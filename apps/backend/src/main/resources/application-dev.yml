@@ -1,0 +1,8 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create
+
+piip:
+  bootstrap:
+    enabled: ${PIIP_BOOTSTRAP_ENABLED:false}

@@ -1,0 +1,40 @@
+<section class="page projects-page">
+  <div class="project-actions">
+    @if (repository.role() === 'Administrador PIIP') {<button class="primary-button gold" type="button" (click)="openProjectRegistration('type-selection')"><mat-icon>add</mat-icon>Registrar proyecto</button>}
+  </div>
+
+  <article class="panel creation-panel">
+    <div><h3>Proyecto derivado de iniciativa aprobada</h3><p>Crea un proyecto a partir de una iniciativa aprobada para mantener la trazabilidad y el vínculo con sus resultados.</p></div>
+    @if (repository.role() === 'Administrador PIIP') {<button class="secondary-button" type="button" (click)="openProjectRegistration('initiative-selection')"><mat-icon>account_tree</mat-icon>Crear desde iniciativa</button>}
+    <div class="preexisting"><p>¿El proyecto no proviene de una iniciativa aprobada?</p><span>Registra exclusivamente un proyecto preexistente que ya se encuentra en ejecución.</span>@if (repository.role() === 'Administrador PIIP') {<a class="text-button" routerLink="/proyectos/nuevo/preexistente">Registrar proyecto preexistente <mat-icon>chevron_right</mat-icon></a>}</div>
+  </article>
+
+  <div class="projects-grid">
+    <article class="panel projects-panel">
+      <h3>Portafolio de proyectos</h3>
+      <form class="project-filters" [formGroup]="filters">
+        <label class="field search"><span>Buscar proyecto</span><span><input formControlName="search" placeholder="Buscar por código o nombre..." /><mat-icon>search</mat-icon></span></label>
+        <label class="field"><span>Estado</span><select formControlName="status"><option>Todos</option>@for (status of catalogs.statuses; track status) {<option [value]="status">{{ status }}</option>}</select></label>
+        <label class="field"><span>Unidad</span><select formControlName="unit"><option>Todas</option>@for (unit of units; track unit) {<option [value]="unit">{{ unit }}</option>}</select></label>
+        <label class="field"><span>Componente digital</span><select formControlName="digital"><option>Todos</option>@for (option of catalogs.digitalComponents; track option) {<option [value]="option">{{ option }}</option>}</select></label>
+        <button class="secondary-button" type="button" (click)="resetFilters()"><mat-icon>filter_alt_off</mat-icon>Limpiar filtros</button>
+      </form>
+
+      <div class="table-scroll"><table><thead><tr><th>Código</th><th>Proyecto</th><th>Iniciativa origen</th><th>Unidad</th><th>Responsable</th><th>Estado</th><th>Componente digital</th><th>Acción</th></tr></thead><tbody>
+        @for (project of filteredProjects(); track project.code) {
+          <tr><td><strong class="code">{{ project.code }}</strong></td><td class="project-name">{{ project.name }}</td><td><span class="origin-value">{{ project.originCode }} @if (project.originMode === 'PREEXISTING') {<small>Preexistente</small>}</span></td><td>{{ project.unit }}</td><td>{{ project.responsible }}</td><td><span class="status" [class]="statusClass(project.status)">{{ project.status }}</span></td><td>{{ project.digitalComponent }}</td><td><span class="row-actions"><a class="secondary-button" [routerLink]="['/proyectos', project.code, 'documentos']">Abrir <mat-icon>chevron_right</mat-icon></a><button class="icon-action" type="button" [matMenuTriggerFor]="projectMenu" [attr.aria-label]="'Acciones de ' + project.code"><mat-icon>more_vert</mat-icon></button><mat-menu #projectMenu="matMenu"><a mat-menu-item [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon>description</mat-icon>Ver documentos</a>@if (project.originMode === 'DERIVED_FROM_INITIATIVE') {<a mat-menu-item [routerLink]="['/iniciativas', project.originCode]"><mat-icon>account_tree</mat-icon>Ver iniciativa origen</a>}@if (repository.role() === 'Administrador PIIP') {<a mat-menu-item routerLink="/auditoria" [queryParams]="{ record: project.code }"><mat-icon>history</mat-icon>Ver auditoría</a>}</mat-menu></span></td></tr>
+        } @empty {<tr><td colspan="8" class="empty-state">No existen proyectos que coincidan con los filtros.</td></tr>}
+      </tbody></table></div>
+      <footer class="pagination"><span>Mostrando {{ filteredProjects().length }} de {{ repository.projects().length }} proyectos</span><span>Resultados del ámbito activo</span><div><button disabled>‹</button><button class="active">1</button><button disabled>›</button></div></footer>
+    </article>
+
+    <aside class="panel project-summary">
+      <h3>Resumen de proyectos</h3>
+      <div class="summary-card green"><span><mat-icon>play_circle_outline</mat-icon></span><p>En ejecución<strong>{{ projectCount('Proyecto en ejecución') }}</strong></p></div>
+      <div class="summary-card gold"><span><mat-icon>check_circle_outline</mat-icon></span><p>Producto aprobado<strong>{{ projectCount('Producto aprobado') }}</strong></p></div>
+      <div class="summary-card red"><span><mat-icon>pause_circle_outline</mat-icon></span><p>Suspendidos<strong>{{ projectCount('Suspendido') }}</strong></p></div>
+      <div class="summary-card gray"><span><mat-icon>task_alt</mat-icon></span><p>Finalizados<strong>{{ projectCount('Finalizado') }}</strong></p></div>
+      <div class="summary-card gray"><span><mat-icon>cancel</mat-icon></span><p>Cancelados<strong>{{ projectCount('Cancelado') }}</strong></p></div>
+    </aside>
+  </div>
+</section>

@@ -1,0 +1,77 @@
+<section class="page form-page">
+  <div class="section-nav" aria-label="Secciones del registro">
+    <button type="button" (click)="scrollTo('general')"><b>01</b>Datos generales</button>
+    <button type="button" (click)="scrollTo('responsible')"><b>02</b>Responsable y unidad</button>
+    <button type="button" (click)="scrollTo('alignment')"><b>03</b>Alineamiento</button>
+    <button type="button" (click)="scrollTo('documents')"><b>04</b>Documentos iniciales</button>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="openReview()">
+    <header class="panel form-hero">
+      <div><p>PORTAFOLIO INSTITUCIONAL DE INNOVACIÓN PÚBLICA</p><h2>Registro de Iniciativa</h2><span>Registro guiado de una iniciativa PIIP. Completa la información disponible y revisa los datos antes de registrar.</span></div>
+      <aside><small>Código</small><strong>{{ pendingCode }}</strong><span class="status">Presentado</span></aside>
+    </header>
+
+    <article class="panel form-section" id="general">
+      <header><h3>01 / Datos generales</h3><p>Identificación, origen y descripción de la iniciativa.</p></header>
+      <div class="form-grid three">
+        <label class="field"><span>Tipo de registro *</span><select formControlName="recordType"><option>Iniciativa</option></select><small>Este formulario registra una iniciativa.</small></label>
+        <label class="field disabled"><span>Código</span><input formControlName="code" /><small>Generado por el sistema en la integración real.</small></label>
+        <label class="field"><span>Fecha de inicio *</span><input type="date" formControlName="startDate" />@if (form.controls.startDate.touched && form.controls.startDate.invalid) {<small class="error">Ingresa la fecha de presentación.</small>}</label>
+        <label class="field span-2"><span>Nombre de iniciativa o proyecto *</span><input formControlName="name" placeholder="Ingresar nombre descriptivo" />@if (form.controls.name.touched && form.controls.name.invalid) {<small class="error">Ingresa el nombre de la iniciativa.</small>}</label>
+        <label class="field disabled"><span>Estado oficial al presentar</span><input formControlName="status" /><small>El borrador es solo una condición local de la UI.</small></label>
+        <label class="field"><span>Tipo de solución *</span><select formControlName="solutionType"><option value="">Seleccionar tipo de solución</option>@for (option of catalogs.solutionTypes; track option) {<option [value]="option">{{ option }}</option>}</select></label>
+        <label class="field"><span>Fuente u origen *</span><select formControlName="source"><option value="">Seleccionar fuente u origen</option>@for (option of catalogs.sources; track option) {<option [value]="option">{{ option }}</option>}</select></label>
+        <label class="field"><span>Componente Digital *</span><select formControlName="digitalComponent"><option value="">Seleccionar</option>@for (option of catalogs.digitalComponents; track option) {<option [value]="option">{{ option }}</option>}</select></label>
+        <label class="field span-3"><span>Descripción *</span><textarea formControlName="description" placeholder="Describe el problema, la necesidad, la situación o la solución."></textarea><small>{{ form.controls.description.value.length }}/1000 caracteres. La descripción se toma del campo correspondiente del Excel.</small></label>
+      </div>
+    </article>
+
+    <article class="panel form-section" id="responsible">
+      <header><h3>02 / Responsable y unidad</h3><p>Responsable funcional y unidades de organización involucradas.</p></header>
+      <div class="form-grid three">
+        <label class="field"><span>Responsable *</span><input formControlName="responsible" placeholder="Nombre del punto focal o responsable" /></label>
+        <label class="field span-2"><span>Unidades de organización responsables *</span><select formControlName="responsibleUnits"><option value="">Seleccionar unidad responsable</option>@for (unit of units(); track unit) {<option [value]="unit">{{ unit }}</option>}</select><small>Unidad orgánica del ámbito activo; no constituye un catálogo del Excel.</small></label>
+        <label class="field span-3"><span>Nota</span><textarea formControlName="note" placeholder="Agregar una observación complementaria del registro."></textarea></label>
+      </div>
+    </article>
+
+    <article class="panel form-section" id="alignment">
+      <header><h3>03 / Alineamiento institucional</h3><p>Relación declarada con el PEI y el POI.</p></header>
+      <div class="form-grid two">
+        <label class="field"><span>Objetivo PEI</span><input formControlName="peiObjective" placeholder="Ingresar objetivo PEI relacionado" /><small>Campo de texto; el Excel no aplica una lista controlada.</small></label>
+        <label class="field"><span>Actividad POI</span><input formControlName="poiActivity" placeholder="Ingresar actividad POI relacionada" /><small>Campo de texto; el Excel no aplica una lista controlada.</small></label>
+      </div>
+    </article>
+
+    <article class="panel form-section" id="documents">
+      <header><h3>04 / Documentos iniciales</h3><p>La ficha se adjunta al registro. Los documentos técnicos aparecen en etapas posteriores.</p></header>
+      <div class="form-grid two documents-grid">
+        <label class="upload-card" [class.loaded]="uploadedFilename()">
+          <input type="file" accept=".pdf,.docx,.xlsx" (change)="onFileSelected($event)" />
+          <mat-icon>{{ uploadedFilename() ? 'check_circle' : 'upload_file' }}</mat-icon>
+          <span><b>Ficha de Iniciativa de Innovación Pública *</b><strong>{{ uploadedFilename() || 'Seleccionar archivo PDF o DOCX' }}</strong><small>Documento inicial del expediente.</small></span>
+        </label>
+        <div class="disabled-document"><b>Informe de opinión técnica de evaluación de iniciativa</b><strong>Se habilita en etapas posteriores</strong><small>Su obligatoriedad por transición permanece pendiente de validación.</small></div>
+        <div class="disabled-document span-2"><b>Documento formal de decisión de aprobación</b><strong>Se habilita al registrar la decisión</strong><small>No se solicita durante el registro inicial.</small></div>
+      </div>
+      @if (!uploadedFilename() && form.touched) {<p class="file-error">Adjunta la ficha inicial para revisar el registro.</p>}
+    </article>
+
+    <footer class="form-footer">
+      <p><mat-icon>info_outline</mat-icon>Los campos con * corresponden a las validaciones actuales de registro; no agregan estados al Excel.</p>
+      <div><button class="secondary-button" type="button" (click)="saveDraft()">Guardar borrador</button><button class="primary-button" type="submit">Revisar y registrar</button></div>
+    </footer>
+  </form>
+
+  @if (reviewOpen()) {
+    <div class="review-backdrop" (click)="reviewOpen.set(false)">
+      <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="review-title" (click)="$event.stopPropagation()">
+        <header><span><mat-icon>fact_check</mat-icon></span><div><p>REVISIÓN FINAL</p><h2 id="review-title">Registrar iniciativa</h2></div><button class="icon-action" type="button" (click)="reviewOpen.set(false)"><mat-icon>close</mat-icon></button></header>
+        <div class="review-summary"><p><span>Código</span><strong>{{ pendingCode }}</strong></p><p><span>Nombre</span><strong>{{ form.controls.name.value }}</strong></p><p><span>Responsable</span><strong>{{ form.controls.responsible.value }}</strong></p><p><span>Estado oficial</span><strong>Presentado</strong></p><p><span>Ficha inicial</span><strong>{{ uploadedFilename() }}</strong></p></div>
+        <div class="review-info"><mat-icon>info</mat-icon>Al confirmar, el registro dejará la condición local de borrador y se mostrará como Presentado.</div>
+        <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="reviewOpen.set(false)">Volver a editar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="registerInitiative()">{{ submitting() ? 'Registrando...' : 'Registrar iniciativa' }}</button></footer>
+      </section>
+    </div>
+  }
+</section>

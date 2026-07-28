@@ -1,0 +1,73 @@
+<section class="page initiatives-page">
+  <div class="page-heading">
+    <div><h2>Registro de iniciativas</h2><p>Consulta, filtra y gestiona los expedientes registrados.</p></div>
+    @if (repository.role() === 'Administrador PIIP') {
+      <a class="primary-button" routerLink="/iniciativas/nueva"><mat-icon>add</mat-icon>Nueva iniciativa</a>
+    }
+  </div>
+
+  <div class="content-grid">
+    <article class="panel filter-table-panel">
+      <form class="filters" [formGroup]="filters">
+        <label class="field search"><span>Buscar</span><span class="input-icon"><input formControlName="search" placeholder="Buscar por código o iniciativa" /><mat-icon>search</mat-icon></span></label>
+        <label class="field"><span>Estado</span><select formControlName="status"><option>Todos</option>@for (status of catalogs.statuses; track status) {<option [value]="status">{{ status }}</option>}</select></label>
+        <label class="field"><span>Fuente u origen</span><select formControlName="source"><option>Todos</option>@for (source of catalogs.sources; track source) {<option [value]="source">{{ source }}</option>}</select></label>
+        <label class="field"><span>Unidad responsable</span><select formControlName="unit"><option>Todas</option>@for (unit of units; track unit) {<option [value]="unit">{{ unit }}</option>}</select></label>
+        <label class="field"><span>Fecha</span><input type="date" formControlName="date" /></label>
+        <button class="text-button clear-top" type="button" (click)="resetFilters()"><mat-icon>filter_alt_off</mat-icon>Limpiar filtros</button>
+      </form>
+
+      <div class="result-meta"><span><b>{{ filteredInitiatives().length }}</b> resultados</span>@if (appliedFilterCount()) {<span class="filter-chip">Filtros aplicados: {{ appliedFilterCount() }} <button type="button" (click)="resetFilters()">×</button></span>}</div>
+
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Código</th><th>Iniciativa</th><th>Fuente u origen</th><th>Responsable</th><th>Unidad</th><th>Estado</th><th>Actualización</th><th>Acción</th></tr></thead>
+          <tbody>
+            @for (initiative of filteredInitiatives(); track initiative.code) {
+              <tr>
+                <td><strong class="code">{{ initiative.code }}</strong></td>
+                <td class="initiative-name">{{ initiative.name }}</td>
+                <td><span class="clamp" [title]="initiative.source">{{ initiative.source }}</span></td>
+                <td>{{ initiative.responsible }}<small>{{ initiative.role }}</small></td>
+                <td>{{ initiative.unit }}</td>
+                <td><span class="status" [class]="statusClass(initiative.status)">{{ initiative.status }}</span></td>
+                <td>{{ initiative.updatedAt }}</td>
+                <td>
+                  <span class="row-actions">
+                    <a class="secondary-button" [routerLink]="['/iniciativas', initiative.code]">Ver detalle <mat-icon>chevron_right</mat-icon></a>
+                    <button class="icon-action" type="button" [matMenuTriggerFor]="initiativeMenu" [attr.aria-label]="'Acciones de ' + initiative.code"><mat-icon>more_vert</mat-icon></button>
+                    <mat-menu #initiativeMenu="matMenu">
+                      <a mat-menu-item [routerLink]="['/iniciativas', initiative.code, 'documentos']"><mat-icon>description</mat-icon>Ver documentos</a>
+                      @if (repository.role() === 'Administrador PIIP' && initiative.status === 'Presentado') {
+                        <a mat-menu-item [routerLink]="['/iniciativas', initiative.code]" [queryParams]="{ action: 'approve' }"><mat-icon>verified</mat-icon>Registrar aprobación</a>
+                      }
+                      @if (repository.role() === 'Administrador PIIP' && initiative.status === 'Iniciativa aprobada') {
+                        @if (repository.getProjectByOrigin(initiative.code); as project) {
+                          <a mat-menu-item [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon>account_tree</mat-icon>Ver proyecto derivado</a>
+                        } @else {
+                          <a mat-menu-item [routerLink]="['/proyectos/nuevo/derivado', initiative.code]"><mat-icon>account_tree</mat-icon>Crear proyecto</a>
+                        }
+                      }
+                      @if (repository.role() === 'Administrador PIIP') {
+                        <a mat-menu-item routerLink="/auditoria" [queryParams]="{ record: initiative.code }"><mat-icon>history</mat-icon>Ver auditoría</a>
+                      }
+                    </mat-menu>
+                  </span>
+                </td>
+              </tr>
+            } @empty { <tr><td colspan="8" class="empty-state">No existen iniciativas que coincidan con los filtros.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="pagination"><span>Mostrar <select aria-label="Filas por página"><option>10</option></select> de {{ filteredInitiatives().length }} resultados</span><div><button disabled>‹</button><button class="active">1</button><button disabled>›</button></div></footer>
+    </article>
+
+    <aside class="panel filter-summary">
+      <h3><mat-icon>filter_alt</mat-icon>Resumen de filtros</h3>
+      <dl><dt>Estado:</dt><dd>{{ filters.controls.status.value }}</dd><dt>Fuente u origen:</dt><dd>{{ filters.controls.source.value }}</dd><dt>Unidad responsable:</dt><dd>{{ filters.controls.unit.value }}</dd><dt>Fecha:</dt><dd>{{ filters.controls.date.value || 'Sin filtro' }}</dd></dl>
+      <div class="summary-count"><span>Filtros aplicados:</span><strong>{{ appliedFilterCount() }}</strong></div>
+      <button class="text-button" type="button" (click)="resetFilters()"><mat-icon>filter_alt_off</mat-icon>Limpiar filtros</button>
+    </aside>
+  </div>
+</section>

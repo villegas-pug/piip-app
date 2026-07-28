@@ -1,0 +1,23 @@
+:host { display: block; padding: 28px 34px 46px; color: var(--piip-text); }
+.admin-page { max-width: 1180px; margin: 0 auto; }
+header { display: flex; justify-content: space-between; gap: 30px; align-items: end; }
+header p { margin: 0 0 4px; color: var(--piip-green-800); font-weight: 700; }
+header h2 { margin: 0; font-family: var(--piip-display); font-size: 32px; color: var(--piip-green-950); }
+header span { display: block; margin-top: 8px; color: var(--piip-muted); }
+header button { min-width: 180px; }
+.scope-note { display: flex; gap: 12px; align-items: center; margin: 24px 0 18px; padding: 14px 18px; border: 1px solid #b9d5c8; border-radius: 7px; color: var(--piip-green-900); background: #f1f8f4; }
+.assignment { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 14px; align-items: start; margin: 22px 0; padding: 20px; border: 1px solid var(--piip-border); border-radius: 8px; background: #fff; box-shadow: var(--piip-shadow); }
+.assignment-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; }
+.table-card { overflow: auto; border: 1px solid var(--piip-border); border-radius: 8px; background: #fff; box-shadow: var(--piip-shadow); }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 16px 18px; text-align: left; border-bottom: 1px solid var(--piip-border); }
+th { color: #4a514d; font-size: 13px; background: #f7f9f7; }
+td { font-size: 14px; }
+td strong, td small { display: block; }
+td small { margin-top: 4px; color: var(--piip-muted); }
+.status { padding: 5px 10px; border-radius: 5px; color: #1c6849; background: #e2f1e8; font-weight: 700; }
+.unassigned { color: #8b5c00; font-weight: 700; }
+.state { min-height: 220px; display: grid; place-content: center; justify-items: center; gap: 14px; color: var(--piip-muted); }
+.state.error mat-icon { font-size: 38px; width: 38px; height: 38px; }
+@media (max-width: 1000px) { .assignment { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 800px) { :host { padding-inline: 18px; } header { align-items: start; flex-direction: column; } .assignment { grid-template-columns: 1fr; } }

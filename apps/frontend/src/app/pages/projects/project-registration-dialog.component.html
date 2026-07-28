@@ -1,0 +1,78 @@
+<div class="registration-dialog">
+  <header class="dialog-header">
+    <span class="header-icon"><mat-icon>{{ view() === 'type-selection' ? 'add_business' : 'account_tree' }}</mat-icon></span>
+    <div>
+      <p>REGISTRO DE PROYECTO</p>
+      <h2>{{ view() === 'type-selection' ? 'Seleccionar tipo de proyecto' : 'Seleccionar iniciativa de origen' }}</h2>
+    </div>
+    <button class="icon-action" type="button" mat-dialog-close aria-label="Cerrar diálogo"><mat-icon>close</mat-icon></button>
+  </header>
+
+  @if (view() === 'type-selection') {
+    <mat-dialog-content class="type-content">
+      <p class="dialog-intro">Indica cómo se incorporará el proyecto al portafolio PIIP.</p>
+      <div class="project-type-grid">
+        <button class="project-type-card" type="button" (click)="showInitiativeSelection()">
+          <span class="type-icon derived"><mat-icon>account_tree</mat-icon></span>
+          <span class="type-copy"><strong>Desde una iniciativa aprobada</strong><small>Precarga los datos comunes y conserva la trazabilidad con la iniciativa de origen.</small></span>
+          <span class="available-count">{{ eligibleInitiatives().length }} disponible{{ eligibleInitiatives().length === 1 ? '' : 's' }}</span>
+          <mat-icon class="chevron">chevron_right</mat-icon>
+        </button>
+        <button class="project-type-card" type="button" (click)="choosePreexistingProject()">
+          <span class="type-icon preexisting"><mat-icon>inventory_2</mat-icon></span>
+          <span class="type-copy"><strong>Proyecto preexistente</strong><small>Registra un proyecto en ejecución que no se originó mediante una iniciativa formal.</small></span>
+          <mat-icon class="chevron">chevron_right</mat-icon>
+        </button>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end"><button class="secondary-button" type="button" mat-dialog-close>Cancelar</button></mat-dialog-actions>
+  } @else {
+    <mat-dialog-content class="initiative-content">
+      <button class="back-button" type="button" (click)="showTypeSelection()"><mat-icon>arrow_back</mat-icon>Elegir otro tipo</button>
+      <p class="dialog-intro">Solo se muestran iniciativas aprobadas que aún no tienen un proyecto derivado.</p>
+
+      @if (eligibleInitiatives().length) {
+        <label class="initiative-search">
+          <span class="visually-hidden">Buscar iniciativa</span>
+          <mat-icon>search</mat-icon>
+          <input [formControl]="searchControl" placeholder="Buscar por código, nombre, unidad o responsable" autocomplete="off" />
+          @if (searchControl.value) {
+            <button type="button" aria-label="Limpiar búsqueda" (click)="searchControl.setValue('')"><mat-icon>close</mat-icon></button>
+          }
+        </label>
+        <div class="result-summary"><strong>{{ filteredInitiatives().length }}</strong> iniciativa{{ filteredInitiatives().length === 1 ? '' : 's' }} encontrada{{ filteredInitiatives().length === 1 ? '' : 's' }}</div>
+
+        @if (filteredInitiatives().length) {
+          <div class="initiative-list" role="radiogroup" aria-label="Iniciativas aprobadas disponibles">
+            @for (initiative of filteredInitiatives(); track initiative.code) {
+              <button
+                class="initiative-option"
+                type="button"
+                role="radio"
+                [class.selected]="selectedInitiativeCode() === initiative.code"
+                [attr.aria-checked]="selectedInitiativeCode() === initiative.code"
+                (click)="selectInitiative(initiative.code)"
+              >
+                <span class="radio-indicator"><span></span></span>
+                <span class="initiative-main">
+                  <span class="initiative-heading"><strong>{{ initiative.code }}</strong><span class="status approved">Iniciativa aprobada</span></span>
+                  <span class="initiative-name">{{ initiative.name }}</span>
+                  <span class="initiative-meta"><span><mat-icon>domain</mat-icon>{{ initiative.unit }}</span><span><mat-icon>person</mat-icon>{{ initiative.responsible }}</span><span><mat-icon>update</mat-icon>{{ initiative.updatedAt }}</span></span>
+                </span>
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="dialog-empty"><mat-icon>search_off</mat-icon><strong>Sin coincidencias</strong><p>Prueba con otro código, nombre, unidad o responsable.</p><button class="text-button" type="button" (click)="searchControl.setValue('')">Limpiar búsqueda</button></div>
+        }
+      } @else {
+        <div class="dialog-empty"><mat-icon>task_alt</mat-icon><strong>No hay iniciativas habilitadas</strong><p>No existen iniciativas aprobadas sin un proyecto derivado.</p></div>
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions class="selection-actions">
+      <span class="selection-state">@if (selectedInitiativeCode()) {Seleccionada: <strong>{{ selectedInitiativeCode() }}</strong>} @else {Selecciona una iniciativa para continuar}</span>
+      <button class="secondary-button" type="button" mat-dialog-close>Cancelar</button>
+      <button class="primary-button" type="button" [disabled]="!selectedInitiativeCode()" (click)="continueWithInitiative()">Continuar<mat-icon>arrow_forward</mat-icon></button>
+    </mat-dialog-actions>
+  }
+</div>

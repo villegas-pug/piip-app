@@ -1,0 +1,64 @@
+# Sistema y editores
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+*.log
+logs/
+.idea/
+.vscode/
+*.iml
+.history/
+
+# Entorno local y secretos
+.env
+.env.*
+!.env.example
+.envrc
+*.pem
+*.p12
+*.key
+*.crt
+keystore.*
+secret.*
+secrets/
+secrets.yaml
+secrets.yml
+**/wallet/
+**/tnsnames.ora
+**/sqlnet.ora
+**/cwallet.sso
+**/ewallet.p12
+**/ojdbc.properties
+
+# Java / Maven
+target/
+build/
+out/
+.gradle/
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*.log
+replay_pid*.log
+
+# Angular / Node
+node_modules/
+dist/
+coverage/
+.angular/
+.cache/
+.tmp/
+*.tsbuildinfo
+npm-debug.log*
+*.eslintcache
+*.stylelintcache
+
+# Pruebas y herramientas
+test-results/
+playwright-report/
+surefire-reports/
+jacoco/
+.specify/cache/
+.specify/tmp/

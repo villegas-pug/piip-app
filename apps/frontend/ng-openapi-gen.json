@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/ng-openapi-gen/ng-openapi-gen-schema.json",
+  "input": "../backend/target/piip-openapi.json",
+  "output": "src/app/api/generated",
+  "services": true,
+  "promises": false,
+  "indexFile": true,
+  "enumStyle": "alias",
+  "removeStaleFiles": true
+}

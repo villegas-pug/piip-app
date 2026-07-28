@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: piip-backend
+  datasource:
+    url: ${ORACLE_URL:jdbc:oracle:thin:@myatp_low}
+    username: ${ORACLE_USERNAME:ADMIN}
+    password: ${ORACLE_PASSWORD:OracleA7dbPass2026}
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      data-source-properties:
+        oracle.net.tns_admin: ${ORACLE_DEV_TNS_ADMIN}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${PIIP_DDL_AUTO:validate}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+        jdbc:
+          time_zone: UTC
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:https://rcgv-services-dev.duckdns.org/keycloak/realms/piip}
+  servlet:
+    multipart:
+      max-file-size: ${PIIP_DOCUMENT_MAX_SIZE:10MB}
+      max-request-size: ${PIIP_DOCUMENT_MAX_SIZE:10MB}
+
+server:
+  port: ${PORT:4001}
+  servlet:
+    context-path: /api/v1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+piip:
+  security:
+    audience: ${PIIP_JWT_AUDIENCE:ms-piip}
+    allowed-origins: ${PIIP_ALLOWED_ORIGINS:http://127.0.0.1:4400,http://localhost:4400}
+  documents:
+    max-size-bytes: ${PIIP_DOCUMENT_MAX_SIZE:10485760}
+  audit:
+    retention-days: ${PIIP_AUDIT_RETENTION_DAYS:180}
+  bootstrap:
+    enabled: ${PIIP_BOOTSTRAP_ENABLED:false}
+    subject: ${PIIP_BOOTSTRAP_SUBJECT:ed3742bc-f2c2-4884-ae09-07e3f9ab98fc}
+    name: ${PIIP_BOOTSTRAP_NAME:Cristopher Guevara Villegas}
+    email: ${PIIP_BOOTSTRAP_EMAIL:rguevarav@midagri.gob.pe}
+    institution-code: ${PIIP_BOOTSTRAP_INSTITUTION_CODE:MIDAGRI}
+    executing-unit-codes: ${PIIP_BOOTSTRAP_EXECUTING_UNIT_CODES:UE-001,UE-002}

@@ -1,0 +1,54 @@
+<section class="page dashboard-page">
+  <h2 class="welcome">Buenos días, {{ repository.role() }}</h2>
+
+  <div class="metric-grid">
+    <article class="metric-card panel"><span class="metric-icon"><mat-icon>assignment</mat-icon></span><strong>{{ repository.dashboardSummary().pendingTasks }}</strong><p>Acciones pendientes</p></article>
+    <article class="metric-card panel"><span class="metric-icon gold"><mat-icon>warning_amber</mat-icon></span><strong class="gold-text">{{ repository.dashboardSummary().alerts }}</strong><p>Alertas</p></article>
+    <article class="metric-card panel"><span class="metric-icon"><mat-icon>notifications_none</mat-icon></span><strong>{{ repository.dashboardSummary().notifications }}</strong><p>Notificaciones</p></article>
+  </div>
+
+  <div class="dashboard-grid">
+    <article class="panel work-panel">
+      <div class="panel-title"><h3>Bandeja de trabajo</h3></div>
+      <div class="work-head"><span>ID de iniciativa</span><span>Acción requerida</span><span>Prioridad</span><span>Asignado por</span><span>Fecha límite</span><span>Acción</span></div>
+      @for (item of repository.workItems(); track item.id) {
+        <div class="work-row">
+          <strong class="code">{{ item.code }}</strong><span>{{ item.action }}</span><span class="priority" [class.high]="item.priority === 'Alta'">{{ item.priority }}</span><span>{{ item.assignedTo }}</span><span [class.overdue]="item.alert === 'VENCIDA'">{{ item.dueDate ?? 'Sin plazo' }}</span><a class="secondary-button" [routerLink]="['/iniciativas', item.code]">Abrir <mat-icon>chevron_right</mat-icon></a>
+        </div>
+      }
+      <a class="text-button all-link" routerLink="/iniciativas">Ver todas las acciones pendientes <mat-icon>chevron_right</mat-icon></a>
+    </article>
+
+    <div class="side-column">
+      <article class="panel alerts-panel">
+        <div class="panel-title"><h3><b>{{ alerts().length }}</b> Alertas</h3></div>
+        @for (item of alerts().slice(0, 2); track item.id) {<div class="alert-row"><mat-icon>warning</mat-icon><p>{{ item.code }} · {{ item.action }}. {{ item.dueDate ? 'Vence el ' + item.dueDate : 'Sin plazo definido' }}.</p></div>} @empty {<div class="alert-row"><mat-icon>check_circle</mat-icon><p>No existen tareas próximas a vencer.</p></div>}
+        <button class="text-button" type="button" (click)="showMessage('Las alertas se calculan desde las tareas asignadas.')">Ver criterio de alertas <mat-icon>chevron_right</mat-icon></button>
+      </article>
+
+      <article class="panel notification-panel">
+        <div class="panel-title"><h3><b>{{ unreadNotifications().length }}</b> Notificaciones</h3></div>
+        @for (item of repository.notifications().slice(0, 1); track item.id) {<div class="notification-row"><span><mat-icon>notifications_none</mat-icon></span><p>{{ item.message }}<small>{{ item.createdAt | date:'short' }}</small></p></div>} @empty {<div class="notification-row"><span><mat-icon>notifications_none</mat-icon></span><p>No existen notificaciones.</p></div>}
+      </article>
+    </div>
+
+    <article class="panel portfolio-panel">
+      <div class="panel-title"><h3>Resumen del portafolio</h3></div>
+      <div class="portfolio-metrics">
+        <div><span><mat-icon>description</mat-icon></span><strong>{{ statusCount('Presentado') }}</strong><p>Presentadas</p></div>
+        <div><span><mat-icon>check_circle_outline</mat-icon></span><strong>{{ statusCount('Iniciativa aprobada') }}</strong><p>Aprobadas</p></div>
+        <div><span class="gray"><mat-icon>inventory_2</mat-icon></span><strong class="gray-text">{{ statusCount('Iniciativa archivada') }}</strong><p>Archivadas</p></div>
+        <div><span class="gold"><mat-icon>business_center</mat-icon></span><strong class="gold-text">{{ statusCount('Proyecto en ejecución') }}</strong><p>Proyectos en ejecución</p></div>
+      </div>
+    </article>
+
+    <article class="panel chart-panel">
+      <div class="panel-title"><h3>Estado del portafolio</h3></div>
+      <div class="chart-row"><span>Presentadas</span><i><b [style.width.%]="barWidth(statusCount('Presentado'))"></b></i><strong>{{ statusCount('Presentado') }}</strong></div>
+      <div class="chart-row"><span>Iniciativas aprobadas</span><i><b class="teal" [style.width.%]="barWidth(statusCount('Iniciativa aprobada'))"></b></i><strong>{{ statusCount('Iniciativa aprobada') }}</strong></div>
+      <div class="chart-row"><span>Iniciativas archivadas</span><i><b class="gray" [style.width.%]="barWidth(statusCount('Iniciativa archivada'))"></b></i><strong>{{ statusCount('Iniciativa archivada') }}</strong></div>
+      <div class="chart-row"><span>Proyectos en ejecución</span><i><b class="gold" [style.width.%]="barWidth(statusCount('Proyecto en ejecución'))"></b></i><strong>{{ statusCount('Proyecto en ejecución') }}</strong></div>
+      <a class="text-button chart-link" routerLink="/proyectos">Ver detalle del estado <mat-icon>chevron_right</mat-icon></a>
+    </article>
+  </div>
+</section>

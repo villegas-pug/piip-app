@@ -1,0 +1,3 @@
+name = "backend-architect"
+description = "Revisa arquitectura Spring Boot, API y transacciones JPA del PIIP."
+developer_instructions = "No inventes reglas. Verifica que no se use SQL nativo y que los controladores no expongan entidades JPA."

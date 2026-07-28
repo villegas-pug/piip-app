@@ -1,0 +1,74 @@
+<section class="page form-page derived-form-page">
+  @if (repository.role() === 'Consulta externa') {
+    <article class="panel controlled-state"><mat-icon>lock</mat-icon><h2>Acceso de solo lectura</h2><p>El perfil Consulta externa no puede registrar proyectos.</p><a class="primary-button" routerLink="/proyectos">Volver a proyectos</a></article>
+  } @else if (!detail) {
+    <article class="panel controlled-state"><mat-icon>search_off</mat-icon><h2>Iniciativa no encontrada</h2><p>No existe una iniciativa con el código {{ initiativeCode || 'solicitado' }}.</p><a class="primary-button" routerLink="/iniciativas">Volver a iniciativas</a></article>
+  } @else if (detail.initiative.status !== 'Iniciativa aprobada') {
+    <article class="panel controlled-state"><mat-icon>block</mat-icon><h2>Iniciativa no habilitada</h2><p>Solo una iniciativa con estado <strong>Iniciativa aprobada</strong> puede originar un proyecto.</p><a class="primary-button" [routerLink]="['/iniciativas', initiativeCode]">Volver al detalle</a></article>
+  } @else if (existingProject) {
+    <article class="panel controlled-state"><mat-icon>account_tree</mat-icon><h2>Proyecto ya registrado</h2><p>{{ initiativeCode }} ya originó el proyecto <strong>{{ existingProject.code }}</strong>.</p><a class="primary-button" [routerLink]="['/proyectos', existingProject.code, 'documentos']">Ver proyecto derivado</a></article>
+  } @else {
+    <div class="section-nav" aria-label="Secciones del registro">
+      <button type="button" (click)="scrollTo('origin')"><b>01</b>Origen</button>
+      <button type="button" (click)="scrollTo('project')"><b>02</b>Datos del proyecto</button>
+      <button type="button" (click)="scrollTo('results')"><b>03</b>Resultados</button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="openReview()">
+      <header class="panel form-hero derived-hero">
+        <div><p>PROYECTO DERIVADO DE INICIATIVA APROBADA</p><h2>Crear proyecto desde {{ initiativeCode }}</h2><span>Los datos comunes han sido precargados. Revísalos y completa la información propia del inicio del proyecto.</span></div>
+        <aside><small>Código provisional</small><strong>{{ provisionalCode }}</strong><span class="status running">Proyecto en ejecución</span></aside>
+      </header>
+
+      <article class="panel form-section" id="origin">
+        <header><h3>01 / Trazabilidad de origen</h3><p>La iniciativa y el proyecto conservarán registros, códigos y documentos independientes.</p></header>
+        <div class="origin-banner"><mat-icon>account_tree</mat-icon><div><strong>{{ detail.initiative.code }} · {{ detail.initiative.name }}</strong><span>Estado: {{ detail.initiative.status }}</span></div><a class="text-button" [routerLink]="['/iniciativas', initiativeCode]">Ver iniciativa <mat-icon>open_in_new</mat-icon></a></div>
+        <div class="form-grid three fixed-fields">
+          <label class="field disabled"><span>Tipo de registro</span><input formControlName="recordType" /></label>
+          <label class="field disabled"><span>Código del proyecto</span><input formControlName="code" /></label>
+          <label class="field disabled"><span>Código de origen</span><input formControlName="originCode" /><small>No puede modificarse.</small></label>
+        </div>
+      </article>
+
+      <article class="panel form-section" id="project">
+        <header><h3>02 / Datos del proyecto</h3><p>Campos comunes precargados y editables antes de registrar.</p></header>
+        <div class="form-grid three">
+          <label class="field"><span>Fecha de inicio *</span><input type="date" formControlName="startDate" />@if (form.controls.startDate.touched && form.controls.startDate.invalid) {<small class="error">Ingresa la fecha efectiva de inicio.</small>}</label>
+          <label class="field disabled"><span>Estado inicial</span><input formControlName="status" /></label>
+          <label class="field"><span>Componente Digital *</span><select formControlName="digitalComponent">@for (option of catalogs.digitalComponents; track option) {<option [value]="option">{{ option }}</option>}</select></label>
+          <label class="field span-3"><span>Nombre de iniciativa o proyecto *</span><input formControlName="name" /></label>
+          <label class="field"><span>Tipo de solución *</span><select formControlName="solutionType">@for (option of catalogs.solutionTypes; track option) {<option [value]="option">{{ option }}</option>}</select></label>
+          <label class="field"><span>Fuente u origen *</span><select formControlName="source">@for (option of catalogs.sources; track option) {<option [value]="option">{{ option }}</option>}</select></label>
+          <label class="field"><span>Responsable *</span><input formControlName="responsible" /></label>
+          <label class="field span-2"><span>Unidades de organización responsables *</span><select formControlName="responsibleUnits">@for (unit of units(); track unit) {<option [value]="unit">{{ unit }}</option>}</select><small>Unidad orgánica del ámbito activo; no constituye un catálogo del Excel.</small></label>
+          <label class="field span-3"><span>Descripción *</span><textarea formControlName="description"></textarea><small>{{ form.controls.description.value.length }}/1000 caracteres</small></label>
+          <label class="field"><span>Objetivo PEI</span><input formControlName="peiObjective" /></label>
+          <label class="field span-2"><span>Actividad POI</span><input formControlName="poiActivity" /></label>
+        </div>
+      </article>
+
+      <article class="panel form-section" id="results">
+        <header><h3>03 / Resultados y observaciones</h3><p>Información propia del proyecto, no copiada automáticamente desde la iniciativa.</p></header>
+        <div class="form-grid two">
+          <label class="field"><span>Resultados clave</span><textarea formControlName="keyResults" placeholder="Describe resultados, beneficios o productos esperados."></textarea><small>{{ form.controls.keyResults.value.length }}/1000 caracteres</small></label>
+          <label class="field"><span>Nota</span><textarea formControlName="note" placeholder="Observación complementaria del proyecto."></textarea><small>{{ form.controls.note.value.length }}/600 caracteres</small></label>
+        </div>
+        <div class="documents-not-copied"><mat-icon>info_outline</mat-icon><div><strong>Los documentos no se duplicarán</strong><p>El expediente del proyecto iniciará con sus documentos propios pendientes y conservará un acceso a la iniciativa de origen.</p></div></div>
+      </article>
+
+      <footer class="form-footer"><p><mat-icon>info_outline</mat-icon>El proyecto se creará únicamente al confirmar la revisión final.</p><div><a class="secondary-button" [routerLink]="['/iniciativas', initiativeCode]">Cancelar</a><button class="secondary-button" type="button" (click)="saveDraft()">Guardar borrador</button><button class="primary-button" type="submit">Revisar proyecto</button></div></footer>
+    </form>
+
+    @if (reviewOpen()) {
+      <div class="review-backdrop" (click)="reviewOpen.set(false)">
+        <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="derived-review-title" (click)="$event.stopPropagation()">
+          <header><span><mat-icon>account_tree</mat-icon></span><div><p>REVISIÓN FINAL</p><h2 id="derived-review-title">Registrar proyecto derivado</h2></div><button class="icon-action" type="button" aria-label="Cerrar" (click)="reviewOpen.set(false)"><mat-icon>close</mat-icon></button></header>
+          <div class="review-origin"><span>{{ initiativeCode }}</span><mat-icon>arrow_forward</mat-icon><strong>{{ provisionalCode }}</strong></div>
+          <div class="review-summary"><p><span>Nombre</span><strong>{{ form.controls.name.value }}</strong></p><p><span>Fecha de inicio</span><strong>{{ form.controls.startDate.value }}</strong></p><p><span>Responsable</span><strong>{{ form.controls.responsible.value }}</strong></p><p><span>Unidad</span><strong>{{ form.controls.responsibleUnits.value }}</strong></p><p><span>Estado</span><strong>Proyecto en ejecución</strong></p></div>
+          <div class="review-info"><mat-icon>info</mat-icon>La iniciativa permanecerá como un registro independiente y vinculado.</div>
+          <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="reviewOpen.set(false)">Volver a editar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="registerProject()">{{ submitting() ? 'Registrando...' : 'Registrar proyecto' }}</button></footer>
+        </section>
+      </div>
+    }
+  }
+</section>

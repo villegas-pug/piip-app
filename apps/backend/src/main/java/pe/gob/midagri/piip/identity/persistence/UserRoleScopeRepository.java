@@ -1,0 +1,26 @@
+package pe.gob.midagri.piip.identity.persistence;
+
+import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.Param;
+import pe.gob.midagri.piip.identity.domain.RoleCode;
+import java.time.Instant;
+import java.util.*;
+
+public interface UserRoleScopeRepository extends JpaRepository<UserRoleScopeEntity, Long> {
+    @EntityGraph(attributePaths = {"role", "institution", "executingUnit", "user"})
+    @Query("select scope from UserRoleScopeEntity scope where scope.user.keycloakSubject = :subject and scope.user.active = true and scope.role.active = true and scope.active = true and scope.validFrom <= :now and (scope.validUntil is null or scope.validUntil > :now)")
+    List<UserRoleScopeEntity> findActiveBySubject(@Param("subject") String subject, @Param("now") Instant now);
+
+    @Query("select count(scope) from UserRoleScopeEntity scope where scope.role.code = :role and scope.role.active = true and scope.user.active = true and scope.active = true and scope.validFrom <= :now and (scope.validUntil is null or scope.validUntil > :now) and scope.institution.id = :institutionId and (scope.executingUnit is null or scope.executingUnit.id = :unitId)")
+    long countActiveAdministrators(@Param("role") RoleCode role, @Param("institutionId") Long institutionId, @Param("unitId") Long unitId, @Param("now") Instant now);
+
+    @Query("select count(scope) from UserRoleScopeEntity scope where scope.role.code = :role and scope.role.active = true and scope.user.active = true and scope.active = true and scope.validFrom <= :now and (scope.validUntil is null or scope.validUntil > :now)")
+    long countActiveByRole(@Param("role") RoleCode role, @Param("now") Instant now);
+
+    @Query("select count(scope) > 0 from UserRoleScopeEntity scope where scope.user.id = :userId and scope.role.id = :roleId and scope.institution.id = :institutionId and ((:unitId is null and scope.executingUnit is null) or scope.executingUnit.id = :unitId) and scope.active = true and scope.validFrom <= :now and (scope.validUntil is null or scope.validUntil > :now)")
+    boolean existsActiveAssignment(@Param("userId") Long userId, @Param("roleId") Long roleId, @Param("institutionId") Long institutionId, @Param("unitId") Long unitId, @Param("now") Instant now);
+
+    @EntityGraph(attributePaths = {"user", "role", "institution", "executingUnit"})
+    @Query("select scope from UserRoleScopeEntity scope where scope.role.code = :role and scope.role.active = true and scope.user.active = true and scope.active = true and scope.institution.id = :institutionId and (scope.executingUnit is null or scope.executingUnit.id = :unitId) and scope.validFrom <= :now and (scope.validUntil is null or scope.validUntil > :now)")
+    List<UserRoleScopeEntity> findActiveRecipients(@Param("role") RoleCode role, @Param("institutionId") Long institutionId, @Param("unitId") Long unitId, @Param("now") Instant now);
+}

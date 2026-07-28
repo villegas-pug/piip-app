@@ -1,0 +1,19 @@
+.derived-form-page { max-width: 1240px; }
+.derived-hero { border-top: 4px solid var(--piip-gold); }
+.origin-banner { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; padding: 15px; border: 1px solid #cdded2; border-radius: 7px; background: var(--piip-mint-soft); }
+.origin-banner > mat-icon { width: 36px; height: 36px; color: var(--piip-green-700); font-size: 36px; }
+.origin-banner div { display: grid; flex: 1; gap: 3px; }
+.origin-banner span { color: #68766e; font-size: 13px; }
+.fixed-fields { padding-top: 4px; }
+.documents-not-copied { display: flex; gap: 12px; margin-top: 18px; padding: 15px; border-left: 4px solid var(--piip-gold); color: #67511c; background: var(--piip-gold-soft); }
+.documents-not-copied p { margin: 3px 0 0; }
+.controlled-state { display: grid; justify-items: center; max-width: 680px; margin: 75px auto; padding: 50px; text-align: center; }
+.controlled-state > mat-icon { width: 58px; height: 58px; color: var(--piip-green-700); font-size: 58px; }
+.controlled-state h2 { margin: 12px 0 4px; font-family: var(--piip-display); font-size: 29px; }
+.controlled-state p { max-width: 480px; margin-bottom: 22px; color: #68746d; }
+.review-origin { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 18px 22px 8px; padding: 13px; border-radius: 7px; color: var(--piip-green-800); background: var(--piip-mint-soft); }
+
+@media (max-width: 720px) {
+  .origin-banner { align-items: flex-start; flex-wrap: wrap; }
+  .origin-banner .text-button { width: 100%; }
+}

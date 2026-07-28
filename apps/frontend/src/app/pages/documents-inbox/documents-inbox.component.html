@@ -1,0 +1,49 @@
+<section class="page documents-inbox-page">
+  <div class="page-heading">
+    <div><h2>Bandeja de documentos</h2><p>Consulta la disponibilidad documental de iniciativas y proyectos.</p></div>
+    <p class="demo-note"><mat-icon>info_outline</mat-icon>Los conteos son informativos y no definen reglas de obligatoriedad documental.</p>
+  </div>
+
+  <div class="summary-strip" aria-label="Resumen documental">
+    <article class="summary-tile"><span class="summary-icon"><mat-icon>folder_open</mat-icon></span><p>Expedientes<strong>{{ summaries().length }}</strong></p></article>
+    <article class="summary-tile loaded"><span class="summary-icon"><mat-icon>task_alt</mat-icon></span><p>Archivos cargados<strong>{{ loadedDocuments() }}</strong></p></article>
+    <article class="summary-tile pending"><span class="summary-icon"><mat-icon>schedule</mat-icon></span><p>Documentos pendientes<strong>{{ pendingDocuments() }}</strong></p></article>
+    <article class="summary-tile neutral"><span class="summary-icon"><mat-icon>remove_circle_outline</mat-icon></span><p>No aplica<strong>{{ notApplicableDocuments() }}</strong></p></article>
+  </div>
+
+  <article class="panel inbox-panel">
+    <form class="filters" [formGroup]="filters">
+      <label class="field search"><span>Buscar expediente</span><span class="input-icon"><input formControlName="search" placeholder="Código o nombre" /><mat-icon>search</mat-icon></span></label>
+      <label class="field"><span>Tipo de registro</span><select formControlName="recordType"><option>Todos</option>@for (type of catalogs.recordTypes; track type) {<option [value]="type">{{ type }}</option>}</select></label>
+      <label class="field"><span>Estado</span><select formControlName="status"><option>Todos</option>@for (status of catalogs.statuses; track status) {<option [value]="status">{{ status }}</option>}</select></label>
+      <label class="field"><span>Unidad responsable</span><select formControlName="unit"><option>Todas</option>@for (unit of units; track unit) {<option [value]="unit">{{ unit }}</option>}</select></label>
+      <button class="secondary-button" type="button" (click)="resetFilters()"><mat-icon>filter_alt_off</mat-icon>Limpiar</button>
+    </form>
+
+    <div class="result-meta"><span><b>{{ filteredDossiers().length }}</b> expedientes encontrados</span><span>Disponibilidad documental informativa</span></div>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Tipo</th><th>Código</th><th>Expediente</th><th>Unidad</th><th>Estado</th><th>Documentos</th><th>Última actividad</th><th>Acción</th></tr></thead>
+        <tbody>
+          @for (dossier of filteredDossiers(); track dossier.recordType + dossier.code) {
+            <tr>
+              <td><span class="record-type" [class.project]="dossier.recordType === 'Proyecto'"><mat-icon>{{ dossier.recordType === 'Iniciativa' ? 'lightbulb' : 'business_center' }}</mat-icon>{{ dossier.recordType }}</span></td>
+              <td><strong class="code">{{ dossier.code }}</strong></td>
+              <td class="dossier-name">{{ dossier.name }}</td>
+              <td>{{ dossier.unit }}</td>
+              <td><span class="status" [class]="statusClass(dossier.status)">{{ dossier.status }}</span></td>
+              <td><div class="document-counts"><span class="loaded-count"><b>{{ dossier.loadedCount }}</b> cargados</span><span class="pending-count"><b>{{ dossier.pendingCount }}</b> pendientes</span>@if (dossier.notApplicableCount) {<span class="na-count"><b>{{ dossier.notApplicableCount }}</b> no aplica</span>}</div></td>
+              <td>{{ dossier.lastActivity }}</td>
+              <td><a class="secondary-button" [routerLink]="dossierRoute(dossier)">Ver documentos <mat-icon>chevron_right</mat-icon></a></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty-state"><mat-icon>search_off</mat-icon><strong>Sin resultados</strong><span>No existen expedientes que coincidan con los filtros seleccionados.</span></td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="pagination"><span>Mostrando {{ filteredDossiers().length }} de {{ summaries().length }} expedientes</span><div><button disabled aria-label="Página anterior">‹</button><button class="active" aria-current="page">1</button><button disabled aria-label="Página siguiente">›</button></div></footer>
+  </article>
+</section>

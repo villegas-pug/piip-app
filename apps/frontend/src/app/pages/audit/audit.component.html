@@ -1,0 +1,44 @@
+<section class="page audit-page">
+  @if (repository.role() === 'Consulta externa') {
+    <article class="panel forbidden"><mat-icon>lock</mat-icon><h2>Acceso restringido</h2><p>La auditoría está disponible únicamente para el perfil Administrador PIIP.</p></article>
+  } @else {
+    <form class="audit-filters" [formGroup]="filters">
+      <label class="field"><span>Expediente</span><select formControlName="record"><option value="">Todos</option>@for (code of recordCodes(); track code) {<option [value]="code">{{ code }}</option>}</select></label>
+      <label class="field"><span>Tipo de evento</span><select formControlName="eventType"><option>Todos</option><option>Creación</option><option>Documento</option><option>Transición</option></select></label>
+      <label class="field"><span>Usuario</span><select formControlName="user"><option>Todos</option><option>Administrador PIIP</option></select></label>
+      <label class="field"><span>Fecha desde</span><input type="date" formControlName="from" /></label>
+      <label class="field"><span>Fecha hasta</span><input type="date" formControlName="to" /></label>
+      <button class="secondary-button" type="button" (click)="resetFilters()">Limpiar filtros</button>
+    </form>
+
+    <div class="audit-grid">
+      <article class="panel history-panel">
+        <h2>Historial de eventos de expedientes</h2>
+        <div class="audit-head"><span></span><span>Fecha y hora</span><span>Evento</span><span>Usuario</span><span>Observación</span><span>Documento</span><span>Acción</span></div>
+        <div class="timeline">
+          @for (event of filteredEvents(); track event.timestamp + event.event) {
+            <div class="audit-row">
+              <span class="event-icon"><mat-icon>{{ event.icon }}</mat-icon></span>
+              <span class="timestamp">{{ event.timestamp }}</span>
+              <strong>{{ event.event }}</strong>
+              <span>{{ event.user }}<small>{{ event.email }}</small></span>
+              <span>{{ event.observation }}</span>
+              <span>@if (event.documentName) {<span class="document-link"><mat-icon>description</mat-icon>{{ event.documentName }}</span>} @else {—}</span>
+              <button class="secondary-button" type="button" (click)="showDetail(event)">Ver detalle <mat-icon>chevron_right</mat-icon></button>
+            </div>
+          } @empty {<div class="empty-state">No existen eventos para los filtros seleccionados.</div>}
+        </div>
+        <footer><span>Mostrando {{ filteredEvents().length }} de {{ filteredEvents().length }} eventos</span><div><button disabled>‹</button><button class="active">1</button><button disabled>›</button></div></footer>
+      </article>
+
+      <aside class="panel integrity-panel">
+        <h2><mat-icon>verified_user</mat-icon>Integridad del expediente</h2>
+        <div class="verification"><span>Accesos registrados</span><strong><mat-icon>visibility</mat-icon>{{ repository.auditAccesses().length }}</strong></div>
+        <p>Resumen de las últimas llamadas registradas por la auditoría de acceso.</p>
+        <h3>Controles visibles</h3>
+        <ul><li><mat-icon>check_circle_outline</mat-icon>{{ deniedAccesses() }} accesos denegados</li><li><mat-icon>check_circle_outline</mat-icon>{{ failedAccesses() }} errores de servidor</li><li><mat-icon>check_circle_outline</mat-icon>Correlation ID por solicitud</li><li><mat-icon>check_circle_outline</mat-icon>Duración y código HTTP</li></ul>
+        <div class="demo-callout"><mat-icon>info_outline</mat-icon>El checksum documental está disponible; firma digital y antimalware permanecen fuera de esta versión.</div>
+      </aside>
+    </div>
+  }
+</section>

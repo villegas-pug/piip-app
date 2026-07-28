@@ -1,0 +1,70 @@
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/inicio" aria-label="Ir al inicio de PIIP">
+      <span class="brand-mark"><mat-icon>spa</mat-icon><i></i></span>
+      <span><strong>PIIP</strong><small>Gestión de Iniciativas y Proyectos</small></span>
+    </a>
+    <span class="brand-accent"></span>
+
+    <nav aria-label="Navegación principal">
+      @for (item of navigation; track item.route) {
+        @if (!item.adminOnly || repository.role() === 'Administrador PIIP') {
+          <a [routerLink]="item.route" [class.active]="isNavigationActive(item)" [attr.aria-current]="isNavigationActive(item) ? 'page' : null">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      }
+    </nav>
+
+    <footer class="institution">
+      <div class="institution-lockup">
+        <mat-icon>account_balance</mat-icon>
+        <span><strong>PERÚ</strong><small>Ministerio de Desarrollo<br />Agrario y Riego</small></span>
+      </div>
+      <p>Trabajamos por el agro<br />y el bienestar del Perú</p>
+    </footer>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <h1>{{ pageTitle() }}</h1>
+      <div class="profile-actions">
+        @if (repository.executingUnits().length > 1) {
+          <label class="executing-unit-selector"><span>Unidad Ejecutora</span><select [value]="repository.selectedExecutingUnitId()" (change)="selectExecutingUnit($event)">@for (unit of repository.executingUnits(); track unit.id) {<option [value]="unit.id">{{ unit.code }} · {{ unit.name }}</option>}</select></label>
+        }
+        <button class="notification-button" type="button" aria-label="Abrir notificaciones" (click)="showNotifications()">
+          <mat-icon>notifications_none</mat-icon>@if (hasUnreadNotifications()) {<span></span>}
+        </button>
+        <i class="divider"></i>
+        <button class="profile-button" type="button" [matMenuTriggerFor]="profileMenu">
+          <span class="avatar"><mat-icon>person</mat-icon></span>
+          <span>{{ repository.role() }}</span>
+          <mat-icon>keyboard_arrow_down</mat-icon>
+        </button>
+        <mat-menu #profileMenu="matMenu" xPosition="before">
+          @if (repository.role() === 'Administrador PIIP') {
+            <a mat-menu-item routerLink="/administracion/usuarios">
+              <mat-icon>manage_accounts</mat-icon>
+              <span>Administrar usuarios</span>
+            </a>
+          }
+          @if (repository.demoMode) {
+            <button mat-menu-item type="button" (click)="toggleRole()">
+              <mat-icon>switch_account</mat-icon>
+              <span>Cambiar a {{ repository.role() === 'Administrador PIIP' ? 'Consulta externa' : 'Administrador PIIP' }}</span>
+            </button>
+          }
+          <button mat-menu-item type="button" (click)="logout()">
+            <mat-icon>logout</mat-icon><span>Cerrar sesión</span>
+          </button>
+        </mat-menu>
+      </div>
+    </header>
+    <main>
+      @if (auth.configurationError(); as error) {<div class="global-api-error" role="alert"><mat-icon>vpn_key_off</mat-icon><span>{{ error }}</span></div>}
+      @if (repository.lastError(); as error) {<div class="global-api-error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ error }}</span><button type="button" [disabled]="repository.loading()" (click)="retryConnection()">{{ repository.loading() ? 'Conectando...' : 'Reintentar' }}</button><button type="button" (click)="repository.clearError()">Cerrar</button></div>}
+      <router-outlet />
+    </main>
+  </div>
+</div>
