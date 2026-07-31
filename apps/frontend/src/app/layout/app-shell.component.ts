@@ -33,6 +33,9 @@ export class AppShellComponent {
   readonly currentUrl = signal(this.router.url);
   readonly notificationPending = signal(false);
   readonly hasUnreadNotifications = computed(() => this.repository.notifications().some((item) => !item.read));
+  readonly activeExecutingUnit = computed(() =>
+    this.repository.executingUnits().find((unit) => unit.id === this.repository.selectedExecutingUnitId()),
+  );
 
   readonly navigation: NavigationItem[] = [
     { label: 'Inicio', icon: 'home', route: '/inicio' },
@@ -89,8 +92,7 @@ export class AppShellComponent {
     this.snackBar.open(`Perfil activo: ${this.repository.role()}.`, 'Cerrar', { duration: 2600 });
   }
 
-  async selectExecutingUnit(event: Event): Promise<void> {
-    const executingUnitId = Number((event.target as HTMLSelectElement).value);
+  async selectExecutingUnit(executingUnitId: number): Promise<void> {
     if (this.activity.isBlocking() || executingUnitId === this.repository.selectedExecutingUnitId()) return;
     try {
       await this.activity.runBlocking(

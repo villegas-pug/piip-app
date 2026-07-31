@@ -31,7 +31,25 @@
       <h1>{{ pageTitle() }}</h1>
       <div class="profile-actions">
         @if (repository.executingUnits().length > 1) {
-          <label class="executing-unit-selector"><span>Unidad Ejecutora</span><select [value]="repository.selectedExecutingUnitId()" [disabled]="activity.isBlocking()" [attr.aria-busy]="activity.isBlocking()" (change)="selectExecutingUnit($event)">@for (unit of repository.executingUnits(); track unit.id) {<option [value]="unit.id">{{ unit.code }} · {{ unit.name }}</option>}</select></label>
+          @if (activeExecutingUnit(); as unit) {
+            <div class="executing-unit-context" [attr.aria-busy]="activity.isBlocking()">
+              <span class="visually-hidden" role="status" aria-live="polite">Unidad Ejecutora activa: {{ unit.code }} · {{ unit.name }}</span>
+              <button class="executing-unit-trigger" type="button" [matMenuTriggerFor]="executingUnitMenu" [disabled]="activity.isBlocking()" [attr.aria-busy]="activity.isBlocking()" [attr.aria-label]="'Cambiar Unidad Ejecutora. Activa: ' + unit.code + ', ' + unit.name">
+                <span class="executing-unit-icon"><mat-icon [class.button-spinner]="activity.isBlocking()">{{ activity.isBlocking() ? 'progress_activity' : 'account_balance' }}</mat-icon></span>
+                <span class="executing-unit-copy"><span class="executing-unit-label">Unidad Ejecutora</span><strong class="executing-unit-code">{{ unit.code }}</strong><small class="executing-unit-name" [title]="unit.name">{{ unit.name }}</small></span>
+                <mat-icon class="executing-unit-chevron">keyboard_arrow_down</mat-icon>
+              </button>
+              <mat-menu #executingUnitMenu="matMenu" xPosition="before">
+                @for (candidate of repository.executingUnits(); track candidate.id) {
+                  <button class="executing-unit-option" mat-menu-item type="button" [disabled]="activity.isBlocking()" (click)="selectExecutingUnit(candidate.id)">
+                    <mat-icon>{{ candidate.id === repository.selectedExecutingUnitId() ? 'check_circle' : 'account_balance' }}</mat-icon>
+                    <span class="executing-unit-option-copy"><strong>{{ candidate.code }}</strong><small>{{ candidate.name }}</small></span>
+                    @if (candidate.id === repository.selectedExecutingUnitId()) {<span class="executing-unit-active-label">Unidad activa</span>}
+                  </button>
+                }
+              </mat-menu>
+            </div>
+          }
         }
         <button class="notification-button" type="button" aria-label="Abrir notificaciones" [disabled]="notificationPending()" [attr.aria-busy]="notificationPending()" (click)="showNotifications()">
           <mat-icon [class.button-spinner]="notificationPending()">{{ notificationPending() ? 'progress_activity' : 'notifications_none' }}</mat-icon>@if (hasUnreadNotifications()) {<span></span>}

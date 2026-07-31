@@ -16,6 +16,7 @@ Sustituir el repositorio mock por un adaptador HTTP sin cambiar las rutas ni la 
 - Los mocks permanecen disponibles únicamente para pruebas y demostraciones aisladas.
 - Después de autenticar, el inicio de PIIP mantiene un estado visual bloqueante hasta completar identidad, ámbitos y datos iniciales.
 - El cambio de Unidad Ejecutora bloquea interacciones y comunica que se actualiza el ámbito hasta completar todas las consultas concurrentes.
+- Cuando hay más de una Unidad Ejecutora autorizada, el encabezado muestra el ámbito activo mediante un botón accesible con código y nombre; su menú identifica la unidad seleccionada y conserva el bloqueo durante el cambio.
 - La navegación y todas las llamadas API muestran progreso global sin parpadeos en operaciones breves.
 - Cada acción CRUD visible impide envíos duplicados, muestra una animación contextual y libera el estado tanto en éxito como en error.
 - En el expediente documental, cada fila con operaciones permitidas presenta un único engranaje accesible; su menú muestra solo descargar, publicar o retirar publicación y marcar como No aplica según el estado del documento y el rol Administrador PIIP.
