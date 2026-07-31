@@ -23,9 +23,9 @@ No usar `create`, `create-drop` ni scripts SQL manuales en el esquema institucio
 
 ## Keycloak
 
-Configurar un cliente público para Angular con Authorization Code Flow, PKCE `S256`, redirect URIs y web origins limitados a la URL institucional. No habilitar client secret en el navegador.
+Configurar un cliente público para Angular con Authorization Code Flow y PKCE `S256`. Registrar exactamente `<URL_FRONTEND>/login` como redirect URI y `<ORIGEN_FRONTEND>` como Web Origin; no asumir comodines ni habilitar client secret en el navegador.
 
-Publicar `runtime-config.institutional.example.js` como `config/runtime-config.js`, reemplazando únicamente URL, realm y client ID. Este archivo no contiene credenciales. El frontend conserva la ruta solicitada durante el redireccionamiento y renueva el token antes de consumir `/api/v1`.
+Publicar `runtime-config.institutional.example.js` como `config/runtime-config.js`, reemplazando únicamente URL, realm y client ID. Este archivo no contiene credenciales y Keycloak es obligatorio también en el entorno local. El frontend conserva la ruta interna solicitada durante el redireccionamiento, retorna por `/login` y renueva el token antes de consumir `/api/v1`.
 
 Keycloak autentica la identidad. Los roles del token no conceden permisos PIIP: `/identity/me` resuelve en Oracle el usuario, los dos roles permitidos y sus ámbitos vigentes.
 

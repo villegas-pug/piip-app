@@ -1,7 +1,6 @@
 export interface PiipRuntimeConfig {
   apiUrl: string;
-  authenticationRequired: boolean;
-  keycloak?: {
+  keycloak: {
     url: string;
     realm: string;
     clientId: string;
@@ -14,27 +13,26 @@ declare global {
   }
 }
 
-const LOCAL_DEFAULTS: PiipRuntimeConfig = {
-  apiUrl: 'http://127.0.0.1:4001/api/v1',
-  authenticationRequired: false,
-};
+const LOCAL_API_URL = 'http://127.0.0.1:4001/api/v1';
 
 export function resolveRuntimeConfig(): PiipRuntimeConfig {
   const configured = typeof window === 'undefined' ? undefined : window.__PIIP_RUNTIME_CONFIG__;
-  const config: PiipRuntimeConfig = {
-    ...LOCAL_DEFAULTS,
-    ...configured,
-    keycloak: configured?.keycloak,
-  };
-
-  const hostname = typeof location === 'undefined' ? 'localhost' : location.hostname;
-  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-  if (!isLocal && !config.authenticationRequired) {
-    throw new Error('La autenticacion Keycloak es obligatoria fuera del entorno local.');
+  const keycloak = configured?.keycloak;
+  if (!keycloak?.url?.trim() || !keycloak.realm?.trim() || !keycloak.clientId?.trim()) {
+    throw new Error('Falta configurar URL, realm o client ID de Keycloak.');
   }
-  return config;
+
+  return {
+    apiUrl: resolveApiUrl(),
+    keycloak: {
+      url: keycloak.url.trim(),
+      realm: keycloak.realm.trim(),
+      clientId: keycloak.clientId.trim(),
+    },
+  };
 }
 
 export function resolveApiUrl(): string {
-  return resolveRuntimeConfig().apiUrl.replace(/\/$/, '');
+  const configured = typeof window === 'undefined' ? undefined : window.__PIIP_RUNTIME_CONFIG__;
+  return (configured?.apiUrl?.trim() || LOCAL_API_URL).replace(/\/$/, '');
 }

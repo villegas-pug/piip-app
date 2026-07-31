@@ -1,0 +1,76 @@
+<main class="login-page">
+  <div class="decorative-orbit orbit-one" aria-hidden="true"></div>
+  <div class="decorative-orbit orbit-two" aria-hidden="true"></div>
+
+  <header class="login-header" aria-label="Identidad de PIIP">
+    <div class="piip-brand">
+      <span class="brand-mark" aria-hidden="true"><mat-icon>spa</mat-icon><i></i></span>
+      <span><strong>PIIP</strong><small>Gestión de Iniciativas y Proyectos</small></span>
+    </div>
+    <span class="environment-label">Acceso institucional</span>
+  </header>
+
+  <section class="hero" aria-labelledby="login-title">
+    <div class="hero-copy">
+      <p class="eyebrow">PORTAFOLIO INSTITUCIONAL DE INNOVACIÓN PÚBLICA</p>
+      <h1 id="login-title">Gestión de Iniciativas<br />y Proyectos</h1>
+      <p class="hero-description">
+        Un espacio institucional para consultar y gestionar la información de PIIP de acuerdo con
+        tus permisos vigentes.
+      </p>
+      <div class="hero-divider" aria-hidden="true"></div>
+      <p class="hero-support">
+        <mat-icon>verified_user</mat-icon>Tu identidad se autentica de forma segura mediante
+        Keycloak.
+      </p>
+    </div>
+
+    <article class="access-card" aria-labelledby="access-title" [attr.aria-busy]="redirecting()">
+      <div class="access-icon" aria-hidden="true"><mat-icon>lock</mat-icon></div>
+      <p class="card-kicker">BIENVENIDO</p>
+      <h2 id="access-title">Acceso a PIIP</h2>
+      <p>
+        Ingresa con tu cuenta institucional. Las funciones disponibles dependen del rol y ámbito
+        activos asignados en PIIP.
+      </p>
+
+      @if (auth.configurationError(); as error) {
+        <div class="login-alert" role="alert">
+          <mat-icon>vpn_key_off</mat-icon>
+          <span>{{ error }}</span>
+        </div>
+        <button class="retry-button" type="button" (click)="retry()">
+          <mat-icon>refresh</mat-icon>Reintentar
+        </button>
+      } @else {
+        @if (loginError(); as error) {
+          <div class="login-alert" role="alert">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ error }}</span>
+          </div>
+        }
+        <button class="login-button" type="button" [disabled]="redirecting()" (click)="login()">
+          <mat-icon [class.spinning]="redirecting()">{{
+            redirecting() ? 'progress_activity' : 'login'
+          }}</mat-icon>
+          <span>{{ redirecting() ? 'Conectando con Keycloak...' : 'Ingresar' }}</span>
+        </button>
+      }
+
+      <div class="security-note">
+        <mat-icon aria-hidden="true">shield</mat-icon>
+        <span>PIIP no almacena ni solicita tu contraseña en esta pantalla.</span>
+      </div>
+    </article>
+  </section>
+
+  <footer class="login-footer">
+    <div class="institution-lockup">
+      <mat-icon aria-hidden="true">account_balance</mat-icon>
+      <span
+        ><strong>PERÚ</strong><small>Ministerio de Desarrollo<br />Agrario y Riego</small></span
+      >
+    </div>
+    <p>Trabajamos por el agro y el bienestar del Perú</p>
+  </footer>
+</main>
