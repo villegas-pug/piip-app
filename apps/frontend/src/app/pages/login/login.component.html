@@ -10,28 +10,14 @@
     <span class="environment-label">Acceso institucional</span>
   </header>
 
-  <section class="hero" aria-labelledby="login-title">
-    <div class="hero-copy">
-      <p class="eyebrow">PORTAFOLIO INSTITUCIONAL DE INNOVACIÓN PÚBLICA</p>
-      <h1 id="login-title">Gestión de Iniciativas<br />y Proyectos</h1>
-      <p class="hero-description">
-        Un espacio institucional para consultar y gestionar la información de PIIP de acuerdo con
-        tus permisos vigentes.
-      </p>
-      <div class="hero-divider" aria-hidden="true"></div>
-      <p class="hero-support">
-        <mat-icon>verified_user</mat-icon>Tu identidad se autentica de forma segura mediante
-        Keycloak.
-      </p>
-    </div>
-
+  <section class="hero" aria-label="Inicio de sesión PIIP">
     <article class="access-card" aria-labelledby="access-title" [attr.aria-busy]="redirecting()">
       <div class="access-icon" aria-hidden="true"><mat-icon>lock</mat-icon></div>
       <p class="card-kicker">BIENVENIDO</p>
-      <h2 id="access-title">Acceso a PIIP</h2>
+      <h1 id="access-title">Acceso a PIIP</h1>
       <p>
-        Ingresa con tu cuenta institucional. Las funciones disponibles dependen del rol y ámbito
-        activos asignados en PIIP.
+        Continúa con tu cuenta institucional. Las funciones disponibles dependen del rol y ámbito
+        activos que tengas asignados en PIIP.
       </p>
 
       @if (auth.configurationError(); as error) {
@@ -53,15 +39,35 @@
           <mat-icon [class.spinning]="redirecting()">{{
             redirecting() ? 'progress_activity' : 'login'
           }}</mat-icon>
-          <span>{{ redirecting() ? 'Conectando con Keycloak...' : 'Ingresar' }}</span>
+          <span>{{
+            redirecting()
+              ? 'Conectando con el acceso institucional...'
+              : 'Ingresar con cuenta institucional'
+          }}</span>
         </button>
       }
 
       <div class="security-note">
         <mat-icon aria-hidden="true">shield</mat-icon>
-        <span>PIIP no almacena ni solicita tu contraseña en esta pantalla.</span>
+        <span
+          >Tu usuario y contraseña se ingresarán únicamente en el servicio institucional seguro;
+          PIIP no los solicita ni almacena.</span
+        >
       </div>
     </article>
+
+    <div class="hero-copy" aria-labelledby="portfolio-title">
+      <p class="eyebrow">PORTAFOLIO INSTITUCIONAL DE INNOVACIÓN PÚBLICA</p>
+      <h2 id="portfolio-title">Gestión de Iniciativas<br />y Proyectos</h2>
+      <p class="hero-description">
+        Un espacio institucional para consultar y gestionar la información de PIIP de acuerdo con
+        tus permisos vigentes.
+      </p>
+      <div class="hero-divider" aria-hidden="true"></div>
+      <p class="hero-support">
+        <mat-icon>verified_user</mat-icon>Acceso protegido mediante autenticación institucional.
+      </p>
+    </div>
   </section>
 
   <footer class="login-footer">

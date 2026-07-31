@@ -20,7 +20,10 @@ describe('LoginComponent', () => {
       imports: [LoginComponent],
       providers: [
         provideRouter([]),
-        { provide: PiipAuthService, useValue: { authenticated, configurationError, login, consumePostLoginRoute } },
+        {
+          provide: PiipAuthService,
+          useValue: { authenticated, configurationError, login, consumePostLoginRoute },
+        },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { queryParamMap: convertToParamMap({ returnUrl: '/auditoria' }) } },
@@ -29,13 +32,20 @@ describe('LoginComponent', () => {
     }).compileComponents();
   });
 
-  it('renders the PIIP access page without credential fields', () => {
+  it('presents access before the institutional content without credential fields', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Gestión de Iniciativas');
+    const accessCard = fixture.nativeElement.querySelector('.access-card');
+    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Acceso a PIIP');
+    expect(fixture.nativeElement.querySelector('.hero-copy h2')?.textContent).toContain(
+      'Gestión de Iniciativas',
+    );
+    expect(accessCard?.nextElementSibling?.classList.contains('hero-copy')).toBe(true);
     expect(fixture.nativeElement.querySelector('input')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.login-button')?.textContent).toContain('Ingresar');
+    expect(fixture.nativeElement.querySelector('.login-button')?.textContent).toContain(
+      'Ingresar con cuenta institucional',
+    );
   });
 
   it('prevents duplicate redirects while login is pending', () => {
@@ -45,10 +55,14 @@ describe('LoginComponent', () => {
 
     void fixture.componentInstance.login();
     void fixture.componentInstance.login();
+    fixture.detectChanges();
 
     expect(login).toHaveBeenCalledOnce();
     expect(login).toHaveBeenCalledWith('/auditoria');
     expect(fixture.componentInstance.redirecting()).toBe(true);
+    expect(fixture.nativeElement.querySelector('.login-button')?.textContent).toContain(
+      'Conectando con el acceso institucional',
+    );
   });
 
   it('shows the configuration error and does not offer login', () => {
@@ -56,7 +70,9 @@ describe('LoginComponent', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Falta configurar Keycloak');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      'Falta configurar Keycloak',
+    );
     expect(fixture.nativeElement.querySelector('.login-button')).toBeNull();
     expect(fixture.nativeElement.querySelector('.retry-button')).not.toBeNull();
   });

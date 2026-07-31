@@ -8,6 +8,7 @@ Sustituir el repositorio mock por un adaptador HTTP sin cambiar las rutas ni la 
 
 - El token Bearer se adjunta a las llamadas API.
 - PIIP presenta una portada pública de inicio de sesión antes de redirigir al cliente público de Keycloak; Angular no captura credenciales.
+- El acceso ocupa el primer nivel visual y semántico de `/login`; la presentación institucional es contenido secundario y en móvil aparece después de la acción de ingreso.
 - Keycloak es obligatorio en todos los entornos y conserva la ruta interna solicitada después del flujo Authorization Code con PKCE `S256`.
 - La ruta de retorno de Keycloak es `/login`; cualquier retorno externo o inválido se sustituye por `/inicio`.
 - El rol visual procede del backend y no puede simularse en modo integrado.
