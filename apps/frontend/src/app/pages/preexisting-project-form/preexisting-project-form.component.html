@@ -106,13 +106,13 @@
     </form>
 
     @if (reviewOpen()) {
-      <div class="review-backdrop" (click)="reviewOpen.set(false)">
-        <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="review-title" (click)="$event.stopPropagation()">
-          <header><span><mat-icon>fact_check</mat-icon></span><div><p>REVISIÓN FINAL</p><h2 id="review-title">Registrar proyecto preexistente</h2></div><button class="icon-action" type="button" aria-label="Cerrar revisión" (click)="reviewOpen.set(false)"><mat-icon>close</mat-icon></button></header>
+      <div class="review-backdrop" (click)="submitting() ? null : reviewOpen.set(false)">
+        <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="review-title" [attr.aria-busy]="submitting()" (click)="$event.stopPropagation()">
+          <header><span><mat-icon>fact_check</mat-icon></span><div><p>REVISIÓN FINAL</p><h2 id="review-title">Registrar proyecto preexistente</h2></div><button class="icon-action" type="button" aria-label="Cerrar revisión" [disabled]="submitting()" (click)="reviewOpen.set(false)"><mat-icon>close</mat-icon></button></header>
           <div class="review-warning"><mat-icon>account_tree</mat-icon><div><strong>Sin iniciativa predecesora</strong><span>El proyecto se incorporará directamente al portafolio con código de origen `NA`.</span></div></div>
           <div class="review-summary"><p><span>Código</span><strong>{{ provisionalCode }}</strong></p><p><span>Nombre</span><strong>{{ form.controls.name.value }}</strong></p><p><span>Responsable</span><strong>{{ form.controls.responsible.value }}</strong></p><p><span>Unidad</span><strong>{{ form.controls.responsibleUnits.value }}</strong></p><p><span>Estado oficial</span><strong>Proyecto en ejecución</strong></p></div>
           <div class="review-info"><mat-icon>info</mat-icon>La etiqueta `Preexistente` es informativa y no agrega un estado al catálogo oficial.</div>
-          <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="reviewOpen.set(false)">Volver a editar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="registerProject()">{{ submitting() ? 'Registrando...' : 'Registrar proyecto' }}</button></footer>
+          <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="reviewOpen.set(false)">Volver a editar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="registerProject()">@if (submitting()) {<mat-icon class="button-spinner">progress_activity</mat-icon>Registrando...} @else {Registrar proyecto}</button></footer>
         </section>
       </div>
     }

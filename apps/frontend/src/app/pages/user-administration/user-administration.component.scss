@@ -8,6 +8,8 @@ header button { min-width: 180px; }
 .scope-note { display: flex; gap: 12px; align-items: center; margin: 24px 0 18px; padding: 14px 18px; border: 1px solid #b9d5c8; border-radius: 7px; color: var(--piip-green-900); background: #f1f8f4; }
 .assignment { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 14px; align-items: start; margin: 22px 0; padding: 20px; border: 1px solid var(--piip-border); border-radius: 8px; background: #fff; box-shadow: var(--piip-shadow); }
 .assignment-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; }
+.assignment-actions button, td button { display: inline-flex; align-items: center; gap: 8px; }
+.assignment-actions mat-spinner, td mat-spinner { --mat-progress-spinner-active-indicator-color: currentColor; }
 .table-card { overflow: auto; border: 1px solid var(--piip-border); border-radius: 8px; background: #fff; box-shadow: var(--piip-shadow); }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 16px 18px; text-align: left; border-bottom: 1px solid var(--piip-border); }

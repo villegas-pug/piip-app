@@ -6,12 +6,13 @@ import { piipAuthInterceptor } from './core/piip-auth.interceptor';
 import { PIIP_REPOSITORY } from './core/piip-repository.token';
 import { routes } from './app.routes';
 import { PiipAuthService } from './core/piip-auth.service';
+import { piipLoadingInterceptor } from './core/piip-loading.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideAppInitializer(() => inject(PiipAuthService).initialize()),
-    provideHttpClient(withInterceptors([piipAuthInterceptor])),
+    provideHttpClient(withInterceptors([piipLoadingInterceptor, piipAuthInterceptor])),
     provideRouter(routes, withViewTransitions()),
     PiipHttpRepository,
     { provide: PIIP_REPOSITORY, useExisting: PiipHttpRepository },

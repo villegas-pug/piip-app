@@ -7,6 +7,13 @@ import { summarizeDocumentDossier } from '../../core/piip-mock.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { DocumentRecord, DocumentStage, DocumentType, PiipRecordType, PiipStatus } from '../../core/piip.models';
 
+type DocumentOperationKind = 'upload' | 'download' | 'publication' | 'not-applicable';
+
+interface PendingDocumentOperation {
+  kind: DocumentOperationKind;
+  key: string;
+}
+
 @Component({
   selector: 'app-documents',
   imports: [MatIconModule, RouterLink],
@@ -24,7 +31,8 @@ export class DocumentsComponent {
   readonly uploadOpen = signal(false);
   readonly uploadType = signal<DocumentType>('PUBLIC_INNOVATION_INITIATIVE_SHEET');
   readonly uploadFile = signal<File | null>(null);
-  readonly operationPending = signal(false);
+  readonly pendingOperation = signal<PendingDocumentOperation | null>(null);
+  readonly operationPending = computed(() => this.pendingOperation() !== null);
   readonly documentTypes: { type: DocumentType; label: string }[] = [
     { type: 'PUBLIC_INNOVATION_INITIATIVE_SHEET', label: 'Ficha de Iniciativa de Innovación Pública' },
     { type: 'INITIATIVE_TECHNICAL_OPINION', label: 'Informe de opinión técnica de evaluación de iniciativa' },
@@ -89,8 +97,8 @@ export class DocumentsComponent {
 
   async upload(): Promise<void> {
     const file = this.uploadFile();
-    if (!file) return;
-    this.operationPending.set(true);
+    if (!file || this.operationPending()) return;
+    this.pendingOperation.set({ kind: 'upload', key: this.uploadType() });
     try {
       await Promise.resolve(this.repository.uploadDocument(this.code(), this.uploadType(), file));
       this.uploadOpen.set(false);
@@ -99,36 +107,54 @@ export class DocumentsComponent {
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible cargar el documento.', 'Cerrar', { duration: 4000 });
     } finally {
-      this.operationPending.set(false);
+      this.pendingOperation.set(null);
     }
   }
 
   async download(document: DocumentRecord): Promise<void> {
-    if (!document.versionId || !document.filename) return;
+    if (!document.versionId || !document.filename || this.operationPending()) return;
+    this.pendingOperation.set({ kind: 'download', key: this.operationKey(document) });
     try {
       await Promise.resolve(this.repository.downloadDocument(this.code(), document.versionId, document.filename));
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible descargar el documento.', 'Cerrar', { duration: 4000 });
+    } finally {
+      this.pendingOperation.set(null);
     }
   }
 
   async togglePublication(document: DocumentRecord): Promise<void> {
-    if (!document.versionId || document.optimisticVersion === undefined) return;
+    if (!document.versionId || document.optimisticVersion === undefined || this.operationPending()) return;
+    this.pendingOperation.set({ kind: 'publication', key: this.operationKey(document) });
     try {
       await Promise.resolve(this.repository.setDocumentPublication(this.code(), document.versionId, !document.externallyPublished, document.optimisticVersion));
       this.snackBar.open(document.externallyPublished ? 'Documento retirado de consulta externa.' : 'Documento publicado para consulta externa.', 'Cerrar', { duration: 3200 });
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible cambiar la publicación.', 'Cerrar', { duration: 4000 });
+    } finally {
+      this.pendingOperation.set(null);
     }
   }
 
   async markNotApplicable(document: DocumentRecord): Promise<void> {
-    if (!document.type) return;
+    if (!document.type || this.operationPending()) return;
+    this.pendingOperation.set({ kind: 'not-applicable', key: this.operationKey(document) });
     try {
       await Promise.resolve(this.repository.markDocumentNotApplicable(this.code(), document.type, 'Marcado desde el expediente PIIP'));
       this.snackBar.open('Documento marcado como No aplica.', 'Cerrar', { duration: 3000 });
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible actualizar el documento.', 'Cerrar', { duration: 4000 });
+    } finally {
+      this.pendingOperation.set(null);
     }
+  }
+
+  isPending(kind: DocumentOperationKind, document?: DocumentRecord): boolean {
+    const operation = this.pendingOperation();
+    return operation?.kind === kind && (!document || operation.key === this.operationKey(document));
+  }
+
+  operationKey(document: DocumentRecord): string {
+    return String(document.versionId ?? document.type ?? document.name);
   }
 }

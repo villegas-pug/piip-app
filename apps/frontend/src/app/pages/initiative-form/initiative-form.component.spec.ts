@@ -18,4 +18,23 @@ describe('InitiativeFormComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('I-025-2026');
     expect(fixture.nativeElement.textContent).toContain('El borrador es solo una condición local de la UI');
   });
+
+  it('prevents duplicate initiative registrations while one is pending', async () => {
+    const repository = TestBed.inject(PIIP_REPOSITORY);
+    let releaseRegistration!: (record: ReturnType<typeof repository.portfolioRecords>[number]) => void;
+    const pendingRegistration = new Promise<ReturnType<typeof repository.portfolioRecords>[number]>((resolve) => {
+      releaseRegistration = resolve;
+    });
+    const registerInitiative = vi.spyOn(repository, 'registerInitiative').mockReturnValue(pendingRegistration);
+    const fixture = TestBed.createComponent(InitiativeFormComponent);
+
+    const first = fixture.componentInstance.registerInitiative();
+    const duplicate = fixture.componentInstance.registerInitiative();
+
+    expect(registerInitiative).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.submitting()).toBe(true);
+    releaseRegistration(repository.portfolioRecords()[0]);
+    await Promise.all([first, duplicate]);
+    expect(fixture.componentInstance.submitting()).toBe(false);
+  });
 });

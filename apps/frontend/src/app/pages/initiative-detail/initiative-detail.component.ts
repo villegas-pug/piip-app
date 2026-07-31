@@ -48,6 +48,7 @@ export class InitiativeDetailComponent {
   }
 
   async approve(): Promise<void> {
+    if (this.submitting()) return;
     this.submitting.set(true);
     try {
       await Promise.resolve(this.repository.approveInitiative({

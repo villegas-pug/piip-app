@@ -76,6 +76,7 @@ export class InitiativeFormComponent {
   }
 
   async registerInitiative(): Promise<void> {
+    if (this.submitting()) return;
     const value = this.form.getRawValue();
     this.submitting.set(true);
     try {

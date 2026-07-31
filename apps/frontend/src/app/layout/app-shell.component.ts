@@ -7,6 +7,7 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import { filter } from 'rxjs';
 import { PIIP_REPOSITORY } from '../core/piip-repository.token';
 import { PiipAuthService } from '../core/piip-auth.service';
+import { PiipActivityService } from '../core/piip-activity.service';
 
 interface NavigationItem {
   label: string;
@@ -26,9 +27,11 @@ export class AppShellComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly snackBar = inject(MatSnackBar);
+  readonly activity = inject(PiipActivityService);
   readonly auth = inject(PiipAuthService);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly currentUrl = signal(this.router.url);
+  readonly notificationPending = signal(false);
   readonly hasUnreadNotifications = computed(() => this.repository.notifications().some((item) => !item.read));
 
   readonly navigation: NavigationItem[] = [
@@ -63,10 +66,19 @@ export class AppShellComponent {
   }
 
   async showNotifications(): Promise<void> {
+    if (this.notificationPending()) return;
     const unread = this.repository.notifications().filter((item) => !item.read);
     const latest = unread[0] ?? this.repository.notifications()[0];
     this.snackBar.open(latest?.message ?? 'No tienes notificaciones pendientes.', 'Cerrar', { duration: 4200 });
-    if (latest && !latest.read) await Promise.resolve(this.repository.markNotificationRead(latest.id));
+    if (!latest || latest.read) return;
+    this.notificationPending.set(true);
+    try {
+      await Promise.resolve(this.repository.markNotificationRead(latest.id));
+    } catch (error) {
+      this.snackBar.open(error instanceof Error ? error.message : 'No fue posible actualizar la notificación.', 'Cerrar', { duration: 3800 });
+    } finally {
+      this.notificationPending.set(false);
+    }
   }
 
   toggleRole(): void {
@@ -79,8 +91,12 @@ export class AppShellComponent {
 
   async selectExecutingUnit(event: Event): Promise<void> {
     const executingUnitId = Number((event.target as HTMLSelectElement).value);
+    if (this.activity.isBlocking() || executingUnitId === this.repository.selectedExecutingUnitId()) return;
     try {
-      await Promise.resolve(this.repository.selectExecutingUnit(executingUnitId));
+      await this.activity.runBlocking(
+        'Actualizando información de la Unidad Ejecutora...',
+        () => Promise.resolve(this.repository.selectExecutingUnit(executingUnitId)),
+      );
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible cambiar de Unidad Ejecutora.', 'Cerrar', { duration: 3800 });
     }
@@ -92,7 +108,10 @@ export class AppShellComponent {
 
   async retryConnection(): Promise<void> {
     this.repository.clearError();
-    await Promise.resolve(this.repository.initialize());
+    await this.activity.runBlocking(
+      'Reconectando con PIIP...',
+      () => Promise.resolve(this.repository.initialize()),
+    );
   }
 }
 

@@ -101,16 +101,16 @@
     </div>
 
     @if (decisionOpen() && repository.role() === 'Administrador PIIP' && detail.initiative.status === 'Presentado') {
-      <div class="review-backdrop" (click)="decisionOpen.set(false)">
-        <section class="review-dialog approval-dialog" role="dialog" aria-modal="true" aria-labelledby="approval-title" (click)="$event.stopPropagation()">
-          <header><span><mat-icon>verified</mat-icon></span><div><p>REGISTRAR DECISIÓN</p><h2 id="approval-title">Aprobar iniciativa</h2></div><button class="icon-action" type="button" aria-label="Cerrar" (click)="decisionOpen.set(false)"><mat-icon>close</mat-icon></button></header>
+      <div class="review-backdrop" (click)="submitting() ? null : decisionOpen.set(false)">
+        <section class="review-dialog approval-dialog" role="dialog" aria-modal="true" aria-labelledby="approval-title" [attr.aria-busy]="submitting()" (click)="$event.stopPropagation()">
+          <header><span><mat-icon>verified</mat-icon></span><div><p>REGISTRAR DECISIÓN</p><h2 id="approval-title">Aprobar iniciativa</h2></div><button class="icon-action" type="button" aria-label="Cerrar" [disabled]="submitting()" (click)="decisionOpen.set(false)"><mat-icon>close</mat-icon></button></header>
           <div class="transition"><span>Presentado</span><mat-icon>arrow_forward</mat-icon><strong>Iniciativa aprobada</strong></div>
           @if (missingApprovalDocuments().length) {
             <div class="nonblocking-warning"><mat-icon>warning_amber</mat-icon><div><strong>Documentación pendiente</strong><p>Faltan {{ missingApprovalDocuments().length }} documento(s). El Excel no establece su obligatoriedad como condición automática, por lo que puedes continuar.</p></div></div>
           }
           <div class="review-summary"><p><span>Código</span><strong>{{ detail.initiative.code }}</strong></p><p><span>Nombre</span><strong>{{ detail.initiative.name }}</strong></p></div>
           <form [formGroup]="decisionForm" class="approval-form"><label class="field"><span>Observación para auditoría</span><textarea formControlName="observation" maxlength="600" placeholder="Comentario opcional sobre la aprobación"></textarea><small>Esta observación no modifica el campo Nota del Excel.</small></label></form>
-          <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="decisionOpen.set(false)">Cancelar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="approve()"><mat-icon>verified</mat-icon>{{ submitting() ? 'Registrando...' : 'Confirmar aprobación' }}</button></footer>
+          <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="decisionOpen.set(false)">Cancelar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="approve()"><mat-icon [class.button-spinner]="submitting()">{{ submitting() ? 'progress_activity' : 'verified' }}</mat-icon>{{ submitting() ? 'Registrando...' : 'Confirmar aprobación' }}</button></footer>
         </section>
       </div>
     }

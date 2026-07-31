@@ -95,6 +95,7 @@ export class PreexistingProjectFormComponent {
   }
 
   async registerProject(): Promise<void> {
+    if (this.submitting()) return;
     this.submitting.set(true);
     try {
       const record = await Promise.resolve(this.repository.registerPreexistingProject(this.buildRegistrationInput()));

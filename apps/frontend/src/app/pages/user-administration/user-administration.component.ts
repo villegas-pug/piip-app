@@ -40,6 +40,8 @@ export class UserAdministrationComponent {
   readonly loading = signal(true);
   readonly error = signal('');
   readonly assignmentOpen = signal(false);
+  readonly assigning = signal(false);
+  readonly suspendingScopeId = signal<number | null>(null);
   readonly assignmentForm = this.formBuilder.nonNullable.group({
     userSubject: ['', Validators.required], role: ['CONSULTA_EXTERNA' as 'ADMINISTRADOR_PIIP' | 'CONSULTA_EXTERNA', Validators.required],
     institutionId: [0, Validators.min(1)], executingUnitId: [0],
@@ -48,16 +50,22 @@ export class UserAdministrationComponent {
   constructor() { this.load(); }
 
   suspend(scope: UserScope): void {
+    if (this.suspendingScopeId() !== null) return;
+    this.suspendingScopeId.set(scope.id);
     this.http.delete(`${this.apiUrl}/admin/role-assignments/${scope.id}`, { params: { version: scope.version } })
+      .pipe(finalize(() => this.suspendingScopeId.set(null)))
       .subscribe({ next: () => { this.snackBar.open('Asignación suspendida.', 'Cerrar', { duration: 2600 }); this.load(); },
         error: () => this.snackBar.open('No se pudo suspender la asignación.', 'Cerrar', { duration: 3200 }) });
   }
 
   assign(): void {
+    if (this.assigning()) return;
     this.assignmentForm.markAllAsTouched();
     if (this.assignmentForm.invalid) return;
     const value = this.assignmentForm.getRawValue();
+    this.assigning.set(true);
     this.http.post(`${this.apiUrl}/admin/role-assignments`, { ...value, executingUnitId: value.executingUnitId || null })
+      .pipe(finalize(() => this.assigning.set(false)))
       .subscribe({ next: () => { this.assignmentOpen.set(false); this.snackBar.open('Rol asignado.', 'Cerrar', { duration: 2600 }); this.load(); },
         error: () => this.snackBar.open('No se pudo crear la asignación.', 'Cerrar', { duration: 3200 }) });
   }

@@ -31,10 +31,10 @@
       <h1>{{ pageTitle() }}</h1>
       <div class="profile-actions">
         @if (repository.executingUnits().length > 1) {
-          <label class="executing-unit-selector"><span>Unidad Ejecutora</span><select [value]="repository.selectedExecutingUnitId()" (change)="selectExecutingUnit($event)">@for (unit of repository.executingUnits(); track unit.id) {<option [value]="unit.id">{{ unit.code }} · {{ unit.name }}</option>}</select></label>
+          <label class="executing-unit-selector"><span>Unidad Ejecutora</span><select [value]="repository.selectedExecutingUnitId()" [disabled]="activity.isBlocking()" [attr.aria-busy]="activity.isBlocking()" (change)="selectExecutingUnit($event)">@for (unit of repository.executingUnits(); track unit.id) {<option [value]="unit.id">{{ unit.code }} · {{ unit.name }}</option>}</select></label>
         }
-        <button class="notification-button" type="button" aria-label="Abrir notificaciones" (click)="showNotifications()">
-          <mat-icon>notifications_none</mat-icon>@if (hasUnreadNotifications()) {<span></span>}
+        <button class="notification-button" type="button" aria-label="Abrir notificaciones" [disabled]="notificationPending()" [attr.aria-busy]="notificationPending()" (click)="showNotifications()">
+          <mat-icon [class.button-spinner]="notificationPending()">{{ notificationPending() ? 'progress_activity' : 'notifications_none' }}</mat-icon>@if (hasUnreadNotifications()) {<span></span>}
         </button>
         <i class="divider"></i>
         <button class="profile-button" type="button" [matMenuTriggerFor]="profileMenu">
@@ -63,7 +63,7 @@
     </header>
     <main>
       @if (auth.configurationError(); as error) {<div class="global-api-error" role="alert"><mat-icon>vpn_key_off</mat-icon><span>{{ error }}</span></div>}
-      @if (repository.lastError(); as error) {<div class="global-api-error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ error }}</span><button type="button" [disabled]="repository.loading()" (click)="retryConnection()">{{ repository.loading() ? 'Conectando...' : 'Reintentar' }}</button><button type="button" (click)="repository.clearError()">Cerrar</button></div>}
+      @if (repository.lastError(); as error) {<div class="global-api-error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ error }}</span><button type="button" [disabled]="repository.loading() || activity.isBlocking()" (click)="retryConnection()">{{ repository.loading() || activity.isBlocking() ? 'Conectando...' : 'Reintentar' }}</button><button type="button" [disabled]="activity.isBlocking()" (click)="repository.clearError()">Cerrar</button></div>}
       <router-outlet />
     </main>
   </div>
