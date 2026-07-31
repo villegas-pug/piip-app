@@ -96,14 +96,26 @@ export class DocumentsComponent {
     this.uploadFile.set((event.target as HTMLInputElement).files?.[0] ?? null);
   }
 
+  toggleUploadPanel(): void {
+    if (this.uploadOpen()) {
+      this.closeUploadPanel();
+      return;
+    }
+    this.uploadOpen.set(true);
+  }
+
+  closeUploadPanel(): void {
+    this.uploadOpen.set(false);
+    this.uploadFile.set(null);
+  }
+
   async upload(): Promise<void> {
     const file = this.uploadFile();
     if (!file || this.operationPending()) return;
     this.pendingOperation.set({ kind: 'upload', key: this.uploadType() });
     try {
       await Promise.resolve(this.repository.uploadDocument(this.code(), this.uploadType(), file));
-      this.uploadOpen.set(false);
-      this.uploadFile.set(null);
+      this.closeUploadPanel();
       this.snackBar.open('Documento cargado correctamente.', 'Cerrar', { duration: 3000 });
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible cargar el documento.', 'Cerrar', { duration: 4000 });

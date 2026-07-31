@@ -1,9 +1,31 @@
 <section class="page documents-page">
   @if (dossier(); as dossier) {
     <nav class="breadcrumbs" aria-label="Ruta de navegación"><a routerLink="/documentos">Documentos</a><mat-icon>chevron_right</mat-icon><a [routerLink]="moduleRoute()">{{ moduleLabel() }}</a><mat-icon>chevron_right</mat-icon><span>{{ dossier.code }}</span></nav>
-    <div class="page-heading"><div><h2>Documentos del expediente</h2><p>{{ dossier.code }} · {{ dossier.name }}</p></div>@if (repository.role() === 'Administrador PIIP') {<button class="primary-button gold" type="button" [disabled]="operationPending()" (click)="uploadOpen.set(!uploadOpen())"><mat-icon>add</mat-icon>Cargar documento</button>}</div>
+    <div class="page-heading"><div><h2>Documentos del expediente</h2><p>{{ dossier.code }} · {{ dossier.name }}</p></div>@if (repository.role() === 'Administrador PIIP') {<button class="primary-button gold" type="button" [disabled]="operationPending()" (click)="toggleUploadPanel()"><mat-icon>add</mat-icon>Cargar documento</button>}</div>
 
-    @if (uploadOpen()) {<div class="panel document-upload-panel" [attr.aria-busy]="isPending('upload')"><label><span>Tipo documental</span><select [value]="uploadType()" [disabled]="operationPending()" (change)="selectUploadType($event)">@for (item of documentTypes; track item.type) {<option [value]="item.type">{{ item.label }}</option>}</select></label><label class="file-picker"><input type="file" accept=".pdf,.docx,.xlsx" [disabled]="operationPending()" (change)="selectUploadFile($event)" /><mat-icon>upload_file</mat-icon>{{ uploadFile()?.name ?? 'Seleccionar archivo' }}</label><button class="secondary-button" type="button" [disabled]="operationPending()" (click)="uploadOpen.set(false)">Cancelar</button><button class="primary-button" type="button" [disabled]="!uploadFile() || operationPending()" (click)="upload()">@if (isPending('upload')) {<mat-icon class="button-spinner">progress_activity</mat-icon>Cargando...} @else {Cargar}</button></div>}
+    @if (uploadOpen()) {
+      <div class="panel document-upload-panel" [attr.aria-busy]="isPending('upload')">
+        <label class="document-type-field">
+          <span>Tipo documental</span>
+          <select [value]="uploadType()" [disabled]="operationPending()" (change)="selectUploadType($event)">
+            @for (item of documentTypes; track item.type) {<option [value]="item.type">{{ item.label }}</option>}
+          </select>
+        </label>
+        <label class="file-picker" [class.file-selected]="uploadFile()" [class.file-disabled]="operationPending()" [attr.title]="uploadFile()?.name ?? null">
+          <input class="file-picker-input" type="file" accept=".pdf,.docx,.xlsx" [disabled]="operationPending()" aria-describedby="document-upload-formats" (change)="selectUploadFile($event)" />
+          <mat-icon aria-hidden="true">{{ uploadFile() ? 'check_circle' : 'upload_file' }}</mat-icon>
+          <span class="file-picker-copy">
+            <strong>{{ uploadFile()?.name ?? 'Seleccionar archivo' }}</strong>
+            <small id="document-upload-formats">PDF, DOCX o XLSX</small>
+          </span>
+          <span class="file-picker-action">{{ uploadFile() ? 'Cambiar archivo' : 'Examinar' }}</span>
+        </label>
+        <div class="document-upload-actions">
+          <button class="secondary-button" type="button" [disabled]="operationPending()" (click)="closeUploadPanel()">Cancelar</button>
+          <button class="primary-button" type="button" [disabled]="!uploadFile() || operationPending()" (click)="upload()">@if (isPending('upload')) {<mat-icon class="button-spinner">progress_activity</mat-icon>Cargando...} @else {Cargar}</button>
+        </div>
+      </div>
+    }
 
     @if (project(); as project) {
       @if (project.originMode === 'DERIVED_FROM_INITIATIVE') {

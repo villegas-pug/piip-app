@@ -30,6 +30,91 @@ describe('DocumentsComponent operations', () => {
     overlayContainer.getContainerElement().innerHTML = '';
   });
 
+  it('renders one compact and keyboard-accessible file selector', () => {
+    const fixture = TestBed.createComponent(DocumentsComponent);
+    fixture.componentInstance.uploadOpen.set(true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+
+    const picker = host.querySelector<HTMLElement>('.file-picker');
+    const input = host.querySelector<HTMLInputElement>('.file-picker-input');
+    expect(host.querySelectorAll('input[type="file"]')).toHaveLength(1);
+    expect(input?.accept).toBe('.pdf,.docx,.xlsx');
+    expect(input?.tabIndex).toBe(0);
+    expect(input?.getAttribute('aria-describedby')).toBe('document-upload-formats');
+    expect(picker?.textContent).toContain('Seleccionar archivo');
+    expect(picker?.textContent).toContain('PDF, DOCX o XLSX');
+    expect(picker?.textContent).toContain('Examinar');
+  });
+
+  it('shows the selected filename, enables upload and clears it when cancelled', () => {
+    const fixture = TestBed.createComponent(DocumentsComponent);
+    fixture.componentInstance.uploadOpen.set(true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const input = host.querySelector<HTMLInputElement>('.file-picker-input')!;
+    const selectedFile = new File(['documento'], 'informe-tecnico-con-nombre-extenso.pdf', { type: 'application/pdf' });
+    Object.defineProperty(input, 'files', { value: [selectedFile] });
+    input.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    const picker = host.querySelector<HTMLElement>('.file-picker');
+    const uploadButton = host.querySelector<HTMLButtonElement>('.document-upload-actions .primary-button');
+    expect(picker?.classList.contains('file-selected')).toBe(true);
+    expect(picker?.title).toBe(selectedFile.name);
+    expect(picker?.textContent).toContain(selectedFile.name);
+    expect(picker?.textContent).toContain('Cambiar archivo');
+    expect(uploadButton?.disabled).toBe(false);
+
+    host.querySelector<HTMLButtonElement>('.document-upload-actions .secondary-button')?.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.uploadOpen()).toBe(false);
+    expect(fixture.componentInstance.uploadFile()).toBeNull();
+    expect(host.querySelector('.document-upload-panel')).toBeNull();
+  });
+
+  it('disables the picker and exposes its busy state during upload', () => {
+    const fixture = TestBed.createComponent(DocumentsComponent);
+    fixture.componentInstance.uploadOpen.set(true);
+    fixture.componentInstance.uploadFile.set(new File(['documento'], 'ficha.pdf', { type: 'application/pdf' }));
+    fixture.componentInstance.pendingOperation.set({ kind: 'upload', key: fixture.componentInstance.uploadType() });
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('.document-upload-panel')?.getAttribute('aria-busy')).toBe('true');
+    expect(host.querySelector('.file-picker')?.classList.contains('file-disabled')).toBe(true);
+    expect(host.querySelector<HTMLInputElement>('.file-picker-input')?.disabled).toBe(true);
+    expect(host.querySelector<HTMLButtonElement>('.document-upload-actions .primary-button')?.textContent).toContain('Cargando...');
+  });
+
+  it('uploads once, closes on success and restores the state after an error', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    let releaseUpload!: () => void;
+    const pendingUpload = new Promise<void>((resolve) => { releaseUpload = resolve; });
+    const uploadDocument = vi.spyOn(repository, 'uploadDocument').mockImplementationOnce(() => pendingUpload as unknown as void);
+    const fixture = TestBed.createComponent(DocumentsComponent);
+    const selectedFile = new File(['documento'], 'ficha.pdf', { type: 'application/pdf' });
+    fixture.componentInstance.uploadOpen.set(true);
+    fixture.componentInstance.uploadFile.set(selectedFile);
+
+    const firstUpload = fixture.componentInstance.upload();
+    const duplicateUpload = fixture.componentInstance.upload();
+    expect(uploadDocument).toHaveBeenCalledTimes(1);
+    releaseUpload();
+    await Promise.all([firstUpload, duplicateUpload]);
+    expect(fixture.componentInstance.uploadOpen()).toBe(false);
+    expect(fixture.componentInstance.uploadFile()).toBeNull();
+    expect(fixture.componentInstance.operationPending()).toBe(false);
+
+    uploadDocument.mockImplementationOnce(() => Promise.reject(new Error('Carga rechazada')) as unknown as void);
+    fixture.componentInstance.uploadOpen.set(true);
+    fixture.componentInstance.uploadFile.set(selectedFile);
+    await fixture.componentInstance.upload();
+    expect(fixture.componentInstance.uploadOpen()).toBe(true);
+    expect(fixture.componentInstance.uploadFile()).toBe(selectedFile);
+    expect(fixture.componentInstance.operationPending()).toBe(false);
+  });
+
   it('renders one accessible gear per actionable document without direct action buttons', () => {
     const fixture = TestBed.createComponent(DocumentsComponent);
     fixture.detectChanges();
