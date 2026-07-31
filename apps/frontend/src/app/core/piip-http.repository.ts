@@ -7,6 +7,7 @@ import {
   InitiativeRecord, NotificationItem, OrganizationalUnit, PiipPortfolioRecord, PiipRecordType,
   PreexistingProjectInput, ProjectRecord, UserRole, WorkItem,
 } from './piip.models';
+import { EventResponse } from '../api/generated';
 import { PiipRepository } from './piip.repository';
 import { resolveApiUrl as runtimeApiUrl } from './piip-runtime-config';
 import {
@@ -76,14 +77,6 @@ interface ApiWorkTask {
   dueDate: string | null;
   alert: WorkItem['alert'];
   version: number;
-}
-
-interface ApiAuditEvent {
-  event: string;
-  entityCode: string;
-  detail: string;
-  actor: string;
-  occurredAt: string;
 }
 
 interface ApiProblem {
@@ -428,16 +421,18 @@ export class PiipHttpRepository extends PiipRepository {
 
   private async loadAudit(): Promise<void> {
     const [items, accesses] = await Promise.all([
-      this.request(this.http.get<ApiAuditEvent[]>(`${this.apiUrl}/audit/events`)),
+      this.request(this.http.get<EventResponse[]>(`${this.apiUrl}/audit/events`)),
       this.request(this.http.get<AuditAccess[]>(`${this.apiUrl}/audit/accesses`)),
     ]);
     this.auditEvents.set(items.map((item) => ({
       recordCode: item.entityCode,
-      timestamp: formatDate(item.occurredAt),
-      event: item.event,
-      user: item.actor,
-      email: '',
-      observation: item.detail,
+      timestamp: item.occurredAt ? formatDate(item.occurredAt) : 'Fecha no registrada',
+      event: item.event ?? 'EVENTO_REGISTRADO',
+      user: item.actorName || 'Usuario no identificado',
+      email: item.actorEmail ?? '',
+      observation: item.detail ?? '',
+      actorSubject: item.actor,
+      rawDetail: item.detail ?? '',
       icon: 'history',
     })));
     this.auditAccesses.set(accesses);

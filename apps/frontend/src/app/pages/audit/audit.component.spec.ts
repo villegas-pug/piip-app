@@ -1,14 +1,20 @@
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
 import { PiipMockRepository } from '../../core/piip-mock.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
+import { AuditEventDetailDialogComponent } from './audit-event-detail-dialog.component';
 import { AuditComponent } from './audit.component';
+import { presentAuditEvent } from './audit-event.presenter';
 
 describe('AuditComponent', () => {
+  const open = vi.fn();
+
   beforeEach(async () => {
+    open.mockReset();
     await TestBed.configureTestingModule({
       imports: [AuditComponent],
-      providers: [provideRouter([]), PiipMockRepository, { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository }],
+      providers: [provideRouter([]), PiipMockRepository, { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository }, { provide: MatDialog, useValue: { open } }],
     }).compileComponents();
   });
 
@@ -24,5 +30,16 @@ describe('AuditComponent', () => {
     expect(fixture.componentInstance.recordCodes()).not.toContain('2');
     expect(fixture.componentInstance.recordCodes()).toEqual(expect.arrayContaining(['I-024-2026', 'P-005-2026']));
     expect(fixture.nativeElement.querySelector('select[formControlName="record"] option').textContent).toBe('Todos');
+  });
+
+  it('uses readable users for the filter and opens the technical detail dialog', () => {
+    const fixture = TestBed.createComponent(AuditComponent);
+    fixture.detectChanges();
+    const event = presentAuditEvent(fixture.componentInstance.filteredEvents()[0]);
+
+    expect(fixture.componentInstance.userOptions()).toContain('Administrador PIIP');
+    fixture.componentInstance.showDetail(event);
+
+    expect(open).toHaveBeenCalledWith(AuditEventDetailDialogComponent, expect.objectContaining({ data: event, autoFocus: 'first-heading' }));
   });
 });

@@ -24,6 +24,7 @@ public class AuditEventEntity {
     public String getEventType() { return eventType; }
     public String getEntityCode() { return entityCode; }
     public String getDetailJson() { return detailJson; }
+    public UserEntity getUser() { return user; }
     public String getActorSubject() { return actorSubject; }
     public Instant getOccurredAt() { return occurredAt; }
 }

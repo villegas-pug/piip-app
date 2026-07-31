@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute } from '@angular/router';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { AuditEvent } from '../../core/piip.models';
+import { AuditEventDetailDialogComponent } from './audit-event-detail-dialog.component';
+import { PresentedAuditEvent, presentAuditEvent } from './audit-event.presenter';
 
 @Component({
   selector: 'app-audit',
@@ -16,13 +18,14 @@ import { AuditEvent } from '../../core/piip.models';
 })
 export class AuditComponent {
   private readonly formBuilder = inject(FormBuilder);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
   private readonly route = inject(ActivatedRoute);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly initialRecord = this.route.snapshot.queryParamMap.get('record') ?? '';
   readonly filters = this.formBuilder.nonNullable.group({ record: this.initialRecord, eventType: 'Todos', user: 'Todos', from: '', to: '' });
   private readonly filterValue = toSignal(this.filters.valueChanges, { initialValue: this.filters.getRawValue() });
   readonly recordCodes = computed(() => [...new Set(this.repository.portfolioRecords().map((record) => record.code))]);
+  readonly userOptions = computed(() => [...new Set(this.repository.auditEvents().map((event) => event.user).filter(Boolean))].sort());
   readonly filteredEvents = computed(() => {
     const filters = this.filterValue();
     return this.repository.auditEvents().filter((event) =>
@@ -33,13 +36,18 @@ export class AuditComponent {
   });
   readonly deniedAccesses = computed(() => this.repository.auditAccesses().filter((access) => access.status === 401 || access.status === 403).length);
   readonly failedAccesses = computed(() => this.repository.auditAccesses().filter((access) => access.status >= 500).length);
+  readonly presentedEvents = computed(() => this.filteredEvents().map(presentAuditEvent));
 
   resetFilters(): void {
     this.filters.reset({ record: this.initialRecord, eventType: 'Todos', user: 'Todos', from: '', to: '' });
   }
 
-  showDetail(event: AuditEvent): void {
-    this.snackBar.open(event.observation || event.event, 'Cerrar', { duration: 5000 });
+  showDetail(event: PresentedAuditEvent): void {
+    this.dialog.open(AuditEventDetailDialogComponent, {
+      data: event,
+      maxWidth: 'calc(100vw - 32px)',
+      autoFocus: 'first-heading',
+    });
   }
 
   private eventCategory(event: string, hasDocument: boolean): 'Creación' | 'Documento' | 'Transición' {

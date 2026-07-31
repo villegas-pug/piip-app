@@ -5,7 +5,7 @@
     <form class="audit-filters" [formGroup]="filters">
       <label class="field"><span>Expediente</span><select formControlName="record"><option value="">Todos</option>@for (code of recordCodes(); track code) {<option [value]="code">{{ code }}</option>}</select></label>
       <label class="field"><span>Tipo de evento</span><select formControlName="eventType"><option>Todos</option><option>Creación</option><option>Documento</option><option>Transición</option></select></label>
-      <label class="field"><span>Usuario</span><select formControlName="user"><option>Todos</option><option>Administrador PIIP</option></select></label>
+      <label class="field"><span>Usuario</span><select formControlName="user"><option>Todos</option>@for (user of userOptions(); track user) {<option [value]="user">{{ user }}</option>}</select></label>
       <label class="field"><span>Fecha desde</span><input type="date" formControlName="from" /></label>
       <label class="field"><span>Fecha hasta</span><input type="date" formControlName="to" /></label>
       <button class="secondary-button" type="button" (click)="resetFilters()">Limpiar filtros</button>
@@ -16,19 +16,19 @@
         <h2>Historial de eventos de expedientes</h2>
         <div class="audit-head"><span></span><span>Fecha y hora</span><span>Evento</span><span>Usuario</span><span>Observación</span><span>Documento</span><span>Acción</span></div>
         <div class="timeline">
-          @for (event of filteredEvents(); track event.timestamp + event.event) {
+          @for (event of presentedEvents(); track event.source.timestamp + event.source.event) {
             <div class="audit-row">
-              <span class="event-icon"><mat-icon>{{ event.icon }}</mat-icon></span>
-              <span class="timestamp">{{ event.timestamp }}</span>
-              <strong>{{ event.event }}</strong>
-              <span>{{ event.user }}<small>{{ event.email }}</small></span>
-              <span>{{ event.observation }}</span>
-              <span>@if (event.documentName) {<span class="document-link"><mat-icon>description</mat-icon>{{ event.documentName }}</span>} @else {—}</span>
+              <span class="event-icon"><mat-icon>{{ event.source.icon }}</mat-icon></span>
+              <span class="timestamp" data-label="Fecha y hora">{{ event.source.timestamp }}</span>
+              <strong class="event-name" data-label="Evento">{{ event.eventLabel }}</strong>
+              <span class="audit-user" data-label="Usuario">{{ event.source.user }}@if (event.source.email) {<small>{{ event.source.email }}</small>}</span>
+              <span class="audit-observation" data-label="Observación">{{ event.observation }}</span>
+              <span class="audit-document" data-label="Documento">@if (event.source.documentName) {<span class="document-link"><mat-icon>description</mat-icon>{{ event.source.documentName }}</span>} @else {—}</span>
               <button class="secondary-button" type="button" (click)="showDetail(event)">Ver detalle <mat-icon>chevron_right</mat-icon></button>
             </div>
           } @empty {<div class="empty-state">No existen eventos para los filtros seleccionados.</div>}
         </div>
-        <footer><span>Mostrando {{ filteredEvents().length }} de {{ filteredEvents().length }} eventos</span><div><button disabled>‹</button><button class="active">1</button><button disabled>›</button></div></footer>
+        <footer><span>Mostrando {{ presentedEvents().length }} de {{ presentedEvents().length }} eventos</span><div><button disabled>‹</button><button class="active">1</button><button disabled>›</button></div></footer>
       </article>
 
       <aside class="panel integrity-panel">

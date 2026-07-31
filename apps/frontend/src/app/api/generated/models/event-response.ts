@@ -3,6 +3,8 @@
 
 export interface EventResponse {
   actor?: string;
+  actorEmail?: string;
+  actorName?: string;
   detail?: string;
   entityCode?: string;
   event?: string;

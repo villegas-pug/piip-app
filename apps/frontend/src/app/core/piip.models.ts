@@ -193,6 +193,8 @@ export interface AuditEvent {
   user: string;
   email: string;
   observation: string;
+  actorSubject?: string;
+  rawDetail?: string;
   documentName?: string;
   icon: string;
 }
