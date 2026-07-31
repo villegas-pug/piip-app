@@ -21,11 +21,11 @@
       </form>
 
       <div class="table-scroll"><table><thead><tr><th>Código</th><th>Proyecto</th><th>Iniciativa origen</th><th>Unidad</th><th>Responsable</th><th>Estado</th><th>Componente digital</th><th>Acción</th></tr></thead><tbody>
-        @for (project of filteredProjects(); track project.code) {
+        @for (project of pagedProjects(); track project.code) {
           <tr><td><strong class="code">{{ project.code }}</strong></td><td class="project-name">{{ project.name }}</td><td><span class="origin-value">{{ project.originCode }} @if (project.originMode === 'PREEXISTING') {<small>Preexistente</small>}</span></td><td>{{ project.unit }}</td><td>{{ project.responsible }}</td><td><span class="status" [class]="statusClass(project.status)">{{ project.status }}</span></td><td>{{ project.digitalComponent }}</td><td><span class="row-actions"><a class="secondary-button" [routerLink]="['/proyectos', project.code, 'documentos']">Abrir <mat-icon>chevron_right</mat-icon></a><button class="icon-action" type="button" [matMenuTriggerFor]="projectMenu" [attr.aria-label]="'Acciones de ' + project.code"><mat-icon>more_vert</mat-icon></button><mat-menu #projectMenu="matMenu"><a mat-menu-item [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon>description</mat-icon>Ver documentos</a>@if (project.originMode === 'DERIVED_FROM_INITIATIVE') {<a mat-menu-item [routerLink]="['/iniciativas', project.originCode]"><mat-icon>account_tree</mat-icon>Ver iniciativa origen</a>}@if (repository.role() === 'Administrador PIIP') {<a mat-menu-item routerLink="/auditoria" [queryParams]="{ record: project.code }"><mat-icon>history</mat-icon>Ver auditoría</a>}</mat-menu></span></td></tr>
         } @empty {<tr><td colspan="8" class="empty-state">No existen proyectos que coincidan con los filtros.</td></tr>}
       </tbody></table></div>
-      <footer class="pagination"><span>Mostrando {{ filteredProjects().length }} de {{ repository.projects().length }} proyectos</span><span>Resultados del ámbito activo</span><div><button disabled>‹</button><button class="active">1</button><button disabled>›</button></div></footer>
+      <app-piip-pagination [totalItems]="filteredProjects().length" [pageIndex]="currentPage()" itemLabel="proyectos" (pageChange)="pageIndex.set($event)" />
     </article>
 
     <aside class="panel project-summary">

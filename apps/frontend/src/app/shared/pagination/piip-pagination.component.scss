@@ -1,0 +1,17 @@
+:host { display: block; }
+
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 58px; padding-top: 14px; color: var(--piip-muted); font-size: 13px; }
+.pagination-range { min-width: 0; }
+.pagination-controls { display: flex; align-items: center; gap: 6px; }
+.pagination button { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid var(--piip-border); border-radius: 4px; color: var(--piip-green-900); background: #fff; }
+.pagination button:not(:disabled) { cursor: pointer; }
+.pagination button:not(:disabled):hover { border-color: var(--piip-green-700); background: #f3f8f4; }
+.pagination button:focus-visible { outline: 2px solid var(--piip-gold); outline-offset: 2px; }
+.pagination button:disabled { cursor: not-allowed; opacity: .48; }
+.pagination button mat-icon { width: 20px; height: 20px; font-size: 20px; }
+.pagination-current { min-width: 106px; color: var(--piip-green-900); font-weight: 700; text-align: center; white-space: nowrap; }
+
+@media (max-width: 560px) {
+  .pagination { align-items: flex-start; flex-direction: column; }
+  .pagination-controls { width: 100%; justify-content: space-between; }
+}

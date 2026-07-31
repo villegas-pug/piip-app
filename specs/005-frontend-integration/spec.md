@@ -17,3 +17,4 @@ Sustituir el repositorio mock por un adaptador HTTP sin cambiar las rutas ni la 
 - En el expediente documental, cada fila con operaciones permitidas presenta un único engranaje accesible; su menú muestra solo descargar, publicar o retirar publicación y marcar como No aplica según el estado del documento y el rol Administrador PIIP.
 - Mientras se procesa una operación documental, el menú se cierra, todos los engranajes quedan deshabilitados y el engranaje de la fila activa muestra una animación hasta finalizar.
 - El panel de carga documental presenta un único selector compacto y accesible, informa los formatos admitidos y el archivo elegido, permite reemplazarlo y descarta la selección al cancelar sin mostrar el control nativo duplicado.
+- Las tablas y listados equivalentes muestran cinco registros por página, conservan sus filtros y ofrecen paginación accesible sin modificar los contratos HTTP.

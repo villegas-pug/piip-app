@@ -42,4 +42,19 @@ describe('AuditComponent', () => {
 
     expect(open).toHaveBeenCalledWith(AuditEventDetailDialogComponent, expect.objectContaining({ data: event, autoFocus: 'first-heading' }));
   });
+
+  it('paginates the same five events used by desktop rows and mobile cards', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const template = repository.auditEvents()[0];
+    repository.auditEvents.set(Array.from({ length: 6 }, (_, index) => ({ ...template, timestamp: `31/07/2026\\n10:0${index}`, event: `EVENTO_${index}` })));
+    const fixture = TestBed.createComponent(AuditComponent);
+    const component = fixture.componentInstance;
+
+    expect(component.pagedEvents()).toHaveLength(5);
+    component.pageIndex.set(1);
+    expect(component.pagedEvents()).toHaveLength(1);
+
+    component.filters.patchValue({ eventType: 'Creación' });
+    expect(component.currentPage()).toBe(0);
+  });
 });

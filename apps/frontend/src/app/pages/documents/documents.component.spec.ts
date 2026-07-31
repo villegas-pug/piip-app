@@ -246,4 +246,25 @@ describe('DocumentsComponent operations', () => {
     await Promise.all([first, duplicate]);
     expect(fixture.componentInstance.operationPending()).toBe(false);
   });
+
+  it('paginates every document stage independently', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const dossier = repository.documentDossiers()[0];
+    repository.documentDossiers.set([{
+      ...dossier,
+      stages: dossier.stages.map((stage) => ({
+        ...stage,
+        records: Array.from({ length: 6 }, (_, index) => ({ ...stage.records[0], name: `${stage.title} ${index + 1}` })),
+      })),
+    }, ...repository.documentDossiers().slice(1)]);
+    const fixture = TestBed.createComponent(DocumentsComponent);
+    const component = fixture.componentInstance;
+    const [firstStage, secondStage] = component.dossier()!.stages;
+
+    expect(component.pagedStageRecords(firstStage)).toHaveLength(5);
+    component.setStagePage(firstStage, 1);
+    expect(component.pagedStageRecords(firstStage)).toHaveLength(1);
+    expect(component.stagePageIndex(secondStage)).toBe(0);
+    expect(component.pagedStageRecords(secondStage)).toHaveLength(5);
+  });
 });

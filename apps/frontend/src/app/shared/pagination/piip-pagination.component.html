@@ -1,0 +1,10 @@
+<nav class="pagination" aria-label="Paginación">
+  <span class="pagination-range" aria-live="polite">{{ rangeLabel() }}</span>
+  <div class="pagination-controls">
+    <button type="button" [disabled]="currentPage() === 0" aria-label="Primera página" (click)="changePage(0)"><mat-icon>first_page</mat-icon></button>
+    <button type="button" [disabled]="currentPage() === 0" aria-label="Página anterior" (click)="changePage(currentPage() - 1)"><mat-icon>chevron_left</mat-icon></button>
+    <span class="pagination-current" aria-current="page">Página {{ currentPage() + 1 }} de {{ totalPages() }}</span>
+    <button type="button" [disabled]="currentPage() >= totalPages() - 1" aria-label="Página siguiente" (click)="changePage(currentPage() + 1)"><mat-icon>chevron_right</mat-icon></button>
+    <button type="button" [disabled]="currentPage() >= totalPages() - 1" aria-label="Última página" (click)="changePage(totalPages() - 1)"><mat-icon>last_page</mat-icon></button>
+  </div>
+</nav>

@@ -50,4 +50,19 @@ describe('ProjectsComponent', () => {
 
     expect(open).not.toHaveBeenCalled();
   });
+
+  it('shows five projects per page and resets when a filter changes', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const template = repository.projects()[0];
+    repository.projects.set(Array.from({ length: 6 }, (_, index) => ({ ...template, code: `P-10${index}-2026`, name: `Proyecto ${index + 1}` })));
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    const component = fixture.componentInstance;
+
+    expect(component.pagedProjects()).toHaveLength(5);
+    component.pageIndex.set(1);
+    expect(component.pagedProjects()).toHaveLength(1);
+
+    component.filters.patchValue({ search: 'P-100-2026' });
+    expect(component.currentPage()).toBe(0);
+  });
 });

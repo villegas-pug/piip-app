@@ -41,6 +41,26 @@ describe('UserAdministrationComponent operations', () => {
     expect(fixture.componentInstance.suspendingScopeId()).toBeNull();
     flushAdministrationLoad(http, apiUrl);
   });
+
+  it('paginates user scopes as identified rows', () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    const users = Array.from({ length: 3 }, (_, index) => ({
+      id: index + 1,
+      subject: `usuario-${index + 1}`,
+      fullName: `Usuario ${index + 1}`,
+      email: `usuario${index + 1}@midagri.gob.pe`,
+      active: true,
+      scopes: [1, 2].map((scope) => ({ id: index * 10 + scope, role: 'CONSULTA_EXTERNA' as const, institution: 'MIDAGRI', executingUnit: `UE-00${scope}`, active: true, version: 1 })),
+    }));
+    http.expectOne(`${apiUrl}/admin/users`).flush(users);
+    http.expectOne(`${apiUrl}/institutions`).flush([]);
+    http.expectOne(`${apiUrl}/executing-units`).flush([]);
+
+    expect(fixture.componentInstance.assignmentRows()).toHaveLength(6);
+    expect(fixture.componentInstance.pagedAssignmentRows()).toHaveLength(5);
+    fixture.componentInstance.pageIndex.set(1);
+    expect(fixture.componentInstance.pagedAssignmentRows()).toEqual([expect.objectContaining({ user: expect.objectContaining({ fullName: 'Usuario 3' }) })]);
+  });
 });
 
 function flushAdministrationLoad(http: HttpTestingController, apiUrl: string): void {

@@ -16,7 +16,7 @@
         <h2>Historial de eventos de expedientes</h2>
         <div class="audit-head"><span></span><span>Fecha y hora</span><span>Evento</span><span>Usuario</span><span>Observación</span><span>Documento</span><span>Acción</span></div>
         <div class="timeline">
-          @for (event of presentedEvents(); track event.source.timestamp + event.source.event) {
+          @for (event of pagedEvents(); track event.source.timestamp + event.source.event) {
             <div class="audit-row">
               <span class="event-icon"><mat-icon>{{ event.source.icon }}</mat-icon></span>
               <span class="timestamp" data-label="Fecha y hora">{{ event.source.timestamp }}</span>
@@ -28,7 +28,7 @@
             </div>
           } @empty {<div class="empty-state">No existen eventos para los filtros seleccionados.</div>}
         </div>
-        <footer><span>Mostrando {{ presentedEvents().length }} de {{ presentedEvents().length }} eventos</span><div><button disabled>‹</button><button class="active">1</button><button disabled>›</button></div></footer>
+        <app-piip-pagination [totalItems]="presentedEvents().length" [pageIndex]="currentPage()" itemLabel="eventos" (pageChange)="pageIndex.set($event)" />
       </article>
 
       <aside class="panel integrity-panel">

@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,6 +10,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { catchError, finalize, of } from 'rxjs';
 import { resolveApiUrl } from '../../core/piip-http.repository';
+import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
+import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 
 interface UserScope {
   id: number; role: 'ADMINISTRADOR_PIIP' | 'CONSULTA_EXTERNA'; institution: string;
@@ -19,12 +21,13 @@ interface UserScope {
 interface UserItem {
   id: number; subject: string; fullName: string; email: string; active: boolean; scopes: UserScope[];
 }
+interface UserAssignmentRow { user: UserItem; scope: UserScope | null; }
 interface InstitutionItem { id: number; code: string; name: string; }
 interface ExecutingUnitItem { id: number; code: string; name: string; institutionId: number; }
 
 @Component({
   selector: 'app-user-administration',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule, MatSelectModule, MatSnackBarModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule, MatSelectModule, MatSnackBarModule, PiipPaginationComponent],
   templateUrl: './user-administration.component.html',
   styleUrl: './user-administration.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,10 +45,16 @@ export class UserAdministrationComponent {
   readonly assignmentOpen = signal(false);
   readonly assigning = signal(false);
   readonly suspendingScopeId = signal<number | null>(null);
+  readonly pageIndex = signal(0);
   readonly assignmentForm = this.formBuilder.nonNullable.group({
     userSubject: ['', Validators.required], role: ['CONSULTA_EXTERNA' as 'ADMINISTRADOR_PIIP' | 'CONSULTA_EXTERNA', Validators.required],
     institutionId: [0, Validators.min(1)], executingUnitId: [0],
   });
+  readonly assignmentRows = computed<UserAssignmentRow[]>(() => this.users().flatMap<UserAssignmentRow>((user) =>
+    user.scopes.length ? user.scopes.map((scope) => ({ user, scope })) : [{ user, scope: null }],
+  ));
+  readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.assignmentRows().length));
+  readonly pagedAssignmentRows = computed(() => paginateItems(this.assignmentRows(), this.currentPage()));
 
   constructor() { this.load(); }
 

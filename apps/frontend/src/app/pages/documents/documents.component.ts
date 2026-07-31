@@ -7,6 +7,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { summarizeDocumentDossier } from '../../core/piip-mock.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { DocumentRecord, DocumentStage, DocumentType, PiipRecordType, PiipStatus } from '../../core/piip.models';
+import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
+import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 
 type DocumentOperationKind = 'upload' | 'download' | 'publication' | 'not-applicable';
 
@@ -17,7 +19,7 @@ interface PendingDocumentOperation {
 
 @Component({
   selector: 'app-documents',
-  imports: [MatIconModule, MatMenuModule, RouterLink],
+  imports: [MatIconModule, MatMenuModule, RouterLink, PiipPaginationComponent],
   templateUrl: './documents.component.html',
   styleUrl: './documents.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,6 +35,7 @@ export class DocumentsComponent {
   readonly uploadType = signal<DocumentType>('PUBLIC_INNOVATION_INITIATIVE_SHEET');
   readonly uploadFile = signal<File | null>(null);
   readonly pendingOperation = signal<PendingDocumentOperation | null>(null);
+  readonly stagePageIndexes = signal<Record<string, number>>({});
   readonly operationPending = computed(() => this.pendingOperation() !== null);
   readonly documentTypes: { type: DocumentType; label: string }[] = [
     { type: 'PUBLIC_INNOVATION_INITIATIVE_SHEET', label: 'Ficha de Iniciativa de Innovación Pública' },
@@ -90,6 +93,18 @@ export class DocumentsComponent {
 
   selectUploadType(event: Event): void {
     this.uploadType.set((event.target as HTMLSelectElement).value as DocumentType);
+  }
+
+  stagePageIndex(stage: DocumentStage): number {
+    return clampPageIndex(this.stagePageIndexes()[stage.title] ?? 0, stage.records.length);
+  }
+
+  pagedStageRecords(stage: DocumentStage): readonly DocumentRecord[] {
+    return paginateItems(stage.records, this.stagePageIndex(stage));
+  }
+
+  setStagePage(stage: DocumentStage, pageIndex: number): void {
+    this.stagePageIndexes.update((current) => ({ ...current, [stage.title]: clampPageIndex(pageIndex, stage.records.length) }));
   }
 
   selectUploadFile(event: Event): void {

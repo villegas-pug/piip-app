@@ -26,7 +26,7 @@
       <table>
         <thead><tr><th>Tipo</th><th>Código</th><th>Expediente</th><th>Unidad</th><th>Estado</th><th>Documentos</th><th>Última actividad</th><th>Acción</th></tr></thead>
         <tbody>
-          @for (dossier of filteredDossiers(); track dossier.recordType + dossier.code) {
+          @for (dossier of pagedDossiers(); track dossier.recordType + dossier.code) {
             <tr>
               <td><span class="record-type" [class.project]="dossier.recordType === 'Proyecto'"><mat-icon>{{ dossier.recordType === 'Iniciativa' ? 'lightbulb' : 'business_center' }}</mat-icon>{{ dossier.recordType }}</span></td>
               <td><strong class="code">{{ dossier.code }}</strong></td>
@@ -44,6 +44,6 @@
       </table>
     </div>
 
-    <footer class="pagination"><span>Mostrando {{ filteredDossiers().length }} de {{ summaries().length }} expedientes</span><div><button disabled aria-label="Página anterior">‹</button><button class="active" aria-current="page">1</button><button disabled aria-label="Página siguiente">›</button></div></footer>
+    <app-piip-pagination [totalItems]="filteredDossiers().length" [pageIndex]="currentPage()" itemLabel="expedientes" (pageChange)="pageIndex.set($event)" />
   </article>
 </section>

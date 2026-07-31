@@ -23,7 +23,7 @@
         <table>
           <thead><tr><th>Código</th><th>Iniciativa</th><th>Fuente u origen</th><th>Responsable</th><th>Unidad</th><th>Estado</th><th>Actualización</th><th>Acción</th></tr></thead>
           <tbody>
-            @for (initiative of filteredInitiatives(); track initiative.code) {
+            @for (initiative of pagedInitiatives(); track initiative.code) {
               <tr>
                 <td><strong class="code">{{ initiative.code }}</strong></td>
                 <td class="initiative-name">{{ initiative.name }}</td>
@@ -60,7 +60,7 @@
         </table>
       </div>
 
-      <footer class="pagination"><span>Mostrar <select aria-label="Filas por página"><option>10</option></select> de {{ filteredInitiatives().length }} resultados</span><div><button disabled>‹</button><button class="active">1</button><button disabled>›</button></div></footer>
+      <app-piip-pagination [totalItems]="filteredInitiatives().length" [pageIndex]="currentPage()" itemLabel="resultados" (pageChange)="pageIndex.set($event)" />
     </article>
 
     <aside class="panel filter-summary">

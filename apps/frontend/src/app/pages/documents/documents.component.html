@@ -40,7 +40,7 @@
             <button class="stage-heading" type="button" (click)="toggleStage(stage.title)" [attr.aria-expanded]="!collapsedStages().has(stage.title)"><mat-icon>{{ collapsedStages().has(stage.title) ? 'keyboard_arrow_right' : 'keyboard_arrow_up' }}</mat-icon><span>{{ stage.title }}</span></button>
             @if (!collapsedStages().has(stage.title)) {
               <div class="document-table document-head"><span>Documento</span><span>Obligatorio</span><span>Archivo</span><span>Versión</span><span>Fecha de carga</span><span>Estado</span><span>Acciones</span></div>
-              @for (document of stage.records; track document.name) {
+              @for (document of pagedStageRecords(stage); track document.name) {
                 <div class="document-table document-row">
                   <strong>{{ document.name }}</strong><span class="required">{{ document.required ? '*' : '—' }}</span><span class="filename">{{ document.filename ?? '—' }}</span><span>{{ document.version ?? '—' }}</span><span>{{ document.uploadedAt ?? '—' }}</span><span><b class="status" [class.pending]="document.state === 'Pendiente'" [class.not-applicable]="document.state === 'No aplica'">{{ document.state }}</b>@if (document.state === 'Cargado') {<small>{{ document.externallyPublished ? 'Publicado' : 'Uso interno' }}</small>}</span>
                   <span class="actions">
@@ -62,6 +62,7 @@
                   </span>
                 </div>
               }
+              <app-piip-pagination [totalItems]="stage.records.length" [pageIndex]="stagePageIndex(stage)" itemLabel="documentos" (pageChange)="setStagePage(stage, $event)" />
             }
           </section>
         }

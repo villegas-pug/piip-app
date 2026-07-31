@@ -23,4 +23,19 @@ describe('DocumentsInboxComponent', () => {
     expect(component.filteredDossiers()).toHaveLength(1);
     expect(component.filteredDossiers()[0].code).toBe('P-005-2026');
   });
+
+  it('paginates filtered dossiers and resets to the first page', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const template = repository.documentDossiers()[0];
+    repository.documentDossiers.set(Array.from({ length: 6 }, (_, index) => ({ ...template, code: `I-20${index}-2026`, name: `Expediente ${index + 1}` })));
+    const fixture = TestBed.createComponent(DocumentsInboxComponent);
+    const component = fixture.componentInstance;
+
+    expect(component.pagedDossiers()).toHaveLength(5);
+    component.pageIndex.set(1);
+    expect(component.pagedDossiers()).toHaveLength(1);
+
+    component.filters.patchValue({ search: 'I-200-2026' });
+    expect(component.currentPage()).toBe(0);
+  });
 });

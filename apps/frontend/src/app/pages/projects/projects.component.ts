@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +8,8 @@ import { Router, RouterLink } from '@angular/router';
 import { PIIP_CATALOGS, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PiipStatus } from '../../core/piip.models';
+import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
+import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 import {
   ProjectRegistrationDialogComponent,
   ProjectRegistrationDialogResult,
@@ -16,13 +18,14 @@ import {
 
 @Component({
   selector: 'app-projects',
-  imports: [ReactiveFormsModule, RouterLink, MatIconModule, MatMenuModule],
+  imports: [ReactiveFormsModule, RouterLink, MatIconModule, MatMenuModule, PiipPaginationComponent],
   templateUrl: './projects.component.html',
   styleUrl: './projects.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectsComponent {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   readonly repository = inject(PIIP_REPOSITORY);
@@ -30,6 +33,7 @@ export class ProjectsComponent {
   readonly units = RESPONSIBLE_UNITS;
   readonly filters = this.formBuilder.nonNullable.group({ search: '', status: 'Todos', unit: 'Todas', digital: 'Todos' });
   private readonly filterValue = toSignal(this.filters.valueChanges, { initialValue: this.filters.getRawValue() });
+  readonly pageIndex = signal(0);
   readonly filteredProjects = computed(() => {
     const value = this.filterValue();
     const search = (value.search ?? '').toLocaleLowerCase().trim();
@@ -40,6 +44,12 @@ export class ProjectsComponent {
       (value.digital === 'Todos' || project.digitalComponent === value.digital),
     );
   });
+  readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.filteredProjects().length));
+  readonly pagedProjects = computed(() => paginateItems(this.filteredProjects(), this.currentPage()));
+
+  constructor() {
+    this.filters.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.pageIndex.set(0));
+  }
 
   resetFilters(): void {
     this.filters.reset({ search: '', status: 'Todos', unit: 'Todas', digital: 'Todos' });

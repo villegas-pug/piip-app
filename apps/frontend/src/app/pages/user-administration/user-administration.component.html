@@ -25,22 +25,22 @@
       <table>
         <thead><tr><th>Usuario</th><th>Rol</th><th>Institución</th><th>Unidad Ejecutora</th><th>Estado</th><th>Acción</th></tr></thead>
         <tbody>
-          @for (user of users(); track user.id) {
-            @if (user.scopes.length === 0) {
-              <tr><td><strong>{{ user.fullName }}</strong><small>{{ user.email }}</small></td><td colspan="4"><span class="unassigned">Sin rol asignado</span></td><td>—</td></tr>
-            }
-            @for (scope of user.scopes; track scope.id; let first = $first) {
+          @for (row of pagedAssignmentRows(); track row.scope?.id ?? row.user.id) {
+            @if (row.scope; as scope) {
               <tr>
-                <td><strong>{{ first ? user.fullName : '' }}</strong><small>{{ first ? user.email : '' }}</small></td>
+                <td><strong>{{ row.user.fullName }}</strong><small>{{ row.user.email }}</small></td>
                 <td>{{ scope.role === 'ADMINISTRADOR_PIIP' ? 'Administrador PIIP' : 'Consulta externa' }}</td>
                 <td>{{ scope.institution }}</td><td>{{ scope.executingUnit }}</td>
                 <td><span class="status">Activo</span></td>
                 <td><button mat-button type="button" [disabled]="suspendingScopeId() !== null" [attr.aria-busy]="suspendingScopeId() === scope.id" (click)="suspend(scope)">@if (suspendingScopeId() === scope.id) {<mat-spinner diameter="18" />Suspendiendo...} @else {Suspender}</button></td>
               </tr>
+            } @else {
+              <tr><td><strong>{{ row.user.fullName }}</strong><small>{{ row.user.email }}</small></td><td colspan="4"><span class="unassigned">Sin rol asignado</span></td><td>—</td></tr>
             }
           }
         </tbody>
       </table>
+      <app-piip-pagination [totalItems]="assignmentRows().length" [pageIndex]="currentPage()" itemLabel="asignaciones" (pageChange)="pageIndex.set($event)" />
     </div>
   }
 </section>
