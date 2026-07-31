@@ -20,7 +20,24 @@
               <div class="document-table document-head"><span>Documento</span><span>Obligatorio</span><span>Archivo</span><span>Versión</span><span>Fecha de carga</span><span>Estado</span><span>Acciones</span></div>
               @for (document of stage.records; track document.name) {
                 <div class="document-table document-row">
-                  <strong>{{ document.name }}</strong><span class="required">{{ document.required ? '*' : '—' }}</span><span class="filename">{{ document.filename ?? '—' }}</span><span>{{ document.version ?? '—' }}</span><span>{{ document.uploadedAt ?? '—' }}</span><span><b class="status" [class.pending]="document.state === 'Pendiente'" [class.not-applicable]="document.state === 'No aplica'">{{ document.state }}</b>@if (document.state === 'Cargado') {<small>{{ document.externallyPublished ? 'Publicado' : 'Uso interno' }}</small>}</span><span class="actions">@if (document.filename) {<button class="secondary-button" type="button" [disabled]="operationPending()" [attr.aria-busy]="isPending('download', document)" (click)="download(document)">@if (isPending('download', document)) {<mat-icon class="button-spinner">progress_activity</mat-icon>Descargando...} @else {Descargar}</button>@if (repository.role() === 'Administrador PIIP') {<button class="icon-action" type="button" [disabled]="operationPending()" [attr.aria-busy]="isPending('publication', document)" [attr.aria-label]="document.externallyPublished ? 'Retirar publicación' : 'Publicar para consulta externa'" (click)="togglePublication(document)"><mat-icon [class.button-spinner]="isPending('publication', document)">{{ isPending('publication', document) ? 'progress_activity' : document.externallyPublished ? 'visibility_off' : 'publish' }}</mat-icon></button>}} @else if (repository.role() === 'Administrador PIIP' && document.state === 'Pendiente') {<button class="text-button" type="button" [disabled]="operationPending()" [attr.aria-busy]="isPending('not-applicable', document)" (click)="markNotApplicable(document)">@if (isPending('not-applicable', document)) {<mat-icon class="button-spinner">progress_activity</mat-icon>Actualizando...} @else {No aplica}</button>} @else {—}</span>
+                  <strong>{{ document.name }}</strong><span class="required">{{ document.required ? '*' : '—' }}</span><span class="filename">{{ document.filename ?? '—' }}</span><span>{{ document.version ?? '—' }}</span><span>{{ document.uploadedAt ?? '—' }}</span><span><b class="status" [class.pending]="document.state === 'Pendiente'" [class.not-applicable]="document.state === 'No aplica'">{{ document.state }}</b>@if (document.state === 'Cargado') {<small>{{ document.externallyPublished ? 'Publicado' : 'Uso interno' }}</small>}</span>
+                  <span class="actions">
+                    @if (document.filename || (repository.role() === 'Administrador PIIP' && document.state === 'Pendiente')) {
+                      <button class="document-action-trigger" type="button" [matMenuTriggerFor]="documentActions" [disabled]="operationPending()" [attr.aria-busy]="isDocumentPending(document)" [attr.aria-label]="'Acciones de ' + document.name">
+                        <mat-icon [class.button-spinner]="isDocumentPending(document)">{{ isDocumentPending(document) ? 'progress_activity' : 'settings' }}</mat-icon>
+                      </button>
+                      <mat-menu #documentActions="matMenu">
+                        @if (document.filename) {
+                          <button mat-menu-item type="button" (click)="download(document)"><mat-icon>download</mat-icon><span>Descargar</span></button>
+                          @if (repository.role() === 'Administrador PIIP') {
+                            <button mat-menu-item type="button" (click)="togglePublication(document)"><mat-icon>{{ document.externallyPublished ? 'visibility_off' : 'publish' }}</mat-icon><span>{{ document.externallyPublished ? 'Retirar publicación' : 'Publicar para consulta externa' }}</span></button>
+                          }
+                        } @else if (repository.role() === 'Administrador PIIP' && document.state === 'Pendiente') {
+                          <button mat-menu-item type="button" (click)="markNotApplicable(document)"><mat-icon>block</mat-icon><span>Marcar como No aplica</span></button>
+                        }
+                      </mat-menu>
+                    } @else {—}
+                  </span>
                 </div>
               }
             }

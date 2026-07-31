@@ -21,8 +21,12 @@
 .document-row .status { padding-inline: 10px; }
 .document-row .status.not-applicable { color: #59615c; background: #eceeec; }
 .document-row small { display: block; margin-top: 3px; color: #68716b; font-size: 12px; }
-.actions { display: flex; align-items: center; }
-.actions .secondary-button { min-height: 34px; padding-inline: 12px; }
+.actions { display: flex; align-items: center; justify-content: center; }
+.document-action-trigger { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid #b8d0c0; border-radius: 5px; color: var(--piip-green-800); background: var(--piip-mint-soft); cursor: pointer; }
+.document-action-trigger:hover:not(:disabled), .document-action-trigger:focus-visible { border-color: var(--piip-green-700); background: var(--piip-mint); }
+.document-action-trigger:focus-visible { outline: 2px solid var(--piip-green-700); outline-offset: 2px; }
+.document-action-trigger:disabled { cursor: wait; opacity: .62; }
+.document-action-trigger mat-icon { width: 21px; height: 21px; font-size: 21px; }
 .required-note { margin: 15px 0 0; padding: 15px 2px 0; border-top: 1px solid var(--piip-border); color: #68716b; }
 .required-note b { color: var(--piip-red); }
 

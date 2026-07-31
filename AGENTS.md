@@ -15,11 +15,13 @@
 - Los controladores delegan; las reglas y transacciones pertenecen a servicios de aplicación.
 - No expongas entidades JPA en contratos HTTP.
 
-## Comandos
+## Comandos (manual, no automático)
 
-- Backend: `mvn test` y `mvn verify` desde `apps/backend`.
-- Frontend: `npm test -- --watch=false` y `npm run build` desde `apps/frontend`.
-- Integración Oracle: `mvn verify -Pintegration-tests`; requiere Docker o variables Oracle externas.
+⚠️ NUNCA ejecutes estos comandos por tu cuenta tras un cambio. Solo ante pedido explícito del usuario en el turno actual. Terminar un cambio ≠ autorización para validarlo.
+
+- Backend: `mvn test` / `mvn verify` (`apps/backend`).
+- Frontend: `npm test -- --watch=false` / `npm run build` (`apps/frontend`).
+- Integración Oracle: `mvn verify -Pintegration-tests` (requiere Docker o variables Oracle).
 
 ## Seguridad
 

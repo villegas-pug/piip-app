@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { summarizeDocumentDossier } from '../../core/piip-mock.repository';
@@ -16,7 +17,7 @@ interface PendingDocumentOperation {
 
 @Component({
   selector: 'app-documents',
-  imports: [MatIconModule, RouterLink],
+  imports: [MatIconModule, MatMenuModule, RouterLink],
   templateUrl: './documents.component.html',
   styleUrl: './documents.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -152,6 +153,10 @@ export class DocumentsComponent {
   isPending(kind: DocumentOperationKind, document?: DocumentRecord): boolean {
     const operation = this.pendingOperation();
     return operation?.kind === kind && (!document || operation.key === this.operationKey(document));
+  }
+
+  isDocumentPending(document: DocumentRecord): boolean {
+    return this.pendingOperation()?.key === this.operationKey(document);
   }
 
   operationKey(document: DocumentRecord): string {
