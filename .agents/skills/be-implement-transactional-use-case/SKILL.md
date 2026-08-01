@@ -1,15 +1,36 @@
 ---
 name: be-implement-transactional-use-case
-description: Implementar casos de uso Spring Boot del PIIP mediante controladores DTO, servicios de aplicación transaccionales, dominio y repositorios JPA. Usar para funcionalidades en apps/backend que no requieran inventar reglas ni modificar Angular.
+description: Implementar funcionalidades y casos de uso transaccionales del backend PIIP con Spring Boot, DTO, servicios de aplicación, dominio y repositorios JPA. Usar siempre ante solicitudes como "crea un endpoint", "guarda o actualiza este registro", "implementa este caso de uso", "agrega un servicio transaccional" o "incorpora lógica backend" en `apps/backend`. No usar para inventar reglas funcionales ni para modificar Angular.
 ---
 
 # Implementar caso de uso transaccional
 
-1. Leer `AGENTS.md`, la especificación activa y el módulo backend propietario.
-2. Confirmar entradas, salidas, autorización, auditoría y reglas respaldadas por fuente; usar `NEEDS CLARIFICATION` ante vacíos.
-3. Mantener controladores delgados y contratos HTTP separados de entidades JPA.
-4. Ubicar orquestación y transacciones en servicios de aplicación; mantener persistencia en repositorios Spring Data JPA.
-5. Validar rol y ámbito efectivo dentro del servicio para operaciones sensibles.
-6. Registrar auditoría sin tokens, cuerpos HTTP o contenido documental.
-7. Modificar únicamente `apps/backend/**` y devolver un handoff si el consumidor Angular debe adaptarse.
-8. No usar SQL nativo ni borrar archivos; no ejecutar Maven/Oracle sin autorización explícita del usuario.
+## Validar el contexto
+
+1. Leer `AGENTS.md`, la especificación activa y el módulo backend propietario. Esto evita implementar el caso de uso con convenciones o reglas ajenas al módulo.
+2. Confirmar entradas, salidas, autorización, auditoría y reglas respaldadas por una fuente. Marcar los vacíos como `NEEDS CLARIFICATION`, porque completar reglas por inferencia cambiaría el comportamiento funcional.
+
+## Mantener las responsabilidades
+
+1. Mantener controladores delgados y contratos HTTP separados de entidades JPA. Exponer persistencia o reglas desde el controlador acoplaría la API al modelo interno.
+2. Ubicar la orquestación y las transacciones en servicios de aplicación, para que el caso de uso conserve un límite transaccional reutilizable.
+3. Mantener la persistencia en repositorios Spring Data JPA. Introducir accesos alternativos rompería la fuente canónica del esquema.
+4. Validar el rol y ámbito efectivo dentro del servicio para operaciones sensibles, porque proteger solo el endpoint permite omitir la autorización desde otros flujos.
+5. Registrar auditoría sin tokens, cuerpos HTTP ni contenido documental, para conservar trazabilidad sin exponer información sensible.
+
+## Límites de alcance y ejecución
+
+1. Modificar únicamente `apps/backend/**`. Si el consumidor Angular debe adaptarse, devolver un handoff al agente principal.
+2. No usar SQL nativo ni borrar archivos, porque estas acciones contradicen la arquitectura y no son necesarias para implementar el caso de uso.
+3. No ejecutar Maven ni integración Oracle sin autorización explícita del usuario en el turno actual.
+
+## Entrega
+
+Presentar:
+
+- Caso de uso, entradas, salidas y fuente funcional.
+- Capas y archivos afectados.
+- Límite transaccional, autorización y auditoría aplicados.
+- Pruebas ejecutadas o pendientes de autorización.
+- Handoff para OpenAPI o frontend cuando el consumidor deba adaptarse.
+- Decisiones pendientes como `NEEDS CLARIFICATION`.

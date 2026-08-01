@@ -1,15 +1,38 @@
 ---
 name: be-fix-reproduced-backend-bug
-description: Reproducir y corregir bugs del backend Spring PIIP con evidencia antes de editar, cambio mínimo y prueba focalizada. Usar para regresiones de API, transacciones, autorización, concurrencia, documentos, auditoría o persistencia en apps/backend.
+description: Reproducir y corregir regresiones del backend Spring PIIP con evidencia previa, cambio mínimo y prueba focalizada. Usar siempre cuando el usuario diga que "la API falla", "devuelve un resultado incorrecto", "no guarda", "duplica registros", "la transacción no funciona", "la autorización falla" o reporte errores en documentos, auditoría, concurrencia o persistencia de `apps/backend`. No editar hasta reproducir el problema o reunir evidencia determinista equivalente.
 ---
 
 # Corregir bug backend reproducido
 
-1. Obtener entrada, precondiciones, resultado esperado, resultado observado y error exacto.
-2. Reproducir mediante prueba unitaria, de contrato o persistencia, o mediante evidencia determinista equivalente, antes de editar cualquier archivo.
-3. Si no se reproduce, detener la corrección y devolver evidencia, hipótesis y `NEEDS CLARIFICATION`.
-4. Localizar la causa en API, aplicación, dominio, autorización o persistencia sin cambiar reglas para hacer pasar pruebas.
-5. Aplicar el cambio mínimo exclusivamente en `apps/backend/**` y mantener transacciones/autorización/auditoría correctas.
-6. Añadir o ajustar una prueba que falle antes y cubra la regresión después.
-7. No modificar Angular; devolver un handoff si cambia el comportamiento HTTP observable.
-8. No usar SQL nativo, borrar archivos ni ejecutar Maven/Oracle sin autorización explícita del usuario.
+## Reproducir antes de editar
+
+1. Obtener entrada, precondiciones, resultado esperado, resultado observado y error exacto. Sin una diferencia verificable entre ambos resultados no existe una reproducción suficiente.
+2. Reproducir mediante una prueba unitaria, de contrato o persistencia, o mediante evidencia determinista equivalente, antes de editar cualquier archivo.
+3. Si la reproducción requiere Maven u Oracle y no existe autorización explícita en el turno actual, detenerse antes de editar y solicitarla.
+4. Si el problema no se reproduce, detener la corrección y devolver evidencia, hipótesis y `NEEDS CLARIFICATION`. Cambiar código sin reproducción podría ocultar la causa o introducir otra regresión.
+
+## Corregir la causa
+
+1. Localizar la causa en API, aplicación, dominio, autorización o persistencia sin cambiar reglas funcionales para hacer pasar pruebas.
+2. Aplicar el cambio mínimo exclusivamente en `apps/backend/**`. Un cambio más amplio dificulta demostrar qué resolvió la regresión.
+3. Mantener transacciones, autorización y auditoría correctas aunque el defecto observado pertenezca a una sola capa.
+4. Añadir o ajustar una prueba diseñada para fallar antes del cambio y cubrir la regresión después. No afirmar que pasa hasta haberla ejecutado con autorización.
+
+## Límites de alcance y ejecución
+
+1. No modificar Angular. Si cambia el comportamiento HTTP observable, devolver un handoff al agente principal.
+2. No usar SQL nativo ni borrar archivos, porque ninguna de esas acciones es necesaria para una corrección mínima.
+3. No ejecutar Maven ni integración Oracle sin autorización explícita del usuario en el turno actual.
+
+## Entrega
+
+Presentar:
+
+- Evidencia de reproducción previa.
+- Causa raíz localizada.
+- Cambio mínimo y archivos afectados.
+- Prueba de regresión añadida o ajustada.
+- Resultado de las pruebas autorizadas y cobertura no ejecutada.
+- Handoff por cambios HTTP observables.
+- `NEEDS CLARIFICATION` si la reproducción o la regla esperada continúa incierta.
