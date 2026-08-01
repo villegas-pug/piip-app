@@ -14,7 +14,7 @@ Usar [.env.example](../../.env.example) como matriz de variables. Los valores de
 
 ## Base de datos
 
-1. Ejecutar `mvn verify` en `apps/backend`.
+1. Ejecutar `gradlew.bat test` en Windows o `./gradlew test` en Linux/macOS, desde `apps/backend`.
 2. Comparar `apps/backend/target/piip-oracle.sql` con `database/generated/piip-oracle.sql`, generado por Hibernate desde las entidades JPA y versionado como entrega al DBA.
 3. Entregar el artefacto al DBA para revisión y aplicación en un esquema vacío de desarrollo.
 4. Iniciar la aplicación con `PIIP_DDL_AUTO=validate`.

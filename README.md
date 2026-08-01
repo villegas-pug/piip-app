@@ -19,10 +19,10 @@ El protocolo, el grounding obligatorio contra el monorepo y las reglas de trazab
 
 ## Verificación
 
-- Backend: `cd apps/backend; mvn verify`.
-- DDL Oracle revisable: `database/generated/piip-oracle.sql`; `mvn verify` regenera la copia de trabajo en `apps/backend/target/piip-oracle.sql`.
+- Backend: `cd apps/backend; .\\gradlew.bat test` en Windows o `./gradlew test` en Linux/macOS.
+- DDL Oracle revisable: `database/generated/piip-oracle.sql`; la prueba Gradle regenera la copia de trabajo en `apps/backend/target/piip-oracle.sql`.
 - Cliente API: `cd apps/frontend; npm run api:generate` después de generar `apps/backend/target/piip-openapi.json`.
 - Frontend: `cd apps/frontend; npm test -- --watch=false; npm run build`.
-- Oracle: `mvn verify -Pintegration-tests` en CI con Docker o una instancia Oracle de pruebas.
+- Oracle: `./gradlew integrationTest` en CI con Docker o una instancia Oracle de pruebas.
 
 La configuración y el recorrido de aceptación del ambiente institucional están en [docs/deployment/institutional-development.md](docs/deployment/institutional-development.md). La configuración local no usa datos mock ni tokens manuales: si el backend o Keycloak no están disponibles, la UI muestra el error de integración.

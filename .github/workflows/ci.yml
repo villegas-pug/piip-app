@@ -16,9 +16,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: maven
+          cache: gradle
       - name: Unit and contract tests
-        run: mvn verify -Dgroups='!integration'
+        run: ./gradlew test
       - name: Verify delivered Oracle DDL is current
         run: cmp database/generated/piip-oracle.sql apps/backend/target/piip-oracle.sql
         working-directory: .
@@ -28,7 +28,7 @@ jobs:
           name: piip-openapi
           path: apps/backend/target/piip-openapi.json
       - name: Oracle Testcontainers
-        run: mvn verify -Pintegration-tests
+        run: ./gradlew integrationTest
 
   frontend:
     needs: backend

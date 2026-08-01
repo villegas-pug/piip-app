@@ -112,8 +112,8 @@ def validate_shell(command: str, scope: str) -> None:
         if re.search(pattern, command, flags=re.IGNORECASE):
             deny("Comando destructivo o escritura por shell bloqueada para especialistas PIIP.")
 
-    if scope == "frontend" and re.search(r"\bmvn(?:\.cmd)?\b", command, flags=re.IGNORECASE):
-        deny("El especialista frontend no puede ejecutar comandos Maven.")
+    if scope == "frontend" and re.search(r"\b(?:mvn|gradlew)(?:\.cmd|\.bat)?\b", command, flags=re.IGNORECASE):
+        deny("El especialista frontend no puede ejecutar comandos de compilación del backend.")
     if scope == "backend" and re.search(r"\b(?:npm|npx|ng)(?:\.cmd)?\b", command, flags=re.IGNORECASE):
         deny("El especialista backend no puede ejecutar comandos Angular/npm.")
 

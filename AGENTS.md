@@ -19,9 +19,9 @@
 
 ⚠️ NUNCA ejecutes estos comandos por tu cuenta tras un cambio. Solo ante pedido explícito del usuario en el turno actual. Terminar un cambio ≠ autorización para validarlo.
 
-- Backend: `mvn test` / `mvn verify` (`apps/backend`).
+- Backend: `gradlew.bat test` / `gradlew.bat check` en Windows, o `./gradlew test` / `./gradlew check` en Linux/macOS (`apps/backend`).
 - Frontend: `npm test -- --watch=false` / `npm run build` (`apps/frontend`).
-- Integración Oracle: `mvn verify -Pintegration-tests` (requiere Docker o variables Oracle).
+- Integración Oracle: `gradlew.bat integrationTest` en Windows, o `./gradlew integrationTest` en Linux/macOS (requiere Docker o variables Oracle).
 
 ## Seguridad
 
