@@ -36,6 +36,12 @@
 - Las skills compartidas están en `.agents/skills`.
 - Los subagentes están en `.codex/agents` como TOML.
 - Las especificaciones y documentación se escriben en español.
+- El protocolo canónico de adopción incremental está en `docs/development/spec-kit-adoption.md`.
+- `specs/001-*` a `specs/005-*` son antecedentes históricos: no son backlog, no bloquean nuevas features y no se completan retroactivamente.
+- Las nuevas features empiezan en `006` y requieren grounding previo contra código, arquitectura, contratos y documentación reales, con rutas e impacto por área explícitos.
+- El comportamiento ya satisfecho se registra como evidencia de baseline, no como tarea completada ni trabajo por reimplementar.
+- Toda contradicción histórica se marca `NEEDS CLARIFICATION`; no amplía el alcance ni autoriza modificar el código.
+- No ejecutes `implement` hasta que el usuario apruebe explícitamente `spec.md`, `plan.md` y `tasks.md` de la feature actual.
 
 ## Routing de especialistas
 

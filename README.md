@@ -13,7 +13,9 @@ El backend requiere Oracle y un emisor OIDC configurados mediante variables de e
 
 ## Especificaciones
 
-GitHub Spec Kit `v0.8.15` está fijado para este repositorio. En Windows se inicializó con integración Codex, skills y scripts PowerShell. Las especificaciones funcionales se separan en `specs/001` a `specs/005`; la constitución PIIP prevalece sobre cualquier plantilla genérica.
+GitHub Spec Kit `v0.8.15` está fijado para este repositorio. En Windows se inicializó con integración Codex, skills y scripts PowerShell. Las especificaciones `specs/001-*` a `specs/005-*` se conservan como referencias históricas y no constituyen backlog. La adopción completa se aplica únicamente a features nuevas desde `006`, mediante el ciclo `specify -> plan -> tasks -> aprobación explícita -> implement`.
+
+El protocolo, el grounding obligatorio contra el monorepo y las reglas de trazabilidad están en [docs/development/spec-kit-adoption.md](docs/development/spec-kit-adoption.md). La constitución PIIP prevalece sobre cualquier plantilla genérica.
 
 ## Verificación
 
