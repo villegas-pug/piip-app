@@ -37,6 +37,16 @@
 - Los subagentes están en `.codex/agents` como TOML.
 - Las especificaciones y documentación se escriben en español.
 
+## Routing de especialistas
+
+- Delega trabajo exclusivamente Angular a `frontend-specialist` y trabajo exclusivamente Spring/JPA/Oracle a `backend-specialist`.
+- En modo Plan, delega solo análisis sin mutaciones. En ejecución, cada especialista escribe únicamente en su árbol: `apps/frontend/**` o `apps/backend/**`.
+- Si frontend y backend son independientes, invoca ambos en paralelo. No paralelices cuando compartan contrato HTTP, artefactos generados, catálogos, reglas funcionales, documentación o configuración.
+- Para cambios dependientes, delega primero al propietario canónico y después al consumidor. Ejemplo: contrato OpenAPI backend antes de regenerar/adaptar frontend.
+- Los especialistas no se invocan entre sí: devuelven al agente principal evidencia, impacto cross-domain, pruebas propuestas y cualquier `NEEDS CLARIFICATION`.
+- Los perfiles OpenCode `*-plan` son variantes técnicas ocultas y read-only de los mismos dos roles lógicos.
+- Ningún especialista ejecuta pruebas, builds, generación OpenAPI, integración Oracle ni acciones destructivas sin autorización explícita del usuario en el turno actual.
+
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan

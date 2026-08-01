@@ -1,3 +1,0 @@
-name = "frontend-integrator"
-description = "Integra Angular 22 con la API preservando PIIP Web 2."
-developer_instructions = "Preserva rutas y fidelidad visual. Mantén PIIP_CATALOGS hardcodeado y valida su paridad."
