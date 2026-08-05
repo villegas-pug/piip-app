@@ -33,6 +33,34 @@ LEGACY_AGENTS = (
     "test-reviewer.toml",
 )
 LEGACY_SKILLS = ("piip-frontend", "piip-backend", "piip-data-model")
+GRADLE_SKILLS = (
+    "be-diagnose-oracle-runtime",
+    "be-fix-reproduced-backend-bug",
+    "be-implement-transactional-use-case",
+    "be-publish-openapi-contract",
+)
+FORBIDDEN_BACKEND_BUILD_PATTERNS = (
+    r"\bmaven\b",
+    r"\bmvn\b",
+    r"\bpom\.xml\b",
+)
+REQUIRED_SKILL_CONTENT = {
+    "be-diagnose-oracle-runtime": ("build.gradle.kts", "Gradle Wrapper", "integrationTest"),
+    "be-fix-reproduced-backend-bug": ("Gradle", "integrationTest"),
+    "be-implement-transactional-use-case": (
+        "Gradle",
+        "integrationTest",
+        "No inyectar ni consultar repositorios desde controladores",
+        "No declarar `@Transactional` en controladores",
+        "servicios de aplicación",
+    ),
+    "be-publish-openapi-contract": (
+        "Gradle Wrapper",
+        "OpenApiGenerationTest",
+        "apps/backend/target/piip-openapi.json",
+    ),
+    "fe-maintain-auth-session": ("apps/frontend/src/app/core",),
+}
 
 
 def split_frontmatter(path: Path) -> tuple[dict[str, str], str, str]:
@@ -78,6 +106,30 @@ def validate_skills(errors: list[str]) -> None:
             edit_at = body.lower().find("editar")
             if reproduce_at < 0 or edit_at < 0 or reproduce_at > edit_at:
                 errors.append(f"{skill_name}: debe exigir reproducción antes de editar")
+
+
+def validate_skill_semantics(errors: list[str]) -> None:
+    for skill_name in GRADLE_SKILLS:
+        path = ROOT / ".agents" / "skills" / skill_name / "SKILL.md"
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for pattern in FORBIDDEN_BACKEND_BUILD_PATTERNS:
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                errors.append(f"{skill_name}: referencia obsoleta al build anterior")
+
+    for skill_name, required_fragments in REQUIRED_SKILL_CONTENT.items():
+        path = ROOT / ".agents" / "skills" / skill_name / "SKILL.md"
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8").casefold()
+        for fragment in required_fragments:
+            if fragment.casefold() not in text:
+                errors.append(f"{skill_name}: falta contenido requerido: {fragment}")
+
+    auth_path = ROOT / ".agents" / "skills" / "fe-maintain-auth-session" / "SKILL.md"
+    if auth_path.is_file() and "apps/frontend/core" in auth_path.read_text(encoding="utf-8"):
+        errors.append("fe-maintain-auth-session: conserva la ruta frontend anterior")
 
 
 def validate_codex(errors: list[str]) -> None:
@@ -170,6 +222,7 @@ def validate_retirement_and_routing(errors: list[str]) -> None:
 def main() -> int:
     errors: list[str] = []
     validate_skills(errors)
+    validate_skill_semantics(errors)
     validate_codex(errors)
     validate_opencode(errors)
     validate_retirement_and_routing(errors)

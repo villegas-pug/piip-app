@@ -9,7 +9,7 @@ description: Reproducir y corregir regresiones del backend Spring PIIP con evide
 
 1. Obtener entrada, precondiciones, resultado esperado, resultado observado y error exacto. Sin una diferencia verificable entre ambos resultados no existe una reproducción suficiente.
 2. Reproducir mediante una prueba unitaria, de contrato o persistencia, o mediante evidencia determinista equivalente, antes de editar cualquier archivo.
-3. Si la reproducción requiere Maven u Oracle y no existe autorización explícita en el turno actual, detenerse antes de editar y solicitarla.
+3. Si la reproducción requiere ejecutar una tarea Gradle u Oracle y no existe autorización explícita en el turno actual, detenerse antes de editar y solicitarla.
 4. Si el problema no se reproduce, detener la corrección y devolver evidencia, hipótesis y `NEEDS CLARIFICATION`. Cambiar código sin reproducción podría ocultar la causa o introducir otra regresión.
 
 ## Corregir la causa
@@ -23,7 +23,7 @@ description: Reproducir y corregir regresiones del backend Spring PIIP con evide
 
 1. No modificar Angular. Si cambia el comportamiento HTTP observable, devolver un handoff al agente principal.
 2. No usar SQL nativo ni borrar archivos, porque ninguna de esas acciones es necesaria para una corrección mínima.
-3. No ejecutar Maven ni integración Oracle sin autorización explícita del usuario en el turno actual.
+3. No ejecutar tareas Gradle de prueba, build o `integrationTest` sin autorización explícita del usuario en el turno actual.
 
 ## Entrega
 

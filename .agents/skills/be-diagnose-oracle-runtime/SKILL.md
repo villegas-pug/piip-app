@@ -8,7 +8,7 @@ description: Diagnosticar fallos de conexión, arranque o integración Oracle de
 ## Reunir evidencia
 
 1. Obtener el error exacto, perfil activo, versión Java, dependencias runtime y configuración no secreta. Sin esos datos, errores de red, wallet y dependencias pueden parecer el mismo problema.
-2. Inspeccionar `pom.xml`, la configuración Spring y las pruebas Oracle antes de proponer cambios. Esto evita recomendar dependencias o propiedades que el proyecto ya tiene o no utiliza.
+2. Inspeccionar `build.gradle.kts`, el Gradle Wrapper, la configuración Spring y las pruebas Oracle antes de proponer cambios. Esto evita recomendar dependencias, tareas o propiedades que el proyecto ya tiene o no utiliza.
 
 ## Separar hipótesis
 
@@ -19,7 +19,7 @@ description: Diagnosticar fallos de conexión, arranque o integración Oracle de
 
 1. No leer, imprimir, copiar ni versionar contraseñas, tokens, wallets o archivos `.env` sensibles, porque el diagnóstico no justifica exponer credenciales.
 2. Mantener el diagnóstico read-only. Cualquier corrección de código requiere una tarea backend explícita y reproducción suficiente para no modificar el runtime por hipótesis.
-3. Ejecutar Docker, Testcontainers, una conexión real o `mvn verify -Pintegration-tests` solo con autorización explícita del usuario en el turno actual y con sus prerrequisitos confirmados.
+3. Ejecutar Docker, Testcontainers, una conexión real o `gradlew.bat integrationTest` en Windows (`./gradlew integrationTest` en Linux/macOS) solo con autorización explícita del usuario en el turno actual y con sus prerrequisitos confirmados.
 4. No borrar wallets, cachés, contenedores ni archivos, porque su eliminación destruye evidencia y puede afectar otros entornos.
 
 ## Entrega

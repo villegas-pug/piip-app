@@ -18,14 +18,14 @@ description: Evolucionar y publicar el contrato OpenAPI del backend PIIP a parti
 
 ## Publicar de forma secuencial
 
-1. Generar `apps/backend/target/piip-openapi.json` solo cuando el usuario autorice expresamente en el turno actual el comando Maven necesario.
+1. Generar `apps/backend/target/piip-openapi.json` mediante `OpenApiGenerationTest` y el Gradle Wrapper solo cuando el usuario autorice expresamente en el turno actual `gradlew.bat test --tests pe.gob.midagri.piip.contract.OpenApiGenerationTest` en Windows o su equivalente `./gradlew` en Linux/macOS.
 2. No afirmar que el contrato fue publicado si el artefacto no se generó.
 3. Completar esta publicación antes de regenerar el cliente frontend, porque Angular debe consumir el contrato canónico y no una propuesta intermedia.
 
 ## Límites de alcance y ejecución
 
 1. No modificar frontend; cualquier adaptación se devuelve al agente principal.
-2. No borrar archivos ni ejecutar Maven u Oracle sin autorización explícita del usuario en el turno actual.
+2. No borrar archivos ni ejecutar tareas Gradle u Oracle sin autorización explícita del usuario en el turno actual.
 
 ## Entrega
 

@@ -1,6 +1,6 @@
 ---
 name: fe-maintain-auth-session
-description: Mantener o revisar la autenticación y sesión del navegador PIIP con Keycloak, PKCE, callback de login, guards, interceptores, tokens, cierre de sesión y retorno seguro. Usar siempre para solicitudes como "cambia el inicio de sesión", "la sesión se pierde", "protege esta ruta", "ajusta el callback", "corrige el retorno después de login", "revisa el interceptor" o "limpia la sesión al salir" en `apps/frontend/core`. Si se trata de una regresión que debe corregirse, aplicar también la reproducción previa de `fe-fix-reproduced-ui-bug`.
+description: Mantener o revisar la autenticación y sesión del navegador PIIP con Keycloak, PKCE, callback de login, guards, interceptores, tokens, cierre de sesión y retorno seguro. Usar siempre para solicitudes como "cambia el inicio de sesión", "la sesión se pierde", "protege esta ruta", "ajusta el callback", "corrige el retorno después de login", "revisa el interceptor" o "limpia la sesión al salir" en `apps/frontend/src/app/core`. Si se trata de una regresión que debe corregirse, aplicar también la reproducción previa de `fe-fix-reproduced-ui-bug`.
 ---
 
 # Mantener autenticación frontend

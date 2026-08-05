@@ -12,8 +12,8 @@ description: Implementar funcionalidades y casos de uso transaccionales del back
 
 ## Mantener las responsabilidades
 
-1. Mantener controladores delgados y contratos HTTP separados de entidades JPA. Exponer persistencia o reglas desde el controlador acoplaría la API al modelo interno.
-2. Ubicar la orquestación y las transacciones en servicios de aplicación, para que el caso de uso conserve un límite transaccional reutilizable.
+1. Mantener controladores delgados y contratos HTTP separados de entidades JPA. No inyectar ni consultar repositorios desde controladores, porque hacerlo expondría persistencia y reglas desde la capa API.
+2. No declarar `@Transactional` en controladores. Ubicar la orquestación, la autorización funcional y el límite transaccional en servicios de aplicación, para que el caso de uso conserve una transacción reutilizable.
 3. Mantener la persistencia en repositorios Spring Data JPA. Introducir accesos alternativos rompería la fuente canónica del esquema.
 4. Validar el rol y ámbito efectivo dentro del servicio para operaciones sensibles, porque proteger solo el endpoint permite omitir la autorización desde otros flujos.
 5. Registrar auditoría sin tokens, cuerpos HTTP ni contenido documental, para conservar trazabilidad sin exponer información sensible.
@@ -22,7 +22,7 @@ description: Implementar funcionalidades y casos de uso transaccionales del back
 
 1. Modificar únicamente `apps/backend/**`. Si el consumidor Angular debe adaptarse, devolver un handoff al agente principal.
 2. No usar SQL nativo ni borrar archivos, porque estas acciones contradicen la arquitectura y no son necesarias para implementar el caso de uso.
-3. No ejecutar Maven ni integración Oracle sin autorización explícita del usuario en el turno actual.
+3. No ejecutar tareas Gradle de prueba, build o `integrationTest` sin autorización explícita del usuario en el turno actual.
 
 ## Entrega
 
