@@ -12,6 +12,14 @@
 - Hibernate JPA es la fuente canónica del esquema: no uses SQL nativo, `JdbcTemplate`, procedimientos almacenados, Flyway ni Liquibase. Los controladores delegan y las reglas y transacciones pertenecen a servicios de aplicación.
 - No expongas entidades JPA en contratos HTTP.
 
+## Contexto: RoviDev Vault -> Graphify -> código fuente
+
+- Usar primero el contexto hidratado del RoviDev Vault para decisiones, convenciones y handoffs relevantes.
+- Ante preguntas o tareas sobre arquitectura, módulos, dependencias, símbolos, flujos o impacto, si existe `graphify-out/graph.json`, aplicar la skill global `graphify` mediante una consulta acotada con `graphify query "<pregunta>"` antes de explorar ampliamente el repositorio. Si ya se conoce el archivo o símbolo exacto, inspeccionarlo directamente; si el grafo falta o falla, informarlo y continuar con las fuentes canónicas.
+- No cargar `graph.json` ni `GRAPH_REPORT.md` completos; usar el resultado acotado de Graphify y validarlo en código fuente, especificaciones, pruebas o configuración antes de responder, planificar o modificar.
+- El Vault gobierna el conocimiento humano y las decisiones aprobadas; Graphify es un índice estructural derivado; el repositorio es la autoridad canónica. No copiar contenido entre Vault y Graphify ni derivar reglas de negocio del grafo.
+- Después de cambios materiales de código, ejecutar `graphify update .` antes del checkpoint de sesión.
+
 ## Comandos (manual, no automático)
 
 ⚠️ Nunca ejecutes estos comandos por tu cuenta tras un cambio. Terminar un cambio no autoriza validarlo: requieren pedido explícito del usuario en el turno actual.

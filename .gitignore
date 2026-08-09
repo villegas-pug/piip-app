@@ -65,3 +65,6 @@ surefire-reports/
 jacoco/
 .specify/cache/
 .specify/tmp/
+
+# Índice estructural local de Graphify
+graphify-out/
