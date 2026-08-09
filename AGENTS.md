@@ -36,7 +36,7 @@
 
 ## Gate Spec Kit
 
-`specify`, `plan` y `tasks` no implementan producto; `analyze` es solo lectura. Ejecutar `implement` solo si existen `spec.md`, `plan.md` y `tasks.md` y el usuario los aprobó explícitamente en el turno actual. Un plan pegado o `PLEASE IMPLEMENT THIS PLAN` no es autorización. Los cambios existentes se registran como baseline, no como tarea completada ni trabajo por reimplementar.
+`specify`, `plan` y `tasks` no implementan producto; `analyze` es solo lectura. Ejecutar `implement` solo si la feature activa tiene `spec.md`, `plan.md` y `tasks.md`, no conserva checklists o `NEEDS CLARIFICATION` bloqueantes y el usuario invoca explícitamente `/speckit-implement` en el turno actual. Esa invocación aprueba los artefactos vigentes y autoriza únicamente sus tareas de implementación; no autoriza por sí misma pruebas, builds, servidores, OpenAPI, Oracle ni Git. Un plan pegado o `PLEASE IMPLEMENT THIS PLAN` no sustituye la invocación. Los cambios existentes se registran como baseline, no como tarea completada ni trabajo por reimplementar.
 
 ## Routing de especialistas
 
@@ -46,6 +46,5 @@
 - Ningún especialista ejecuta pruebas, builds, generación OpenAPI, integración Oracle ni acciones destructivas sin autorización explícita del usuario en el turno actual.
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+Para la feature activa, leer `specs/007-name-http-parameters/plan.md` antes de planificar o implementar.
 <!-- SPECKIT END -->

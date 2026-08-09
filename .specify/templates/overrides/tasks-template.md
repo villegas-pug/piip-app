@@ -6,9 +6,9 @@ description: "Lista trazable de tareas para una feature nueva del monorepo PIIP"
 
 **Entrada**: documentos de `/specs/[###-feature-name]/`
 
-**Prerrequisitos**: `spec.md` y `plan.md` aprobados; documentos de diseño adicionales cuando existan.
+**Prerrequisitos**: `spec.md`, `plan.md` y `tasks.md` vigentes; documentos de diseño adicionales cuando existan; sin checklists ni `NEEDS CLARIFICATION` bloqueantes.
 
-**Autorización**: generar esta lista no autoriza `implement`, pruebas, builds, generación OpenAPI ni integración Oracle. `implement` requiere aprobación explícita posterior de `spec.md`, `plan.md` y `tasks.md`.
+**Autorización**: generar esta lista no autoriza `implement`, pruebas, builds, generación OpenAPI ni integración Oracle. La invocación explícita de `/speckit-implement` autoriza las tareas de implementación de la feature activa y aprueba sus artefactos vigentes; las demás acciones requieren autorización separada.
 
 ## Formato obligatorio
 
@@ -116,4 +116,3 @@ Cada tarea usa:
 - No reimplementar capacidades incluidas en la evidencia de baseline.
 - No paralelizar cambios que compartan contrato, catálogo, regla funcional, documentación o configuración.
 - El cierre distingue cambios realizados, tareas pendientes y validaciones no ejecutadas.
-

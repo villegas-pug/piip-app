@@ -14,5 +14,5 @@ public class UserAdministrationController {
     public UserAdministrationController(UserAdministrationService service) { this.service = service; }
     @GetMapping("/users") public List<UserResponse> users() { return service.list(); }
     @PostMapping("/role-assignments") @ResponseStatus(HttpStatus.CREATED) public ScopeResponse assign(@Valid @RequestBody RoleAssignmentRequest request) { return service.assign(request); }
-    @DeleteMapping("/role-assignments/{scopeId}") @ResponseStatus(HttpStatus.NO_CONTENT) public void suspend(@PathVariable Long scopeId, @RequestParam long version) { service.suspend(scopeId, version); }
+    @DeleteMapping("/role-assignments/{scopeId}") @ResponseStatus(HttpStatus.NO_CONTENT) public void suspend(@PathVariable("scopeId") Long scopeId, @RequestParam("version") long version) { service.suspend(scopeId, version); }
 }

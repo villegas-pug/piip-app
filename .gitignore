@@ -35,6 +35,7 @@ secrets.yml
 target/
 build/
 out/
+apps/backend/bin/
 .gradle/
 *.class
 *.jar

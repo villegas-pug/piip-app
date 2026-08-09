@@ -33,7 +33,7 @@ public class OrganizationController {
     }
 
     @GetMapping("/organizational-units")
-    public List<OrganizationalUnitResponse> organizationalUnits(@RequestParam Long executingUnitId) {
+    public List<OrganizationalUnitResponse> organizationalUnits(@RequestParam("executingUnitId") Long executingUnitId) {
         authorization.requireReadableUnit(executingUnitId);
         return organizationalUnits.findByExecutingUnitIdAndActiveTrueOrderByName(executingUnitId).stream()
             .map(item -> new OrganizationalUnitResponse(item.getId(), item.getCode(), item.getName(), item.getAcronym(), item.getParent() == null ? null : item.getParent().getId())).toList();

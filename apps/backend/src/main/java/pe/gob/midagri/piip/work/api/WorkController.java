@@ -30,14 +30,14 @@ public class WorkController {
     }
 
     @PutMapping("/{taskId}/complete") @ResponseStatus(HttpStatus.NO_CONTENT) @Transactional
-    public void complete(@PathVariable Long taskId, @RequestParam long version) {
+    public void complete(@PathVariable("taskId") Long taskId, @RequestParam("version") long version) {
         WorkTaskEntity task = task(taskId); LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, task.getRecord().getExecutingUnit().getId());
         if (task.getVersion() != version) throw new StaleVersionException();
         task.complete(); audit.event("TAREA_COMPLETADA", "TAREA_TRABAJO", taskId.toString(), Map.of("registro", task.getRecord().getCode()), actor.subject());
     }
 
     @PutMapping("/{taskId}/assignee") @Transactional
-    public TaskResponse reassign(@PathVariable Long taskId, @RequestBody ReassignRequest request) {
+    public TaskResponse reassign(@PathVariable("taskId") Long taskId, @RequestBody ReassignRequest request) {
         WorkTaskEntity task = task(taskId); LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, task.getRecord().getExecutingUnit().getId());
         if (task.getVersion() != request.version()) throw new StaleVersionException();
         UserEntity target = users.findByKeycloakSubject(request.userSubject()).orElseThrow(() -> new NotFoundException("Usuario inexistente"));

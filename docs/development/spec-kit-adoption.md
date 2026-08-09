@@ -46,11 +46,10 @@ Las tareas no pueden importar pendientes de `001` a `005` salvo dependencia dire
 
 ### 5. Aprobación e implementación
 
-El ciclo es `specify -> plan -> tasks -> aprobación explícita -> implement`. No se ejecuta `implement` hasta que el usuario haya aprobado `spec.md`, `plan.md` y `tasks.md` de la feature actual.
+El ciclo recomendado es `specify -> clarify -> plan -> tasks -> analyze -> implement`. No se ejecuta `implement` hasta que la feature activa tenga `spec.md`, `plan.md` y `tasks.md`, sin checklists ni `NEEDS CLARIFICATION` bloqueantes, y el usuario invoque explícitamente `/speckit-implement` en el turno actual. Esa invocación constituye la aprobación de los artefactos vigentes; no requiere un mensaje de aprobación separado.
 
 La implementación se limita a las tareas aprobadas. Un checkbox cambia a `[X]` únicamente con evidencia del cambio correspondiente. Las pruebas, builds, generación OpenAPI e integración Oracle requieren autorización explícita del usuario en el turno en que se pretendan ejecutar.
 
 ## Cierre de una feature
 
 El cierre debe informar tareas completadas y pendientes, cambios realmente realizados, validaciones realmente ejecutadas y cualquier riesgo o `NEEDS CLARIFICATION` todavía abierto. No debe afirmar que una validación pasó si no se ejecutó.
-
