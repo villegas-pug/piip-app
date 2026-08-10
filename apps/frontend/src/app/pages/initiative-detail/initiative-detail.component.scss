@@ -1,4 +1,4 @@
-.detail-page { max-width: 1280px; margin: 0 auto; }
+.detail-page { max-width: 1280px; margin: 0 auto; animation-fill-mode: none; }
 .breadcrumbs { display: flex; align-items: center; gap: 5px; margin: 0 0 15px; color: #617069; font-size: 14px; }
 .breadcrumbs a { color: var(--piip-green-800); text-decoration: none; }
 .breadcrumbs mat-icon { width: 18px; height: 18px; font-size: 18px; }
@@ -40,6 +40,20 @@
 .timeline p { margin: 4px 0; color: #5e6a63; }
 .timeline small { color: #7a857e; white-space: pre-line; }
 .empty-timeline { color: #758079; }
+.review-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(0,38,25,.55); backdrop-filter: blur(3px); }
+.review-dialog { width: min(620px, 100%); overflow: hidden; border-radius: 10px; background: #fff; box-shadow: 0 24px 70px rgba(0,34,22,.32); animation: dialog-in .2s ease both; }
+.review-dialog > header { display: flex; align-items: center; gap: 13px; padding: 20px 22px; border-bottom: 1px solid var(--piip-border); }
+.review-dialog > header > span { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; color: var(--piip-green-800); background: var(--piip-mint); }
+.review-dialog header p { margin: 0; color: var(--piip-green-700); font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+.review-dialog header h2 { margin: 1px 0 0; font-family: var(--piip-display); }
+.review-dialog header button { margin-left: auto; }
+.review-summary { padding: 10px 22px; }
+.review-summary p { display: grid; grid-template-columns: 135px 1fr; gap: 15px; margin: 0; padding: 10px 0; border-bottom: 1px solid #edf0ed; }
+.review-summary span { color: #6c7770; }
+.review-dialog footer { display: flex; justify-content: flex-end; gap: 12px; padding: 16px 22px; background: #f7f9f7; }
+
+@keyframes dialog-in { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+
 .transition { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 20px 22px 10px; padding: 14px; border-radius: 7px; background: var(--piip-mint-soft); }
 .transition strong { color: var(--piip-green-800); }
 .nonblocking-warning { display: flex; gap: 11px; margin: 12px 22px; padding: 13px; border: 1px solid #efd59b; border-radius: 6px; color: #805a00; background: #fff8e8; }
