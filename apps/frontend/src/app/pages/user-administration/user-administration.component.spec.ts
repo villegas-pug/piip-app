@@ -7,64 +7,191 @@ import { UserAdministrationComponent } from './user-administration.component';
 
 describe('UserAdministrationComponent operations', () => {
   let http: HttpTestingController;
+  let snackBar: Pick<MatSnackBar, 'open'>;
   const apiUrl = resolveApiUrl();
 
   beforeEach(async () => {
+    snackBar = { open: vi.fn() };
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     await TestBed.configureTestingModule({
       imports: [UserAdministrationComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: MatSnackBar, useValue: { open: vi.fn() } }],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).overrideComponent(UserAdministrationComponent, {
+      add: { providers: [{ provide: MatSnackBar, useValue: snackBar }] },
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.restoreAllMocks();
+  });
 
-  it('prevents duplicate role assignments and suspensions and releases their states', () => {
+  it('prevents duplicate role assignments and suspensions and releases their states', async () => {
     const fixture = TestBed.createComponent(UserAdministrationComponent);
     flushAdministrationLoad(http, apiUrl);
-    fixture.componentInstance.assignmentForm.setValue({
-      userSubject: 'usuario-1', role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1,
-    });
+    await fixture.whenStable();
+    fixture.componentInstance.assignmentForm.setValue({ userSubject: 'usuario-1', role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 });
 
     fixture.componentInstance.assign();
     fixture.componentInstance.assign();
-    expect(fixture.componentInstance.assigning()).toBe(true);
-    http.expectOne(`${apiUrl}/admin/role-assignments`).flush({});
+    const assignment = http.expectOne(`${apiUrl}/admin/role-assignments`);
+    expect(assignment.request.body).toEqual({ userSubject: 'usuario-1', role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 });
+    assignment.flush(jsonBlob({}));
     expect(fixture.componentInstance.assigning()).toBe(false);
     flushAdministrationLoad(http, apiUrl);
 
-    const scope = { id: 9, role: 'ADMINISTRADOR_PIIP' as const, institution: 'MIDAGRI', executingUnit: 'UE-001', active: true, version: 2 };
+    const scope = activeScope();
     fixture.componentInstance.suspend(scope);
     fixture.componentInstance.suspend(scope);
-    expect(fixture.componentInstance.suspendingScopeId()).toBe(9);
-    http.expectOne((request) => request.url === `${apiUrl}/admin/role-assignments/9`).flush({});
-    expect(fixture.componentInstance.suspendingScopeId()).toBeNull();
+    expect(fixture.componentInstance.changingScopeId()).toBe(9);
+    const suspension = http.expectOne(`${apiUrl}/admin/role-assignments/9?version=2`);
+    expect(window.confirm).toHaveBeenCalledOnce();
+    suspension.flush('');
+    expect(fixture.componentInstance.changingScopeId()).toBeNull();
     flushAdministrationLoad(http, apiUrl);
   });
 
-  it('paginates user scopes as identified rows', () => {
+  it('joins first-assignment candidates by subject and identifies them without changing the table listing', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl, [
+      { id: 1, subject: 'asignado', fullName: 'Usuario asignado', email: 'asignado@midagri.gob.pe', scopes: [] },
+    ], [
+      { id: 2, subject: 'candidato', fullName: 'Persona candidata', email: 'candidato@midagri.gob.pe' },
+      { id: 1, subject: 'asignado', fullName: 'Usuario asignado', email: 'asignado@midagri.gob.pe' },
+    ]);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.assignmentRows()).toHaveLength(1);
+    expect(fixture.componentInstance.assignmentUsers()).toEqual([
+      { subject: 'asignado', fullName: 'Usuario asignado', email: 'asignado@midagri.gob.pe', withoutAssignments: true },
+      { subject: 'candidato', fullName: 'Persona candidata', email: 'candidato@midagri.gob.pe', withoutAssignments: true },
+    ]);
+  });
+
+  it('prevents an exact active assignment duplicate without an HTTP request, normalizing zero as no executing unit', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl, [{
+      id: 1, subject: 'usuario-1', fullName: 'Usuario 1', email: 'usuario1@midagri.gob.pe',
+      scopes: [{ id: 9, role: 'ADMINISTRADOR_PIIP', institution: 'MIDAGRI', institutionId: 1, executingUnit: 'Toda la institución', executingUnitId: undefined, active: true, version: 1 }],
+    }]);
+    await fixture.whenStable();
+    fixture.componentInstance.assignmentForm.setValue({ userSubject: 'usuario-1', role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 0 });
+
+    fixture.componentInstance.assign();
+
+    http.expectNone(`${apiUrl}/admin/role-assignments`);
+    expect(snackBar.open).toHaveBeenLastCalledWith('El usuario ya cuenta con una asignación activa igual. Elige otro rol o ámbito.', 'Cerrar', { duration: 4200 });
+  });
+
+  it('edits role and scope with its version, then reactivates a suspended assignment', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl);
+    await fixture.whenStable();
+    const scope = activeScope();
+
+    fixture.componentInstance.openEdit(scope);
+    fixture.componentInstance.editForm.setValue({ role: 'CONSULTA_EXTERNA', institutionId: 2, executingUnitId: 8 });
+    fixture.componentInstance.saveEdit();
+    const update = http.expectOne(`${apiUrl}/admin/role-assignments/9?version=2`);
+    expect(update.request.method).toBe('PUT');
+    expect(update.request.body).toEqual({ role: 'CONSULTA_EXTERNA', institutionId: 2, executingUnitId: 8 });
+    update.flush(jsonBlob({}));
+    expect(fixture.componentInstance.editingScope()).toBeNull();
+    flushAdministrationLoad(http, apiUrl);
+
+    fixture.componentInstance.reactivate({ ...scope, active: false, version: 3 });
+    const reactivation = http.expectOne(`${apiUrl}/admin/role-assignments/9/reactivation?version=3`);
+    expect(reactivation.request.method).toBe('PUT');
+    reactivation.flush(jsonBlob({}));
+    flushAdministrationLoad(http, apiUrl);
+  });
+
+  it.each([
+    [403, 'No tienes autorización para realizar esta operación.'],
+    [409, 'La información cambió. Actualiza la pantalla antes de volver a intentarlo.'],
+    [422, 'La operación no cumple las validaciones de rol, ámbito o cobertura.'],
+  ])('informs the actionable message for assignment operations %i', async (status, message) => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl);
+    await fixture.whenStable();
+
+    fixture.componentInstance.suspend(activeScope());
+    http.expectOne(`${apiUrl}/admin/role-assignments/9?version=2`).flush({}, { status, statusText: 'Error' });
+    await fixture.whenStable();
+
+    expect(snackBar.open).toHaveBeenLastCalledWith(message, 'Cerrar', { duration: 4200 });
+    expect(fixture.componentInstance.changingScopeId()).toBeNull();
+  });
+
+  it('does not mutate when the suspension confirmation is declined', () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl);
+    vi.mocked(window.confirm).mockReturnValue(false);
+
+    fixture.componentInstance.suspend(activeScope());
+
+    http.expectNone((request) => request.url.includes('/admin/role-assignments/'));
+  });
+
+  it('paginates user scopes as identified rows', async () => {
     const fixture = TestBed.createComponent(UserAdministrationComponent);
     const users = Array.from({ length: 3 }, (_, index) => ({
-      id: index + 1,
-      subject: `usuario-${index + 1}`,
-      fullName: `Usuario ${index + 1}`,
-      email: `usuario${index + 1}@midagri.gob.pe`,
-      active: true,
-      scopes: [1, 2].map((scope) => ({ id: index * 10 + scope, role: 'CONSULTA_EXTERNA' as const, institution: 'MIDAGRI', executingUnit: `UE-00${scope}`, active: true, version: 1 })),
+      id: index + 1, subject: `usuario-${index + 1}`, fullName: `Usuario ${index + 1}`, email: `usuario${index + 1}@midagri.gob.pe`,
+      scopes: [1, 2].map((scope) => ({ id: index * 10 + scope, role: 'CONSULTA_EXTERNA' as const, institution: 'MIDAGRI', institutionId: 1, executingUnit: `UE-00${scope}`, active: true, version: 1 })),
     }));
-    http.expectOne(`${apiUrl}/admin/users`).flush(users);
+    http.expectOne(`${apiUrl}/admin/users`).flush(jsonBlob(users));
+    http.expectOne(`${apiUrl}/admin/users/assignment-candidates`).flush([]);
     http.expectOne(`${apiUrl}/institutions`).flush([]);
     http.expectOne(`${apiUrl}/executing-units`).flush([]);
+    await fixture.whenStable();
 
     expect(fixture.componentInstance.assignmentRows()).toHaveLength(6);
     expect(fixture.componentInstance.pagedAssignmentRows()).toHaveLength(5);
     fixture.componentInstance.pageIndex.set(1);
     expect(fixture.componentInstance.pagedAssignmentRows()).toEqual([expect.objectContaining({ user: expect.objectContaining({ fullName: 'Usuario 3' }) })]);
   });
+
+  it('shows the loading state and accessible empty state after an empty generated listing', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    expect(fixture.componentInstance.loading()).toBe(true);
+    flushAdministrationLoad(http, apiUrl);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.loading()).toBe(false);
+    const emptyState = fixture.nativeElement.querySelector('.empty-state');
+    expect(emptyState?.getAttribute('role')).toBe('status');
+    expect(emptyState?.textContent).toContain('No hay usuarios ni asignaciones disponibles');
+  });
+
+  it('presents only the assignment state and no account management action', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    http.expectOne(`${apiUrl}/admin/users`).flush(jsonBlob([{ id: 7, subject: 'usuario', fullName: 'Usuario', email: 'usuario@midagri.gob.pe', scopes: [{ ...activeScope(), active: false }] }]));
+    http.expectOne(`${apiUrl}/admin/users/assignment-candidates`).flush([]);
+    http.expectOne(`${apiUrl}/institutions`).flush([]);
+    http.expectOne(`${apiUrl}/executing-units`).flush([]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const states = Array.from(fixture.nativeElement.querySelectorAll('.status') as NodeListOf<Element>).map((item) => item.textContent?.trim());
+    expect(states).toEqual(['Asignación suspendida']);
+    expect(fixture.nativeElement.textContent).not.toContain('Inhabilitar usuario');
+    expect(fixture.nativeElement.textContent).not.toContain('Habilitar usuario');
+  });
 });
 
-function flushAdministrationLoad(http: HttpTestingController, apiUrl: string): void {
-  http.expectOne(`${apiUrl}/admin/users`).flush([]);
+function activeScope() {
+  return { id: 9, role: 'ADMINISTRADOR_PIIP' as const, institution: 'MIDAGRI', institutionId: 1, executingUnit: 'UE-001', executingUnitId: 1, active: true, version: 2 };
+}
+
+function flushAdministrationLoad(http: HttpTestingController, apiUrl: string, users: unknown[] = [], candidates: unknown[] = []): void {
+  http.expectOne(`${apiUrl}/admin/users`).flush(jsonBlob(users));
+  http.expectOne(`${apiUrl}/admin/users/assignment-candidates`).flush(candidates);
   http.expectOne(`${apiUrl}/institutions`).flush([]);
   http.expectOne(`${apiUrl}/executing-units`).flush([]);
+}
+
+function jsonBlob(value: unknown): Blob {
+  return new Blob([JSON.stringify(value)], { type: 'application/json' });
 }

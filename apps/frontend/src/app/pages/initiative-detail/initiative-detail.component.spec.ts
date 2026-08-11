@@ -3,6 +3,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { PiipMockRepository } from '../../core/piip-mock.repository';
+import { PiipPortfolioRecord } from '../../core/piip.models';
+import { PiipRepository } from '../../core/piip.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { InitiativeDetailComponent } from './initiative-detail.component';
 
@@ -59,12 +61,13 @@ describe('InitiativeDetailComponent', () => {
   });
 
   it('shows the approval submission state until the operation completes', async () => {
-    const repository = TestBed.inject(PiipMockRepository);
-    const approvedRecord = repository.portfolioRecords().find((record) => record.code === 'I-024-2026');
+    const mockRepository = TestBed.inject(PiipMockRepository);
+    const repository = TestBed.inject(PIIP_REPOSITORY) as PiipRepository;
+    const approvedRecord = mockRepository.portfolioRecords().find((record) => record.code === 'I-024-2026');
     if (!approvedRecord) throw new Error('No se encontró la iniciativa de prueba.');
 
-    let resolveApproval!: (record: typeof approvedRecord) => void;
-    const pendingApproval = new Promise<typeof approvedRecord>((resolve) => { resolveApproval = resolve; });
+    let resolveApproval!: (record: PiipPortfolioRecord) => void;
+    const pendingApproval = new Promise<PiipPortfolioRecord>((resolve) => { resolveApproval = resolve; });
     vi.spyOn(repository, 'approveInitiative').mockReturnValue(pendingApproval);
 
     const fixture = TestBed.createComponent(InitiativeDetailComponent);

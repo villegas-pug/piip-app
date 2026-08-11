@@ -43,4 +43,14 @@ public class UserRoleScopeEntity {
     public long getVersion() { return version; }
     public boolean isActiveNow(Instant now) { return active && !validFrom.isAfter(now) && (validUntil == null || validUntil.isAfter(now)); }
     public void suspend(Instant when) { active = false; validUntil = when; }
+    public void update(RoleEntity role, InstitutionEntity institution, ExecutingUnitEntity executingUnit) {
+        this.role = role;
+        this.institution = institution;
+        this.executingUnit = executingUnit;
+    }
+    public void reactivate(Instant when) {
+        active = true;
+        validFrom = when;
+        validUntil = null;
+    }
 }

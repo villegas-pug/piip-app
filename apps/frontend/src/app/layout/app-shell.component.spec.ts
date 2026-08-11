@@ -64,7 +64,8 @@ describe('AppShellComponent loading state', () => {
     const overlay = TestBed.inject(OverlayContainer);
     const fixture = TestBed.createComponent(AppShellComponent);
     fixture.detectChanges();
-    const trigger = fixture.nativeElement.querySelector<HTMLButtonElement>('.executing-unit-trigger')!;
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    const trigger = nativeElement.querySelector<HTMLButtonElement>('.executing-unit-trigger')!;
 
     expect(trigger.textContent).toContain('UE-001');
     expect(trigger.textContent).toContain('Unidad de Innovación');
@@ -78,5 +79,20 @@ describe('AppShellComponent loading state', () => {
     expect(menuText).toContain('UE-001');
     expect(menuText).toContain('UE-002');
     expect(menuText).toContain('Unidad activa');
+  });
+
+  it('shows the authenticated user name above the effective role in the profile control', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.currentUser.set({
+      subject: 'profile-subject', fullName: 'Cristopher Guevara Villegas', email: 'cristopher@example.pe',
+      roles: ['ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1], institutionWide: false,
+    });
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+
+    const profile = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.profile-button')!;
+    expect(profile.textContent).toContain('Cristopher Guevara Villegas');
+    expect(profile.textContent).toContain('Administrador PIIP');
+    expect(profile.getAttribute('aria-label')).toContain('Cristopher Guevara Villegas');
   });
 });

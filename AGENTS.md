@@ -54,5 +54,5 @@
 - Ningún especialista ejecuta pruebas, builds, generación OpenAPI, integración Oracle ni acciones destructivas sin autorización explícita del usuario en el turno actual.
 
 <!-- SPECKIT START -->
-Para la feature activa, leer `specs/007-name-http-parameters/plan.md` antes de planificar o implementar.
+Para la feature activa, leer `specs/008-administrar-usuarios/plan.md` antes de planificar o implementar.
 <!-- SPECKIT END -->

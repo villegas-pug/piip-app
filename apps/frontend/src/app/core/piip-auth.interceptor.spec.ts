@@ -33,8 +33,9 @@ describe('piipAuthInterceptor', () => {
     delete window.__PIIP_RUNTIME_CONFIG__;
   });
 
-  it('adds the bearer token only to the PIIP API', () => {
+  it('adds the bearer token only to the PIIP API', async () => {
     http.get('https://api.example.gob.pe/api/v1/identity/me').subscribe();
+    await Promise.resolve();
 
     const request = controller.expectOne('https://api.example.gob.pe/api/v1/identity/me');
     expect(request.request.headers.get('Authorization')).toBe('Bearer access-token');

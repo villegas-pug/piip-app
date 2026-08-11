@@ -1,29 +1,40 @@
 <section class="admin-page">
   <header>
-    <div><p>Seguridad y ámbitos</p><h2>Usuarios autorizados</h2><span>Los roles se administran en Oracle. Keycloak se utiliza únicamente para autenticar la identidad.</span></div>
-    <button mat-flat-button type="button" [disabled]="assigning() || suspendingScopeId() !== null" (click)="assignmentOpen.set(!assignmentOpen())"><mat-icon>person_add</mat-icon>Nueva asignación</button>
+    <div><p>Seguridad y ámbitos</p><h2>Usuarios autorizados</h2><span>Keycloak autentica y administra las cuentas; PIIP gestiona sus roles y ámbitos.</span></div>
+    <button mat-flat-button type="button" [disabled]="operationPending()" (click)="assignmentOpen.set(!assignmentOpen())"><mat-icon>person_add</mat-icon>Nueva asignación</button>
   </header>
 
   @if (assignmentOpen()) {
     <form class="assignment" [formGroup]="assignmentForm" [attr.aria-busy]="assigning()" (ngSubmit)="assign()">
-      <mat-form-field appearance="outline"><mat-label>Usuario</mat-label><mat-select formControlName="userSubject">@for (user of users(); track user.id) { <mat-option [value]="user.subject">{{ user.fullName }} · {{ user.email }}</mat-option> }</mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Usuario</mat-label><mat-select formControlName="userSubject">@for (user of assignmentUsers(); track user.subject) { <mat-option [value]="user.subject" [attr.aria-label]="user.withoutAssignments ? user.fullName + ', ' + user.email + ', sin asignaciones previas' : user.fullName + ', ' + user.email">{{ user.fullName }} · {{ user.email }}@if (user.withoutAssignments) { <span class="candidate-detail"> · Sin asignaciones previas</span> }</mat-option> }</mat-select></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Rol</mat-label><mat-select formControlName="role"><mat-option value="ADMINISTRADOR_PIIP">Administrador PIIP</mat-option><mat-option value="CONSULTA_EXTERNA">Consulta externa</mat-option></mat-select></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Institución</mat-label><mat-select formControlName="institutionId">@for (item of institutions(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Unidad Ejecutora</mat-label><mat-select formControlName="executingUnitId"><mat-option [value]="0">Toda la institución</mat-option>@for (item of executingUnits(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
-      <div class="assignment-actions"><button mat-button type="button" [disabled]="assigning()" (click)="assignmentOpen.set(false)">Cancelar</button><button mat-flat-button type="submit" [disabled]="assigning()">@if (assigning()) {<mat-spinner diameter="18" />Asignando...} @else {Asignar rol}</button></div>
+      <div class="assignment-actions"><button mat-button type="button" [disabled]="operationPending()" (click)="assignmentOpen.set(false)">Cancelar</button><button mat-flat-button type="submit" [disabled]="operationPending()">@if (assigning()) {<mat-spinner diameter="18" />Asignando...} @else {Asignar rol}</button></div>
+    </form>
+  }
+
+  @if (editingScope(); as scope) {
+    <form class="assignment edit-assignment" [formGroup]="editForm" [attr.aria-busy]="savingScopeId() === scope.id" (ngSubmit)="saveEdit()">
+      <div class="form-heading"><h3>Editar asignación</h3><span>Los cambios conservan la asignación y usan su versión vigente.</span></div>
+      <mat-form-field appearance="outline"><mat-label>Rol</mat-label><mat-select formControlName="role"><mat-option value="ADMINISTRADOR_PIIP">Administrador PIIP</mat-option><mat-option value="CONSULTA_EXTERNA">Consulta externa</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Institución</mat-label><mat-select formControlName="institutionId">@for (item of institutions(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Unidad Ejecutora</mat-label><mat-select formControlName="executingUnitId"><mat-option [value]="0">Toda la institución</mat-option>@for (item of executingUnits(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
+      <div class="assignment-actions"><button mat-button type="button" [disabled]="operationPending()" (click)="cancelEdit()">Cancelar</button><button mat-flat-button type="submit" [disabled]="operationPending()">@if (savingScopeId() === scope.id) {<mat-spinner diameter="18" />Guardando...} @else {Guardar cambios}</button></div>
     </form>
   }
 
   <div class="scope-note"><mat-icon>verified_user</mat-icon><span>Solo puedes administrar usuarios dentro de tus unidades ejecutoras asignadas.</span></div>
 
   @if (loading()) {
-    <div class="state"><mat-spinner diameter="36" /><span>Consultando usuarios...</span></div>
+    <div class="state" role="status"><mat-spinner diameter="36" /><span>Consultando usuarios...</span></div>
   } @else if (error()) {
-    <div class="state error"><mat-icon>cloud_off</mat-icon><span>{{ error() }}</span></div>
+    <div class="state error" role="alert"><mat-icon>cloud_off</mat-icon><span>{{ error() }}</span></div>
   } @else {
     <div class="table-card">
       <table>
-        <thead><tr><th>Usuario</th><th>Rol</th><th>Institución</th><th>Unidad Ejecutora</th><th>Estado</th><th>Acción</th></tr></thead>
+        <caption class="sr-only">Usuarios autorizados y sus asignaciones administrables</caption>
+        <thead><tr><th>Usuario</th><th>Rol</th><th>Institución</th><th>Unidad Ejecutora</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
           @for (row of pagedAssignmentRows(); track row.scope?.id ?? row.user.id) {
             @if (row.scope; as scope) {
@@ -31,16 +42,25 @@
                 <td><strong>{{ row.user.fullName }}</strong><small>{{ row.user.email }}</small></td>
                 <td>{{ scope.role === 'ADMINISTRADOR_PIIP' ? 'Administrador PIIP' : 'Consulta externa' }}</td>
                 <td>{{ scope.institution }}</td><td>{{ scope.executingUnit }}</td>
-                <td><span class="status">Activo</span></td>
-                <td><button mat-button type="button" [disabled]="suspendingScopeId() !== null" [attr.aria-busy]="suspendingScopeId() === scope.id" (click)="suspend(scope)">@if (suspendingScopeId() === scope.id) {<mat-spinner diameter="18" />Suspendiendo...} @else {Suspender}</button></td>
+                <td><span class="status" [class.status-inactive]="!scope.active">{{ scope.active ? 'Asignación activa' : 'Asignación suspendida' }}</span></td>
+                <td class="actions">
+                  @if (scope.active) {
+                    <button mat-button type="button" [disabled]="operationPending()" (click)="openEdit(scope)">Editar</button>
+                    <button mat-button type="button" [disabled]="operationPending()" [attr.aria-busy]="changingScopeId() === scope.id" (click)="suspend(scope)">@if (changingScopeId() === scope.id) {<mat-spinner diameter="18" />Suspendiendo...} @else {Suspender}</button>
+                  } @else {
+                    <button mat-button type="button" [disabled]="operationPending()" [attr.aria-busy]="changingScopeId() === scope.id" (click)="reactivate(scope)">@if (changingScopeId() === scope.id) {<mat-spinner diameter="18" />Reactivando...} @else {Reactivar}</button>
+                  }
+                </td>
               </tr>
             } @else {
-              <tr><td><strong>{{ row.user.fullName }}</strong><small>{{ row.user.email }}</small></td><td colspan="4"><span class="unassigned">Sin rol asignado</span></td><td>—</td></tr>
+              <tr><td><strong>{{ row.user.fullName }}</strong><small>{{ row.user.email }}</small></td><td colspan="5"><span class="unassigned">Sin rol asignado</span></td></tr>
             }
+          } @empty {
+            <tr><td colspan="6"><div class="empty-state" role="status"><mat-icon>group_off</mat-icon><span>No hay usuarios ni asignaciones disponibles dentro de tu ámbito administrable.</span></div></td></tr>
           }
         </tbody>
       </table>
-      <app-piip-pagination [totalItems]="assignmentRows().length" [pageIndex]="currentPage()" itemLabel="asignaciones" (pageChange)="pageIndex.set($event)" />
+      @if (assignmentRows().length > 0) { <app-piip-pagination [totalItems]="assignmentRows().length" [pageIndex]="currentPage()" itemLabel="asignaciones" (pageChange)="pageIndex.set($event)" /> }
     </div>
   }
 </section>

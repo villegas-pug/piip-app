@@ -24,7 +24,9 @@ class OpenApiGenerationTest {
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body()).contains("/initiatives", "/projects/derived", "/portfolio-records/{recordCode}/documents");
+        assertThat(response.body())
+            .contains("/initiatives", "/projects/derived", "/portfolio-records/{recordCode}/documents")
+            .doesNotContain("/admin/users/{userId}/status");
         Path output = Path.of("target", "piip-openapi.json");
         Files.createDirectories(output.getParent());
         Files.writeString(output, response.body(), StandardCharsets.UTF_8);

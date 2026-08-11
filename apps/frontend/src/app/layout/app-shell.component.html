@@ -55,9 +55,9 @@
           <mat-icon [class.button-spinner]="notificationPending()">{{ notificationPending() ? 'progress_activity' : 'notifications_none' }}</mat-icon>@if (hasUnreadNotifications()) {<span></span>}
         </button>
         <i class="divider"></i>
-        <button class="profile-button" type="button" [matMenuTriggerFor]="profileMenu">
+        <button class="profile-button" type="button" [matMenuTriggerFor]="profileMenu" [attr.aria-label]="'Abrir menú de perfil de ' + (repository.currentUser()?.fullName ?? 'usuario PIIP')">
           <span class="avatar"><mat-icon>person</mat-icon></span>
-          <span>{{ repository.role() }}</span>
+          <span class="profile-copy"><strong [title]="repository.currentUser()?.fullName ?? 'Usuario PIIP'">{{ repository.currentUser()?.fullName ?? 'Usuario PIIP' }}</strong><small>{{ repository.role() }}</small></span>
           <mat-icon>keyboard_arrow_down</mat-icon>
         </button>
         <mat-menu #profileMenu="matMenu" xPosition="before">

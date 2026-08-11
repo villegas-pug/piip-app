@@ -31,4 +31,5 @@ public class UserEntity {
         if (email != null && !email.isBlank()) this.email = email;
         this.lastAuthenticatedAt = Instant.now();
     }
+    public void changeActiveState(boolean active) { this.active = active; }
 }

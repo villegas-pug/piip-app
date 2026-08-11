@@ -65,9 +65,13 @@ nav mat-icon { width: 29px; height: 29px; font-size: 29px; }
 .notification-button mat-icon { width: 28px; height: 28px; font-size: 28px; }
 .notification-button span { position: absolute; top: 6px; right: 7px; width: 7px; height: 7px; border: 2px solid #fff; border-radius: 50%; background: var(--piip-gold); }
 .divider { width: 1px; height: 38px; background: var(--piip-border); }
-.profile-button { display: flex; align-items: center; gap: 11px; min-width: 225px; font-size: 18px; }
+.profile-button { display: flex; align-items: center; gap: 11px; min-width: 250px; max-width: 330px; text-align: left; }
 .avatar { display: grid; place-items: center; width: 43px; height: 43px; border-radius: 50%; color: #fff; background: var(--piip-green-800); }
 .avatar mat-icon { width: 30px; height: 30px; font-size: 30px; }
+.profile-copy { display: grid; min-width: 0; flex: 1; line-height: 1.2; }
+.profile-copy strong, .profile-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-copy strong { color: var(--piip-green-900); font-size: 15px; font-weight: 700; }
+.profile-copy small { margin-top: 2px; color: #657169; font-size: 12px; }
 .profile-button > mat-icon:last-child { margin-left: auto; }
 
 main { min-height: calc(100vh - var(--piip-topbar-height)); }

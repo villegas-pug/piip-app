@@ -74,6 +74,17 @@ class LocalAuthorizationConcurrencyTest {
     }
 
     @Test
+    void resolvesActiveRoleScopeWhenTheLegacyUserStateIsInactive() {
+        UserEntity user = users.findByKeycloakSubject(subject).orElseThrow();
+        user.changeActiveState(false);
+        users.saveAndFlush(user);
+
+        LocalAccessContext context = authorization.resolve(subject);
+
+        assertThat(context.roles()).containsExactly(RoleCode.ADMINISTRADOR_PIIP);
+    }
+
+    @Test
     void serializesParallelAuthenticationUpdates() throws Exception {
         invokeConcurrently(4, () -> {
             authorization.recordAuthentication(subject, "Usuario autenticado", "autenticado@example.test");

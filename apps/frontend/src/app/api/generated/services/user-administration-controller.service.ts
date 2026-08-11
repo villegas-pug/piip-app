@@ -12,9 +12,16 @@ import { StrictHttpResponse } from '../strict-http-response';
 
 import { assign } from '../fn/user-administration-controller/assign';
 import { Assign$Params } from '../fn/user-administration-controller/assign';
+import { assignmentCandidates } from '../fn/user-administration-controller/assignment-candidates';
+import { AssignmentCandidates$Params } from '../fn/user-administration-controller/assignment-candidates';
+import { reactivate } from '../fn/user-administration-controller/reactivate';
+import { Reactivate$Params } from '../fn/user-administration-controller/reactivate';
 import { ScopeResponse } from '../models/scope-response';
 import { suspend } from '../fn/user-administration-controller/suspend';
 import { Suspend$Params } from '../fn/user-administration-controller/suspend';
+import { update } from '../fn/user-administration-controller/update';
+import { Update$Params } from '../fn/user-administration-controller/update';
+import { UserAssignmentCandidateResponse } from '../models/user-assignment-candidate-response';
 import { UserResponse } from '../models/user-response';
 import { users } from '../fn/user-administration-controller/users';
 import { Users$Params } from '../fn/user-administration-controller/users';
@@ -23,6 +30,87 @@ import { Users$Params } from '../fn/user-administration-controller/users';
 export class UserAdministrationControllerService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `update()` */
+  static readonly UpdatePath = '/admin/role-assignments/{scopeId}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `update()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  update$Response(params: Update$Params, context?: HttpContext): Observable<StrictHttpResponse<ScopeResponse>> {
+    const obs = update(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `update$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  update(params: Update$Params, context?: HttpContext): Observable<ScopeResponse> {
+    const resp = this.update$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<ScopeResponse>): ScopeResponse => r.body)
+    );
+  }
+
+  /** Path part for operation `suspend()` */
+  static readonly SuspendPath = '/admin/role-assignments/{scopeId}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `suspend()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  suspend$Response(params: Suspend$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+    const obs = suspend(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `suspend$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  suspend(params: Suspend$Params, context?: HttpContext): Observable<void> {
+    const resp = this.suspend$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<void>): void => r.body)
+    );
+  }
+
+  /** Path part for operation `reactivate()` */
+  static readonly ReactivatePath = '/admin/role-assignments/{scopeId}/reactivation';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reactivate()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  reactivate$Response(params: Reactivate$Params, context?: HttpContext): Observable<StrictHttpResponse<ScopeResponse>> {
+    const obs = reactivate(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reactivate$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  reactivate(params: Reactivate$Params, context?: HttpContext): Observable<ScopeResponse> {
+    const resp = this.reactivate$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<ScopeResponse>): ScopeResponse => r.body)
+    );
   }
 
   /** Path part for operation `assign()` */
@@ -79,30 +167,30 @@ export class UserAdministrationControllerService extends BaseService {
     );
   }
 
-  /** Path part for operation `suspend()` */
-  static readonly SuspendPath = '/admin/role-assignments/{scopeId}';
+  /** Path part for operation `assignmentCandidates()` */
+  static readonly AssignmentCandidatesPath = '/admin/users/assignment-candidates';
 
   /**
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
-   * To access only the response body, use `suspend()` instead.
+   * To access only the response body, use `assignmentCandidates()` instead.
    *
    * This method doesn't expect any request body.
    */
-  suspend$Response(params: Suspend$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
-    const obs = suspend(this.http, this.rootUrl, params, context);
+  assignmentCandidates$Response(params?: AssignmentCandidates$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<UserAssignmentCandidateResponse>>> {
+    const obs = assignmentCandidates(this.http, this.rootUrl, params, context);
     return obs;
   }
 
   /**
    * This method provides access only to the response body.
-   * To access the full response (for headers, for example), `suspend$Response()` instead.
+   * To access the full response (for headers, for example), `assignmentCandidates$Response()` instead.
    *
    * This method doesn't expect any request body.
    */
-  suspend(params: Suspend$Params, context?: HttpContext): Observable<void> {
-    const resp = this.suspend$Response(params, context);
+  assignmentCandidates(params?: AssignmentCandidates$Params, context?: HttpContext): Observable<Array<UserAssignmentCandidateResponse>> {
+    const resp = this.assignmentCandidates$Response(params, context);
     return resp.pipe(
-      map((r: StrictHttpResponse<void>): void => r.body)
+      map((r: StrictHttpResponse<Array<UserAssignmentCandidateResponse>>): Array<UserAssignmentCandidateResponse> => r.body)
     );
   }
 
