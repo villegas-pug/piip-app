@@ -1,7 +1,7 @@
 <section class="page initiatives-page">
   <div class="page-heading">
     <div><h2>Registro de iniciativas</h2><p>Consulta, filtra y gestiona los expedientes registrados.</p></div>
-    @if (repository.role() === 'Administrador PIIP') {
+    @if (canCreateInActiveScope()) {
       <a class="primary-button" routerLink="/iniciativas/nueva"><mat-icon>add</mat-icon>Nueva iniciativa</a>
     }
   </div>
@@ -38,17 +38,17 @@
                     <button class="icon-action" type="button" [matMenuTriggerFor]="initiativeMenu" [attr.aria-label]="'Acciones de ' + initiative.code"><mat-icon>more_vert</mat-icon></button>
                     <mat-menu #initiativeMenu="matMenu">
                       <a mat-menu-item [routerLink]="['/iniciativas', initiative.code, 'documentos']"><mat-icon>description</mat-icon>Ver documentos</a>
-                      @if (repository.role() === 'Administrador PIIP' && initiative.status === 'Presentado') {
+                      @if (canAdminister(initiative) && initiative.status === 'Presentado') {
                         <a mat-menu-item [routerLink]="['/iniciativas', initiative.code]" [queryParams]="{ action: 'approve' }"><mat-icon>verified</mat-icon>Registrar aprobación</a>
                       }
-                      @if (repository.role() === 'Administrador PIIP' && initiative.status === 'Iniciativa aprobada') {
+                      @if (canAdminister(initiative) && initiative.status === 'Iniciativa aprobada') {
                         @if (repository.getProjectByOrigin(initiative.code); as project) {
                           <a mat-menu-item [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon>account_tree</mat-icon>Ver proyecto derivado</a>
                         } @else {
                           <a mat-menu-item [routerLink]="['/proyectos/nuevo/derivado', initiative.code]"><mat-icon>account_tree</mat-icon>Crear proyecto</a>
                         }
                       }
-                      @if (repository.role() === 'Administrador PIIP') {
+                      @if (repository.hasAnyAdministratorScope()) {
                         <a mat-menu-item routerLink="/auditoria" [queryParams]="{ record: initiative.code }"><mat-icon>history</mat-icon>Ver auditoría</a>
                       }
                     </mat-menu>

@@ -26,7 +26,10 @@ public class WorkController {
     @GetMapping @Transactional(readOnly = true)
     public List<TaskResponse> pending() {
         LocalAccessContext actor = authorization.require(RoleCode.ADMINISTRADOR_PIIP);
-        return tasks.findByAssignedUserIdAndStatusOrderByDueDateAsc(actor.userId(), TaskStatus.PENDING).stream().map(this::response).toList();
+        return tasks.findByAssignedUserIdAndStatusOrderByDueDateAsc(actor.userId(), TaskStatus.PENDING).stream()
+            .filter(task -> actor.coversExecutingUnit(RoleCode.ADMINISTRADOR_PIIP,
+                task.getRecord().getExecutingUnit().getId(), task.getRecord().getExecutingUnit().getInstitution().getId()))
+            .map(this::response).toList();
     }
 
     @PutMapping("/{taskId}/complete") @ResponseStatus(HttpStatus.NO_CONTENT) @Transactional
@@ -41,7 +44,10 @@ public class WorkController {
         WorkTaskEntity task = task(taskId); LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, task.getRecord().getExecutingUnit().getId());
         if (task.getVersion() != request.version()) throw new StaleVersionException();
         UserEntity target = users.findByKeycloakSubject(request.userSubject()).orElseThrow(() -> new NotFoundException("Usuario inexistente"));
-        boolean allowed = scopes.findActiveBySubject(target.getKeycloakSubject(), Instant.now()).stream().anyMatch(scope -> scope.getRole().getCode() == RoleCode.ADMINISTRADOR_PIIP && (scope.getExecutingUnit() == null || scope.getExecutingUnit().getId().equals(task.getRecord().getExecutingUnit().getId())));
+        boolean allowed = scopes.findActiveBySubject(target.getKeycloakSubject(), Instant.now()).stream().anyMatch(scope ->
+            scope.getRole().getCode() == RoleCode.ADMINISTRADOR_PIIP
+                && scope.getInstitution().getId().equals(task.getRecord().getExecutingUnit().getInstitution().getId())
+                && (scope.getExecutingUnit() == null || scope.getExecutingUnit().getId().equals(task.getRecord().getExecutingUnit().getId())));
         if (!allowed) throw new BusinessRuleException("El usuario no es administrador del mismo ámbito");
         task.reassign(target); audit.event("TAREA_REASIGNADA", "TAREA_TRABAJO", taskId.toString(), Map.of("registro", task.getRecord().getCode(), "asignadoA", target.getKeycloakSubject()), actor.subject());
         return response(task);

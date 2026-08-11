@@ -18,6 +18,24 @@
 | `DELETE /role-assignments/{scopeId}?version={scopeVersion}` | Sin cuerpo | `204` | Suspende de forma reversible la asignación, sin borrarla. |
 | `PUT /role-assignments/{scopeId}/reactivation?version={scopeVersion}` | Sin cuerpo | `200 ScopeResponse` | Reactiva la misma asignación suspendida cuando sus catálogos y cobertura siguen siendo válidos. |
 
+## Identidad funcional
+
+`GET /api/v1/identity/me` añade de forma compatible `roleScopes[]`. Cada elemento corresponde a una única asignación activa y vigente; no se combinan roles y ámbitos de elementos diferentes.
+
+```text
+RoleScopeResponse
+  role: ADMINISTRADOR_PIIP | CONSULTA_EXTERNA
+  institutionId: number
+  executingUnitId?: number | null
+
+CurrentUserResponse
+  subject, fullName, email
+  roleScopes: RoleScopeResponse[]
+  roles, institutionIds, executingUnitIds, institutionWide  # compatibilidad temporal
+```
+
+Una operación que recibe o resuelve una Unidad Ejecutora y exige Administrador PIIP responde `403` si no existe un `roleScope` Administrador que cubra esa misma Unidad, aunque el actor tenga Administrador en otro ámbito y cualquier otro rol en la Unidad solicitada.
+
 ## DTOs publicados
 
 ```text

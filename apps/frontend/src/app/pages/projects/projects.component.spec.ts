@@ -44,7 +44,28 @@ describe('ProjectsComponent', () => {
 
   it('does not open registration for the external consultation profile', () => {
     const fixture = TestBed.createComponent(ProjectsComponent);
-    TestBed.inject(PiipMockRepository).role.set('Consulta externa');
+    TestBed.inject(PiipMockRepository).toggleRole();
+
+    fixture.componentInstance.openProjectRegistration('type-selection');
+
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('does not combine an Administrator grant from another UE for project creation', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([
+      { id: 1, code: 'UE-001', name: 'UE-001', institutionId: 1 },
+      { id: 2, code: 'UE-002', name: 'UE-002', institutionId: 1 },
+    ]);
+    repository.currentUser.set({
+      subject: 'mixed', fullName: 'Usuario mixto', email: 'mixed@example.pe',
+      roleScopes: [
+        { role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 1 },
+        { role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 2 },
+      ], roles: ['CONSULTA_EXTERNA', 'ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1, 2], institutionWide: false,
+    });
+    repository.selectedExecutingUnitId.set(1);
+    const fixture = TestBed.createComponent(ProjectsComponent);
 
     fixture.componentInstance.openProjectRegistration('type-selection');
 

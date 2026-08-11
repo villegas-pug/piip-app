@@ -31,7 +31,11 @@ public class DashboardController {
         visibleRecords.forEach(item -> byStatus.merge(item.getStatus().label(), 1L, Long::sum));
 
         var pendingTasks = actor.hasRole(pe.gob.midagri.piip.identity.domain.RoleCode.ADMINISTRADOR_PIIP)
-            ? tasks.findByAssignedUserIdAndStatusOrderByDueDateAsc(actor.userId(), TaskStatus.PENDING) : List.<pe.gob.midagri.piip.work.persistence.WorkTaskEntity>of();
+            ? tasks.findByAssignedUserIdAndStatusOrderByDueDateAsc(actor.userId(), TaskStatus.PENDING).stream()
+                .filter(task -> actor.coversExecutingUnit(pe.gob.midagri.piip.identity.domain.RoleCode.ADMINISTRADOR_PIIP,
+                    task.getRecord().getExecutingUnit().getId(), task.getRecord().getExecutingUnit().getInstitution().getId()))
+                .toList()
+            : List.<pe.gob.midagri.piip.work.persistence.WorkTaskEntity>of();
         long alerts = pendingTasks.stream().filter(task -> task.getDueDate() != null && !task.getDueDate().isAfter(LocalDate.now().plusDays(3))).count();
         long unread = notifications.findByRecipientIdOrderByCreatedAtDesc(actor.userId()).stream().filter(item -> !item.isRead()).count();
         return new DashboardResponse(initiatives, projects, alerts, pendingTasks.size(), unread, byStatus);

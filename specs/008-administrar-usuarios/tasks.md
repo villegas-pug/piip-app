@@ -1,57 +1,69 @@
-# Tasks: Keycloak como autoridad de estado de cuenta
+# Tasks: Autorización exacta por rol y ámbito
 
 **Input**: `specs/008-administrar-usuarios/{spec.md,plan.md,research.md,data-model.md,contracts/user-administration-http.md,quickstart.md}`
 
-**Baseline**: el CRUD de asignaciones, la publicación de candidatos y el cliente generado existente son trabajo previo. Las tareas siguientes cubren exclusivamente el retiro del estado local de usuario y su sustitución por la autoridad de Keycloak; no reimplementan ese baseline.
+**Baseline**: T001-T015 de la iteración anterior están completadas. El CRUD de asignaciones, candidatos, retiro del estado local y cliente actual no se reimplementan. Las tareas pendientes cubren exclusivamente la corrección aprobada de autorización exacta.
 
-**Autorización**: generar tareas no autoriza implementación. `/speckit-implement` autoriza sólo estas tareas de código. Publicar OpenAPI, regenerar el cliente, ejecutar pruebas, E2E, Oracle y Git requieren autorización explícita separada en el turno de ejecución.
+**Autorización**: `/speckit-implement` autoriza únicamente T016-T026, T028-T034 y T037-T038. T027, T035 y T036 requieren autorización explícita adicional para OpenAPI, generación, pruebas y E2E según se indica en cada tarea.
 
-## Phase 1: User Story 3 — Separar estado de cuenta y autorización PIIP (P1)
+## Phase 1: Baseline completado
 
+T001-T015 permanecen completadas en el historial de esta feature: Keycloak como autoridad de cuenta, CRUD de asignaciones, candidatos, contrato, cliente, UI y validaciones anteriores.
 
-**Goal**: eliminar el estado local de cuenta de la autorización y de la administración, preservando las operaciones sobre asignaciones.
+## Phase 2: Fundamento de autorización exacta
 
-**Independent Test**: una asignación vigente autoriza sin depender del valor local heredado, y la pantalla no expone una acción de estado de cuenta.
+**Goal**: conservar la tupla rol y ámbito como unidad canónica antes de adaptar consumidores.
 
-- [X] T001 [US3] Retirar el endpoint de cambio de estado y los campos de cuenta de los DTOs en `apps/backend/src/main/java/pe/gob/midagri/piip/identity/api/{UserAdministrationController,AdminDtos}.java`.
-- [X] T002 [US3] Retirar `changeStatus`, sus eventos de auditoría y el mapeo de estado de usuario en `apps/backend/src/main/java/pe/gob/midagri/piip/identity/application/UserAdministrationService.java`.
-- [X] T003 [US3] Eliminar el uso de `user.active` de las consultas de autorización, cobertura, último administrador y destinatarios en `apps/backend/src/main/java/pe/gob/midagri/piip/identity/persistence/UserRoleScopeRepository.java`.
-- [X] T004 [P] [US3] Cambiar la consulta de candidatos para ignorar el estado heredado local en `apps/backend/src/main/java/pe/gob/midagri/piip/identity/persistence/UserRepository.java`.
+- [X] T016 [US4] Añadir pruebas de regresión que demuestren que Administrador en UE-002 no concede escritura en UE-001 cubierta sólo por Consulta externa en `apps/backend/src/test/java/pe/gob/midagri/piip/identity/{LocalAccessContextTest.java,application/LocalAuthorizationServiceTest.java}`.
+- [X] T017 [US4] Crear el valor inmutable `RoleScopeGrant` y convertir `LocalAccessContext` para conservar grants exactos y proyecciones derivadas en `apps/backend/src/main/java/pe/gob/midagri/piip/identity/application/{RoleScopeGrant.java,LocalAccessContext.java}`.
+- [X] T018 [US4] Mapear asignaciones activas a grants y corregir `requireUnit`/`requireReadableUnit` en `apps/backend/src/main/java/pe/gob/midagri/piip/identity/application/LocalAuthorizationService.java`.
+- [X] T019 [P] [US4] Ajustar mocks y constructores de contexto afectados sin alterar reglas funcionales en `apps/backend/src/test/java/pe/gob/midagri/piip/identity/{LocalAccessContextTest.java,LocalAuthorizationConcurrencyTest.java,application/UserAdministrationServiceTest.java}`.
 
-## Phase 2: Contrato publicado y consumidor de User Story 3
+## Phase 3: Consumidores backend por ámbito
 
-- [X] T005 [P] [US3] Actualizar las pruebas de repositorio, servicio, controlador y autorización local para cubrir la ausencia de estado local funcional en `apps/backend/src/test/java/pe/gob/midagri/piip/identity/`.
-- [X] T006 [US3] Actualizar la prueba de contrato OpenAPI para que no describa el cambio de estado en `apps/backend/src/test/java/pe/gob/midagri/piip/contract/OpenApiGenerationTest.java`.
-- [X] T007 [US3] Con autorización explícita, publicar el contrato mediante `apps/backend/src/test/java/pe/gob/midagri/piip/contract/OpenApiGenerationTest.java` y comprobar que retiró la ruta y campos obsoletos.
-- [X] T008 [US3] Con autorización explícita posterior a T007, regenerar `apps/frontend/src/app/api/generated/` mediante `apps/frontend/package.json` y revisar los archivos retirados por `removeStaleFiles`.
+**Goal**: impedir el producto cartesiano entre roles y coberturas en todos los casos sensibles.
 
-## Phase 3: Interfaz de User Story 3
+- [X] T020 [P] [US4] Aplicar rol Administrador exacto en escrituras e iniciativas elegibles en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/PortfolioService.java` y crear `apps/backend/src/test/java/pe/gob/midagri/piip/portfolio/application/PortfolioAuthorizationTest.java`.
+- [X] T021 [P] [US4] Aplicar rol exacto para escritura, visibilidad interna y descarga de documentos en `apps/backend/src/main/java/pe/gob/midagri/piip/documents/application/DocumentService.java` y crear `apps/backend/src/test/java/pe/gob/midagri/piip/documents/application/DocumentAuthorizationTest.java`.
+- [X] T022 [P] [US4] Filtrar y autorizar tareas administrativas por la UE del registro en `apps/backend/src/main/java/pe/gob/midagri/piip/{work/api/WorkController.java,dashboard/api/DashboardController.java}` y crear `apps/backend/src/test/java/pe/gob/midagri/piip/{work/api/WorkControllerTest.java,dashboard/api/DashboardControllerTest.java}`.
+- [X] T023 [US4] Limitar listado, origen, destino y cobertura institucional exclusivamente a grants Administrador en `apps/backend/src/main/java/pe/gob/midagri/piip/identity/application/UserAdministrationService.java` y ampliar `UserAdministrationServiceTest.java`.
+- [X] T024 [US4] Revisar estáticamente todos los usos de `require(RoleCode.ADMINISTRADOR_PIIP)`, `hasRole` y cobertura para confirmar que no queda una combinación sensible rol-ámbito fuera del alcance documentado en `apps/backend/src/main/java/`.
 
-- [X] T009 [US3] Retirar estado, señales y llamada de cambio de estado de usuario en `apps/frontend/src/app/pages/user-administration/user-administration.component.ts`.
-- [X] T010 [P] [US3] Retirar etiquetas, confirmaciones y botones de estado de usuario, conservando estado de asignación y accesibilidad, en `apps/frontend/src/app/pages/user-administration/{user-administration.component.html,user-administration.component.scss}`.
-- [X] T011 [US3] Actualizar pruebas del componente para ausencia de controles de cuenta y preservación de roles/ámbitos, errores y duplicados en `apps/frontend/src/app/pages/user-administration/user-administration.component.spec.ts`.
+## Phase 4: Contrato de identidad exacta
 
-## Phase 4: Validación y E2E
+**Goal**: entregar al frontend grants suficientes para representar permisos sin inferencias agregadas.
 
-- [X] T012 Con autorización explícita, ejecutar las pruebas focalizadas backend desde `apps/backend` y registrar el resultado sin ejecutar integración Oracle adicional.
-- [X] T013 Con autorización explícita, ejecutar `npm test -- --watch=false` desde `apps/frontend` y distinguir cualquier fallo ajeno a Administración de usuarios.
-- [X] T014 Con autorización explícita, ejecutar el recorrido E2E de `specs/008-administrar-usuarios/quickstart.md`: confirmar la ausencia de gestión de cuentas en PIIP y los flujos de asignación; documentar por separado cualquier validación operativa realizada en Keycloak.
-- [X] T015 Ejecutar `git diff --check` desde `F:/work-space/midagri/piip-monorepo` y registrar el resultado sin sustituir pruebas funcionales.
+- [X] T025 [US4] Añadir `RoleScopeResponse` y `roleScopes` compatibles a `/identity/me` en `apps/backend/src/main/java/pe/gob/midagri/piip/identity/api/IdentityController.java` y crear `apps/backend/src/test/java/pe/gob/midagri/piip/identity/api/IdentityControllerTest.java` para cubrir únicamente asignaciones activas y vigentes.
+- [X] T026 [US4] Actualizar la aserción contractual para `roleScopes` en `apps/backend/src/test/java/pe/gob/midagri/piip/contract/OpenApiGenerationTest.java` sin publicar todavía el artefacto.
+- [X] T027 Con autorización explícita, ejecutar `OpenApiGenerationTest`, verificar `roleScopes` y regenerar `apps/frontend/src/app/api/generated/` mediante `npm run api:generate`, revisando `removeStaleFiles` sin editar generated manualmente.
 
-## Dependencias y orden
+## Phase 5: Contexto y acciones Angular
 
-- T001-T004 preceden a T005-T007.
-- T007 precede a T008; T008 precede a T009-T011.
-- T012-T014 siguen la implementación y requieren autorización independiente.
+**Goal**: mostrar y usar el rol de la UE correcta en navegación, rutas y acciones.
 
-## Oportunidades de paralelización
+- [X] T028 [US4] Adaptar el modelo de identidad generado a los tipos de presentación en `apps/frontend/src/app/core/piip.models.ts`, manteniendo los campos agregados sólo por compatibilidad.
+- [X] T029 [US4] Incorporar capacidades por grant, rol efectivo por UE y limpieza de cargas privilegiadas en `apps/frontend/src/app/core/{piip.repository.ts,piip-http.repository.ts,piip-mock.repository.ts}`.
+- [X] T030 [P] [US4] Separar autorización de Administrador transversal y Administrador de UE activa en `apps/frontend/src/app/core/{administrator.guard.ts,active-scope-administrator.guard.ts}` y `apps/frontend/src/app/app.routes.ts`.
+- [X] T031 [US4] Mostrar nombre y rol efectivo de la UE activa, conservar acceso transversal a Administración de usuarios y recalcular al cambiar de UE en `apps/frontend/src/app/layout/{app-shell.component.ts,app-shell.component.html,app-shell.component.scss}`.
+- [X] T032 [P] [US4] Sustituir comprobaciones globales por capacidades de la UE seleccionada o de la UE real del registro en `apps/frontend/src/app/pages/{initiatives/initiatives.component.html,initiative-detail/initiative-detail.component.html,initiative-form/initiative-form.component.ts,projects/projects.component.{ts,html},preexisting-project-form/preexisting-project-form.component.html,derived-project-form/derived-project-form.component.html,documents/documents.component.html}`.
+- [X] T033 [US4] Filtrar instituciones, UE y `Toda la institución` exclusivamente con grants Administrador en `apps/frontend/src/app/pages/user-administration/user-administration.component.{ts,html}`.
+- [X] T034 [US4] Ampliar pruebas de repositorio, guards, shell y pantallas en `apps/frontend/src/app/{core/piip-http.repository.spec.ts,core/administrator.guard.spec.ts,core/active-scope-administrator.guard.spec.ts,layout/app-shell.component.spec.ts,pages/initiative-detail/initiative-detail.component.spec.ts,pages/projects/projects.component.spec.ts,pages/documents/documents.component.spec.ts,pages/user-administration/user-administration.component.spec.ts}`.
 
-- T003 y T004 pueden avanzar en paralelo al limitarse a repositorios distintos.
-- T005 puede avanzar en paralelo con T003-T004 una vez acordadas las firmas finales de T001-T002.
-- T010 puede avanzar en paralelo con T009 después de T008.
+## Phase 6: Publicación y validación autorizada
 
-## Estrategia incremental
+- [X] T035 Con autorización explícita, ejecutar pruebas backend focalizadas y `npm test -- --watch=false`, distinguiendo fallos propios y ajenos.
+- [X] T036 Con autorización explícita, ejecutar el recorrido E2E reversible de `specs/008-administrar-usuarios/quickstart.md` con Consulta externa en UE-001 y Administrador PIIP en UE-002.
+- [X] T037 Ejecutar `git diff --check` y revisar que no se modificaron entidades JPA, esquema, Keycloak ni semántica global de auditoría.
+- [X] T038 Ejecutar `graphify update .` después de los cambios materiales de código y antes del checkpoint de sesión.
 
-1. Retirar primero la semántica local en backend y comprobar sus pruebas focalizadas.
-2. Publicar contrato y regenerar el cliente únicamente después de la publicación autorizada.
-3. Simplificar la UI y validar que la gestión de asignaciones permanece intacta.
+## Dependencias
+
+- T016 precede a T017-T018; T017-T018 bloquean T020-T025.
+- T020-T024 pueden avanzar en paralelo después de T018, salvo archivos de pruebas compartidos.
+- T025-T026 preceden a T027; T027 precede a toda adaptación Angular T028-T034.
+- T028-T034 dependen del cliente generado por T027.
+- T035-T038 siguen a toda la implementación y conservan sus autorizaciones independientes.
+
+## Prueba independiente
+
+La historia US4 se considera implementada cuando la misma cuenta puede leer UE-001 como Consulta externa, no puede escribir ni administrar allí, conserva Administrador PIIP en UE-002 y la interfaz refleja ambos contextos sin arrastrar privilegios.

@@ -37,7 +37,8 @@ class UserAdministrationServiceTest {
     @BeforeEach
     void setUp() {
         service = new UserAdministrationService(users, roles, scopes, institutions, units, authorization, audit);
-        administrator = new LocalAccessContext(1L, "admin-subject", Set.of(RoleCode.ADMINISTRADOR_PIIP), Set.of(10L), Set.of(), Set.of(10L));
+        administrator = new LocalAccessContext(1L, "admin-subject",
+            Set.of(new RoleScopeGrant(RoleCode.ADMINISTRADOR_PIIP, 10L, null)));
         when(authorization.require(RoleCode.ADMINISTRADOR_PIIP)).thenReturn(administrator);
         lenient().when(authorization.resolve("admin-subject")).thenReturn(administrator);
     }
@@ -115,6 +116,20 @@ class UserAdministrationServiceTest {
         assertThat(response.id()).isEqualTo(20L);
         assertThat(response.role()).isEqualTo(RoleCode.ADMINISTRADOR_PIIP);
         verify(audit).event(eq("ROL_ACTUALIZADO"), eq("USUARIO"), eq("managed-subject"), anyMap(), eq("admin-subject"));
+    }
+
+    @Test
+    void consultationScopeDoesNotExpandAdministrativeListingCoverage() {
+        LocalAccessContext mixed = new LocalAccessContext(1L, "admin-subject",
+            Set.of(new RoleScopeGrant(RoleCode.CONSULTA_EXTERNA, 10L, 100L),
+                new RoleScopeGrant(RoleCode.ADMINISTRADOR_PIIP, 20L, 200L)));
+        when(authorization.require(RoleCode.ADMINISTRADOR_PIIP)).thenReturn(mixed);
+        when(authorization.resolve("admin-subject")).thenReturn(mixed);
+        when(scopes.findForAdministration(Set.of(20L))).thenReturn(List.of());
+
+        assertThat(service.list()).isEmpty();
+        verify(scopes).findForAdministration(Set.of(20L));
+        verify(scopes, never()).findForAdministration(argThat(ids -> ids.contains(10L)));
     }
 
     private UserEntity user(Long id, String subject, boolean active) {

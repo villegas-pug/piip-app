@@ -13,6 +13,14 @@ export type PiipStatus =
 
 export type UserRole = 'Administrador PIIP' | 'Consulta externa';
 
+export type UserRoleCode = 'ADMINISTRADOR_PIIP' | 'CONSULTA_EXTERNA';
+
+export interface RoleScope {
+  role: UserRoleCode;
+  institutionId: number;
+  executingUnitId: number | null;
+}
+
 export type PiipRecordType = 'Iniciativa' | 'Proyecto';
 
 export type ProjectOriginMode = 'DERIVED_FROM_INITIATIVE' | 'PREEXISTING';
@@ -46,6 +54,7 @@ export interface PiipPortfolioRecord {
   finalProductApprovalDocument: string;
   projectManagementDocumentation: string;
   finalClosureReport: string;
+  executingUnitId?: number;
 }
 
 export interface InitiativeRecord {
@@ -57,6 +66,7 @@ export interface InitiativeRecord {
   unit: string;
   status: PiipStatus;
   updatedAt: string;
+  executingUnitId?: number;
 }
 
 export interface ProjectRecord {
@@ -68,6 +78,7 @@ export interface ProjectRecord {
   responsible: string;
   status: PiipStatus;
   digitalComponent: 'Si' | 'No';
+  executingUnitId?: number;
 }
 
 export interface PreexistingProjectInput {
@@ -171,6 +182,7 @@ export interface DocumentDossier {
   unit: string;
   status: PiipStatus;
   lastActivity: string;
+  executingUnitId?: number;
   stages: DocumentStage[];
 }
 
@@ -184,6 +196,7 @@ export interface DocumentDossierSummary {
   pendingCount: number;
   notApplicableCount: number;
   lastActivity: string;
+  executingUnitId?: number;
 }
 
 export interface AuditEvent {
@@ -226,7 +239,8 @@ export interface CurrentUser {
   subject: string;
   fullName: string;
   email: string;
-  roles: ('ADMINISTRADOR_PIIP' | 'CONSULTA_EXTERNA')[];
+  roleScopes: RoleScope[];
+  roles: UserRoleCode[];
   institutionIds: number[];
   executingUnitIds: number[];
   institutionWide: boolean;

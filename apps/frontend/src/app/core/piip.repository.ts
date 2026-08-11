@@ -1,4 +1,4 @@
-import { WritableSignal } from '@angular/core';
+import { Signal, WritableSignal } from '@angular/core';
 import {
   AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier, DocumentDossierSummary,
   DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput, InitiativeRecord,
@@ -10,7 +10,7 @@ export type RepositoryOperation<T> = T | Promise<T>;
 
 export abstract class PiipRepository {
   abstract readonly demoMode: boolean;
-  abstract readonly role: WritableSignal<UserRole>;
+  abstract readonly role: Signal<UserRole | null>;
   abstract readonly portfolioRecords: WritableSignal<PiipPortfolioRecord[]>;
   abstract readonly initiatives: WritableSignal<InitiativeRecord[]>;
   abstract readonly projects: WritableSignal<ProjectRecord[]>;
@@ -30,6 +30,10 @@ export abstract class PiipRepository {
   abstract initialize(): RepositoryOperation<void>;
   abstract refreshAll(): RepositoryOperation<void>;
   abstract clearError(): void;
+  abstract canReadExecutingUnit(executingUnitId: number | null | undefined): boolean;
+  abstract canAdministerExecutingUnit(executingUnitId: number | null | undefined): boolean;
+  abstract hasAnyAdministratorScope(): boolean;
+  abstract effectiveRoleForExecutingUnit(executingUnitId: number | null | undefined): UserRole | null;
   abstract selectExecutingUnit(executingUnitId: number): RepositoryOperation<void>;
   abstract toggleRole(): void;
   abstract getDocumentDossier(recordType: PiipRecordType, code: string): DocumentDossier | undefined;

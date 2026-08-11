@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { administratorGuard } from './core/administrator.guard';
+import { activeScopeAdministratorGuard } from './core/active-scope-administrator.guard';
 import { authenticatedGuard } from './core/authenticated.guard';
 import { piipReadyGuard } from './core/piip-ready.guard';
 
@@ -36,7 +37,7 @@ export const routes: Routes = [
       {
         path: 'iniciativas/nueva',
         title: 'PIIP | Nueva iniciativa',
-        canActivate: [administratorGuard],
+        canActivate: [activeScopeAdministratorGuard],
         loadComponent: () =>
           import('./pages/initiative-form/initiative-form.component').then(
             (module) => module.InitiativeFormComponent,
@@ -70,7 +71,7 @@ export const routes: Routes = [
       {
         path: 'proyectos/nuevo/preexistente',
         title: 'PIIP | Proyecto preexistente',
-        canActivate: [administratorGuard],
+        canActivate: [activeScopeAdministratorGuard],
         loadComponent: () =>
           import('./pages/preexisting-project-form/preexisting-project-form.component').then(
             (module) => module.PreexistingProjectFormComponent,
@@ -79,7 +80,7 @@ export const routes: Routes = [
       {
         path: 'proyectos/nuevo/derivado/:initiativeCode',
         title: 'PIIP | Proyecto derivado',
-        canActivate: [administratorGuard],
+        canActivate: [activeScopeAdministratorGuard],
         loadComponent: () =>
           import('./pages/derived-project-form/derived-project-form.component').then(
             (module) => module.DerivedProjectFormComponent,

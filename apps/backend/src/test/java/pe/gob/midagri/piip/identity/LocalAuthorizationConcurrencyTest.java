@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import pe.gob.midagri.piip.identity.application.LocalAccessContext;
 import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
+import pe.gob.midagri.piip.identity.application.RoleScopeGrant;
 import pe.gob.midagri.piip.identity.domain.RoleCode;
 import pe.gob.midagri.piip.identity.persistence.RoleEntity;
 import pe.gob.midagri.piip.identity.persistence.RoleRepository;
@@ -67,6 +68,9 @@ class LocalAuthorizationConcurrencyTest {
         assertThat(contexts).allSatisfy(context -> {
             assertThat(context.subject()).isEqualTo(subject);
             assertThat(context.roles()).containsExactly(RoleCode.ADMINISTRADOR_PIIP);
+            assertThat(context.grants()).singleElement().isEqualTo(
+                new RoleScopeGrant(RoleCode.ADMINISTRADOR_PIIP, context.institutionIds().iterator().next(),
+                    context.executingUnitIds().iterator().next()));
         });
         UserEntity unchanged = users.findByKeycloakSubject(subject).orElseThrow();
         assertThat(unchanged.getVersion()).isZero();

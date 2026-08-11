@@ -38,9 +38,11 @@ public class DocumentService {
 
     @Transactional(readOnly = true)
     public List<DocumentResponse> list(String recordCode) {
-        PortfolioRecordEntity record = record(recordCode); authorization.requireReadableUnit(record.getExecutingUnit().getId());
-        LocalAccessContext access = authorization.current();
-        return documents.findByRecordIdOrderByType(record.getId()).stream().map(document -> toResponse(document, access.hasRole(RoleCode.ADMINISTRADOR_PIIP))).toList();
+        PortfolioRecordEntity record = record(recordCode);
+        LocalAccessContext access = authorization.requireReadableUnit(record.getExecutingUnit().getId());
+        boolean internal = access.coversExecutingUnit(RoleCode.ADMINISTRADOR_PIIP,
+            record.getExecutingUnit().getId(), record.getExecutingUnit().getInstitution().getId());
+        return documents.findByRecordIdOrderByType(record.getId()).stream().map(document -> toResponse(document, internal)).toList();
     }
 
     @Transactional
@@ -77,7 +79,9 @@ public class DocumentService {
     public DownloadResponse download(Long versionId) {
         DocumentVersionEntity version = versions.findById(versionId).orElseThrow(() -> new NotFoundException("Versión documental inexistente"));
         PortfolioRecordEntity record = version.getDocument().getRecord(); LocalAccessContext access = authorization.requireReadableUnit(record.getExecutingUnit().getId());
-        if (access.hasRole(RoleCode.CONSULTA_EXTERNA) && !access.hasRole(RoleCode.ADMINISTRADOR_PIIP) && !version.isExternallyPublished()) throw new AccessDeniedException("La versión no está publicada para consulta externa");
+        boolean internal = access.coversExecutingUnit(RoleCode.ADMINISTRADOR_PIIP,
+            record.getExecutingUnit().getId(), record.getExecutingUnit().getInstitution().getId());
+        if (!internal && !version.isExternallyPublished()) throw new AccessDeniedException("La versión no está publicada para consulta externa");
         byte[] content = contents.findByDocumentVersionId(versionId).orElseThrow(() -> new NotFoundException("Contenido documental inexistente")).getContent();
         return new DownloadResponse(version.getFilename(), version.getMimeType(), content);
     }

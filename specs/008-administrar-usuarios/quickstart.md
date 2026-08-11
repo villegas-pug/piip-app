@@ -18,6 +18,19 @@
 8. Repetir una modificación con una versión previa y confirmar el conflicto de concurrencia y un mensaje accionable.
 9. Revisar el historial de auditoría para confirmar que registra actor, evento y cambios no sensibles de las asignaciones.
 
+## Regresión de rol y ámbito
+
+Preparar una cuenta con `CONSULTA_EXTERNA` en UE-001 y `ADMINISTRADOR_PIIP` en UE-002.
+
+1. Seleccionar UE-001 y confirmar que el encabezado muestra Consulta externa, permite lectura y oculta acciones de creación, aprobación, carga y publicación.
+2. Intentar directamente una escritura sobre UE-001 y confirmar `403` sin cambios persistidos.
+3. Seleccionar UE-002 y confirmar que el encabezado muestra Administrador PIIP y habilita las operaciones administrativas válidas.
+4. Abrir Administración de usuarios desde cualquiera de las dos UE y confirmar que sólo ofrece ámbitos cubiertos por Administrador PIIP; UE-001 no debe ampliar esa cobertura.
+5. Abrir mediante URL directa un registro de UE-001 mientras UE-002 está activa y confirmar que las acciones se calculan con la UE real del registro.
+6. Validar que documentos no publicados de UE-001 permanecen ocultos y no descargables.
+7. Repetir el cambio de UE y confirmar que no quedan datos ni acciones privilegiadas del contexto anterior.
+8. Restaurar cualquier asignación u operación reversible utilizada durante el recorrido.
+
 ## Automatización propuesta, no ejecutada
 
 - Backend: pruebas focalizadas de servicio, repositorio y contrato MVC para autorización, transiciones, bloqueos y `ProblemDetail`.

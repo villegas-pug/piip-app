@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import {
   AuditEvent,
   AuditAccess,
@@ -24,11 +24,11 @@ import { PiipRepository } from './piip.repository';
 @Injectable({ providedIn: 'root' })
 export class PiipMockRepository extends PiipRepository {
   readonly demoMode: boolean = true;
-  readonly role = signal<UserRole>('Administrador PIIP');
-  readonly currentUser = signal<CurrentUser | null>({ subject: 'demo-admin', fullName: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', roles: ['ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1], institutionWide: false });
+  readonly currentUser = signal<CurrentUser | null>({ subject: 'demo-admin', fullName: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 }], roles: ['ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1], institutionWide: false });
   readonly executingUnits = signal([{ id: 1, code: 'UE-DEMO', name: 'Unidad Ejecutora de demostracion', institutionId: 1 }]);
   readonly organizationalUnits = signal([]);
   readonly selectedExecutingUnitId = signal<number | null>(1);
+  readonly role = computed(() => this.effectiveRoleForExecutingUnit(this.selectedExecutingUnitId()));
   readonly loading = signal(false);
   readonly lastError = signal<string | null>(null);
   readonly documentDossierSummaries = signal<DocumentDossierSummary[]>([]);
@@ -99,6 +99,7 @@ export class PiipMockRepository extends PiipRepository {
       unit: 'DGIA',
       status: 'Presentado',
       updatedAt: '20/05/2026 10:15',
+      executingUnitId: 1,
     },
     {
       code: 'I-019-2026',
@@ -109,6 +110,7 @@ export class PiipMockRepository extends PiipRepository {
       unit: 'DIPNA',
       status: 'Iniciativa aprobada',
       updatedAt: '18/05/2026 16:45',
+      executingUnitId: 1,
     },
     {
       code: 'I-014-2026',
@@ -119,6 +121,7 @@ export class PiipMockRepository extends PiipRepository {
       unit: 'DGA',
       status: 'Iniciativa archivada',
       updatedAt: '15/05/2026 09:30',
+      executingUnitId: 1,
     },
   ]);
 
@@ -141,6 +144,7 @@ export class PiipMockRepository extends PiipRepository {
       unit: 'DGIA',
       status: 'Presentado',
       lastActivity: '23/05/2026 10:28',
+      executingUnitId: 1,
       stages: [
         {
           title: '1. Registro inicial',
@@ -177,6 +181,7 @@ export class PiipMockRepository extends PiipRepository {
       unit: 'DIPNA',
       status: 'Iniciativa aprobada',
       lastActivity: '18/05/2026 16:45',
+      executingUnitId: 1,
       stages: [
         { title: '1. Registro inicial', records: [{ name: 'Ficha de Iniciativa de Innovación Pública', required: true, filename: 'Ficha_Iniciativa_I-019-2026.pdf', version: '1.0', uploadedAt: '06/05/2026', state: 'Cargado' }] },
         { title: '2. Evaluación', records: [{ name: 'Informe de opinión técnica de evaluación de iniciativa', required: false, filename: 'Informe_Opinion_I-019-2026.pdf', version: '1.0', uploadedAt: '14/05/2026', state: 'Cargado' }] },
@@ -195,6 +200,7 @@ export class PiipMockRepository extends PiipRepository {
       unit: 'DCLIMA',
       status: 'Proyecto en ejecución',
       lastActivity: '24/05/2026 11:10',
+      executingUnitId: 1,
       stages: [
         { title: '1. Registro inicial', records: [{ name: 'Ficha de Iniciativa de Innovación Pública', required: false, filename: null, version: null, uploadedAt: null, state: 'No aplica' }] },
         { title: '2. Evaluación', records: [{ name: 'Informe de opinión técnica de evaluación de iniciativa', required: false, filename: null, version: null, uploadedAt: null, state: 'No aplica' }] },
@@ -216,12 +222,29 @@ export class PiipMockRepository extends PiipRepository {
   ]);
 
   toggleRole(): void {
-    this.role.update((role) => (role === 'Administrador PIIP' ? 'Consulta externa' : 'Administrador PIIP'));
+    const user = this.currentUser();
+    const executingUnitId = this.selectedExecutingUnitId();
+    if (!user || executingUnitId === null) return;
+    const nextRole = this.role() === 'Administrador PIIP' ? 'CONSULTA_EXTERNA' : 'ADMINISTRADOR_PIIP';
+    const unit = this.executingUnits().find((candidate) => candidate.id === executingUnitId);
+    if (!unit) return;
+    this.currentUser.set({
+      ...user,
+      roles: [nextRole],
+      roleScopes: [{ role: nextRole, institutionId: unit.institutionId, executingUnitId }],
+    });
   }
 
   initialize(): void {}
   refreshAll(): void {}
   clearError(): void { this.lastError.set(null); }
+  canReadExecutingUnit(executingUnitId: number | null | undefined): boolean { return this.hasGrantForExecutingUnit(executingUnitId); }
+  canAdministerExecutingUnit(executingUnitId: number | null | undefined): boolean { return this.hasGrantForExecutingUnit(executingUnitId, 'ADMINISTRADOR_PIIP'); }
+  hasAnyAdministratorScope(): boolean { return this.currentUser()?.roleScopes.some((scope) => scope.role === 'ADMINISTRADOR_PIIP') ?? false; }
+  effectiveRoleForExecutingUnit(executingUnitId: number | null | undefined): UserRole | null {
+    if (this.canAdministerExecutingUnit(executingUnitId)) return 'Administrador PIIP';
+    return this.hasGrantForExecutingUnit(executingUnitId, 'CONSULTA_EXTERNA') ? 'Consulta externa' : null;
+  }
   selectExecutingUnit(executingUnitId: number): void { this.selectedExecutingUnitId.set(executingUnitId); }
 
   getDocumentDossier(recordType: PiipRecordType, code: string): DocumentDossier | undefined {
@@ -459,6 +482,17 @@ export class PiipMockRepository extends PiipRepository {
   private assertAdministrator(message: string): void {
     if (this.role() !== 'Administrador PIIP') throw new Error(message);
   }
+
+  private hasGrantForExecutingUnit(executingUnitId: number | null | undefined, role?: 'ADMINISTRADOR_PIIP' | 'CONSULTA_EXTERNA'): boolean {
+    if (executingUnitId == null) return false;
+    const unit = this.executingUnits().find((candidate) => candidate.id === executingUnitId);
+    if (!unit) return false;
+    return this.currentUser()?.roleScopes.some((scope) =>
+      (!role || scope.role === role)
+      && scope.institutionId === unit.institutionId
+      && (scope.executingUnitId === null || scope.executingUnitId === executingUnitId),
+    ) ?? false;
+  }
 }
 
 export function summarizeDocumentDossier(dossier: DocumentDossier): DocumentDossierSummary {
@@ -473,6 +507,7 @@ export function summarizeDocumentDossier(dossier: DocumentDossier): DocumentDoss
     pendingCount: documents.filter((document) => document.state === 'Pendiente').length,
     notApplicableCount: documents.filter((document) => document.state === 'No aplica').length,
     lastActivity: dossier.lastActivity,
+    executingUnitId: dossier.executingUnitId,
   };
 }
 

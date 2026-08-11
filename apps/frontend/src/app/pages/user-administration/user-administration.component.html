@@ -8,8 +8,8 @@
     <form class="assignment" [formGroup]="assignmentForm" [attr.aria-busy]="assigning()" (ngSubmit)="assign()">
       <mat-form-field appearance="outline"><mat-label>Usuario</mat-label><mat-select formControlName="userSubject">@for (user of assignmentUsers(); track user.subject) { <mat-option [value]="user.subject" [attr.aria-label]="user.withoutAssignments ? user.fullName + ', ' + user.email + ', sin asignaciones previas' : user.fullName + ', ' + user.email">{{ user.fullName }} · {{ user.email }}@if (user.withoutAssignments) { <span class="candidate-detail"> · Sin asignaciones previas</span> }</mat-option> }</mat-select></mat-form-field>
       <mat-form-field appearance="outline"><mat-label>Rol</mat-label><mat-select formControlName="role"><mat-option value="ADMINISTRADOR_PIIP">Administrador PIIP</mat-option><mat-option value="CONSULTA_EXTERNA">Consulta externa</mat-option></mat-select></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Institución</mat-label><mat-select formControlName="institutionId">@for (item of institutions(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Unidad Ejecutora</mat-label><mat-select formControlName="executingUnitId"><mat-option [value]="0">Toda la institución</mat-option>@for (item of executingUnits(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Institución</mat-label><mat-select formControlName="institutionId">@for (item of administrableInstitutions(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Unidad Ejecutora</mat-label><mat-select formControlName="executingUnitId">@if (canUseInstitutionWide(assignmentForm.controls.institutionId.value)) {<mat-option [value]="0">Toda la institución</mat-option>}@for (item of assignmentExecutingUnits(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
       <div class="assignment-actions"><button mat-button type="button" [disabled]="operationPending()" (click)="assignmentOpen.set(false)">Cancelar</button><button mat-flat-button type="submit" [disabled]="operationPending()">@if (assigning()) {<mat-spinner diameter="18" />Asignando...} @else {Asignar rol}</button></div>
     </form>
   }
@@ -18,13 +18,13 @@
     <form class="assignment edit-assignment" [formGroup]="editForm" [attr.aria-busy]="savingScopeId() === scope.id" (ngSubmit)="saveEdit()">
       <div class="form-heading"><h3>Editar asignación</h3><span>Los cambios conservan la asignación y usan su versión vigente.</span></div>
       <mat-form-field appearance="outline"><mat-label>Rol</mat-label><mat-select formControlName="role"><mat-option value="ADMINISTRADOR_PIIP">Administrador PIIP</mat-option><mat-option value="CONSULTA_EXTERNA">Consulta externa</mat-option></mat-select></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Institución</mat-label><mat-select formControlName="institutionId">@for (item of institutions(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
-      <mat-form-field appearance="outline"><mat-label>Unidad Ejecutora</mat-label><mat-select formControlName="executingUnitId"><mat-option [value]="0">Toda la institución</mat-option>@for (item of executingUnits(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Institución</mat-label><mat-select formControlName="institutionId">@for (item of administrableInstitutions(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Unidad Ejecutora</mat-label><mat-select formControlName="executingUnitId">@if (canUseInstitutionWide(editForm.controls.institutionId.value)) {<mat-option [value]="0">Toda la institución</mat-option>}@for (item of editExecutingUnits(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
       <div class="assignment-actions"><button mat-button type="button" [disabled]="operationPending()" (click)="cancelEdit()">Cancelar</button><button mat-flat-button type="submit" [disabled]="operationPending()">@if (savingScopeId() === scope.id) {<mat-spinner diameter="18" />Guardando...} @else {Guardar cambios}</button></div>
     </form>
   }
 
-  <div class="scope-note"><mat-icon>verified_user</mat-icon><span>Solo puedes administrar usuarios dentro de tus unidades ejecutoras asignadas.</span></div>
+  <div class="scope-note"><mat-icon>verified_user</mat-icon><span>Solo puedes administrar usuarios dentro de los ámbitos cubiertos por tus asignaciones de Administrador PIIP.</span></div>
 
   @if (loading()) {
     <div class="state" role="status"><mat-spinner diameter="36" /><span>Consultando usuarios...</span></div>

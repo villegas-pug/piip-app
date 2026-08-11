@@ -33,3 +33,4 @@
 
 - La revisión de fuentes existentes muestra consulta de usuarios, creación de asignaciones de rol por ámbito y suspensión de asignaciones como baseline. La especificación no presupone creación de identidades ni gestión de credenciales.
 - Decisiones confirmadas: la edición conserva la asignación y actualiza rol y ámbito; el retiro es una suspensión reversible; Keycloak es la única autoridad para habilitar o inhabilitar cuentas y PIIP sólo administra roles y ámbitos.
+- Corrección incorporada: cada autorización conserva la tupla rol, institución y Unidad Ejecutora; el rol visible depende de la UE activa, Administrador prevalece ante doble rol y Administración de usuarios permanece transversal con cobertura exclusivamente administrativa.

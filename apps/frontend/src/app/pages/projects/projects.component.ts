@@ -46,6 +46,7 @@ export class ProjectsComponent {
   });
   readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.filteredProjects().length));
   readonly pagedProjects = computed(() => paginateItems(this.filteredProjects(), this.currentPage()));
+  readonly canCreateInActiveScope = computed(() => this.repository.canAdministerExecutingUnit(this.repository.selectedExecutingUnitId()));
 
   constructor() {
     this.filters.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.pageIndex.set(0));
@@ -56,7 +57,7 @@ export class ProjectsComponent {
   }
 
   openProjectRegistration(initialView: ProjectRegistrationDialogView): void {
-    if (this.repository.role() !== 'Administrador PIIP') return;
+    if (!this.canCreateInActiveScope()) return;
 
     this.dialog.open(ProjectRegistrationDialogComponent, {
       width: '760px',
@@ -78,6 +79,10 @@ export class ProjectsComponent {
 
   projectCount(status: PiipStatus): number {
     return this.repository.projects().filter((project) => project.status === status).length;
+  }
+
+  canAdminister(project: { executingUnitId?: number }): boolean {
+    return this.repository.canAdministerExecutingUnit(project.executingUnitId);
   }
 
   statusClass(status: PiipStatus): string {

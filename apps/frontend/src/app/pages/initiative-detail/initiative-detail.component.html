@@ -10,11 +10,11 @@
         <span class="status" [class]="statusClass(detail.initiative.status)">{{ detail.initiative.status }}</span>
       </div>
       <div class="hero-actions">
-        <a class="secondary-button" [routerLink]="['/iniciativas', detail.initiative.code, 'documentos']"><mat-icon>description</mat-icon>{{ repository.role() === 'Administrador PIIP' ? 'Gestionar documentos' : 'Ver documentos' }}</a>
-        @if (repository.role() === 'Administrador PIIP' && detail.initiative.status === 'Presentado') {
+        <a class="secondary-button" [routerLink]="['/iniciativas', detail.initiative.code, 'documentos']"><mat-icon>description</mat-icon>{{ canAdministerRecord() ? 'Gestionar documentos' : 'Ver documentos' }}</a>
+        @if (canAdministerRecord() && detail.initiative.status === 'Presentado') {
           <button class="primary-button" type="button" (click)="openApproval()"><mat-icon>verified</mat-icon>Registrar aprobación</button>
         }
-        @if (repository.role() === 'Administrador PIIP' && detail.initiative.status === 'Iniciativa aprobada') {
+        @if (canAdministerRecord() && detail.initiative.status === 'Iniciativa aprobada') {
           @if (detail.derivedProject; as project) {
             <a class="primary-button" [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon>account_tree</mat-icon>Ver proyecto {{ project.code }}</a>
           } @else {
@@ -94,13 +94,13 @@
           }
         </article>
 
-        @if (repository.role() === 'Administrador PIIP') {
+        @if (repository.hasAnyAdministratorScope()) {
           <a class="audit-link panel" routerLink="/auditoria" [queryParams]="{ record: detail.initiative.code }"><mat-icon>shield</mat-icon><span><strong>Consultar auditoría</strong><small>Eventos filtrados por {{ detail.initiative.code }}</small></span><mat-icon>chevron_right</mat-icon></a>
         }
       </aside>
     </div>
 
-    @if (decisionOpen() && repository.role() === 'Administrador PIIP' && detail.initiative.status === 'Presentado') {
+    @if (decisionOpen() && canAdministerRecord() && detail.initiative.status === 'Presentado') {
       <div class="review-backdrop" (click)="submitting() ? null : decisionOpen.set(false)">
         <section class="review-dialog approval-dialog" role="dialog" aria-modal="true" aria-labelledby="approval-title" [attr.aria-busy]="submitting()" (click)="$event.stopPropagation()">
           <header><span><mat-icon>verified</mat-icon></span><div><p>REGISTRAR DECISIÓN</p><h2 id="approval-title">Aprobar iniciativa</h2></div><button class="icon-action" type="button" aria-label="Cerrar" [disabled]="submitting()" (click)="decisionOpen.set(false)"><mat-icon>close</mat-icon></button></header>
@@ -119,7 +119,7 @@
       <div class="review-backdrop">
         <section class="review-dialog success-dialog" role="dialog" aria-modal="true" aria-labelledby="success-title">
           <div class="success-icon"><mat-icon>check_circle</mat-icon></div><h2 id="success-title">Iniciativa aprobada</h2><p>La iniciativa mantiene su registro y ahora puede originar un proyecto independiente.</p>
-          <div class="success-actions"><button class="secondary-button" type="button" (click)="approvalComplete.set(false)">Volver al detalle</button><a class="primary-button gold" [routerLink]="['/proyectos/nuevo/derivado', detail.initiative.code]"><mat-icon>account_tree</mat-icon>Crear proyecto ahora</a></div>
+          <div class="success-actions"><button class="secondary-button" type="button" (click)="approvalComplete.set(false)">Volver al detalle</button>@if (canAdministerRecord()) {<a class="primary-button gold" [routerLink]="['/proyectos/nuevo/derivado', detail.initiative.code]"><mat-icon>account_tree</mat-icon>Crear proyecto ahora</a>}</div>
         </section>
       </div>
     }

@@ -38,7 +38,7 @@ public class UserAdministrationService {
     @Transactional(readOnly = true)
     public List<UserResponse> list() {
         LocalAccessContext actor = currentAdministrator();
-        return scopes.findForAdministration(actor.institutionIds()).stream()
+        return scopes.findForAdministration(actor.institutionIds(RoleCode.ADMINISTRADOR_PIIP)).stream()
             .filter(scope -> isCovered(actor, scope))
             .collect(Collectors.groupingBy(UserRoleScopeEntity::getUser, LinkedHashMap::new, Collectors.toList()))
             .entrySet().stream()
@@ -141,7 +141,9 @@ public class UserAdministrationService {
         if (unit != null && (!unit.isActive() || !unit.getInstitution().getId().equals(institution.getId()))) {
             throw new BusinessRuleException("La Unidad Ejecutora debe estar activa y pertenecer a la institución");
         }
-        if (unit == null ? !actor.coversInstitutionWide(institution.getId()) : !actor.coversExecutingUnit(unit.getId(), institution.getId())) {
+        if (unit == null
+                ? !actor.coversInstitutionWide(RoleCode.ADMINISTRADOR_PIIP, institution.getId())
+                : !actor.coversExecutingUnit(RoleCode.ADMINISTRADOR_PIIP, unit.getId(), institution.getId())) {
             throw new AccessDeniedException("Ámbito fuera de la cobertura autorizada");
         }
         return new TargetScope(role, institution, unit);
@@ -156,8 +158,8 @@ public class UserAdministrationService {
 
     private boolean isCovered(LocalAccessContext actor, UserRoleScopeEntity scope) {
         return scope.getExecutingUnit() == null
-            ? actor.coversInstitutionWide(scope.getInstitution().getId())
-            : actor.coversExecutingUnit(scope.getExecutingUnit().getId(), scope.getInstitution().getId());
+            ? actor.coversInstitutionWide(RoleCode.ADMINISTRADOR_PIIP, scope.getInstitution().getId())
+            : actor.coversExecutingUnit(RoleCode.ADMINISTRADOR_PIIP, scope.getExecutingUnit().getId(), scope.getInstitution().getId());
     }
 
     private void requireCovered(LocalAccessContext actor, UserRoleScopeEntity scope) {

@@ -26,6 +26,7 @@ class OpenApiGenerationTest {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body())
             .contains("/initiatives", "/projects/derived", "/portfolio-records/{recordCode}/documents")
+            .contains("roleScopes", "RoleScopeResponse", "executingUnitId")
             .doesNotContain("/admin/users/{userId}/status");
         Path output = Path.of("target", "piip-openapi.json");
         Files.createDirectories(output.getParent());

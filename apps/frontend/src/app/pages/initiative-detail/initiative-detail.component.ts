@@ -26,6 +26,7 @@ export class InitiativeDetailComponent {
 
   readonly code = computed(() => this.paramMap().get('code') ?? '');
   readonly detail = computed(() => this.repository.getInitiativeDetail(this.code()));
+  readonly canAdministerRecord = computed(() => this.repository.canAdministerExecutingUnit(this.detail()?.initiative.executingUnitId));
   readonly decisionOpen = signal(this.route.snapshot.queryParamMap.get('action') === 'approve');
   readonly approvalComplete = signal(false);
   readonly submitting = signal(false);
@@ -43,7 +44,7 @@ export class InitiativeDetailComponent {
 
   openApproval(): void {
     const detail = this.detail();
-    if (this.repository.role() !== 'Administrador PIIP' || detail?.initiative.status !== 'Presentado') return;
+    if (!this.canAdministerRecord() || detail?.initiative.status !== 'Presentado') return;
     this.decisionOpen.set(true);
   }
 

@@ -102,4 +102,25 @@ describe('InitiativeDetailComponent', () => {
     expect(nativeElement.querySelector('.success-dialog')).not.toBeNull();
     expect(nativeElement.textContent).toContain('Iniciativa aprobada');
   });
+
+  it('hides approval when Administrator and record coverage come from different grants', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([
+      { id: 1, code: 'UE-001', name: 'UE-001', institutionId: 1 },
+      { id: 2, code: 'UE-002', name: 'UE-002', institutionId: 1 },
+    ]);
+    repository.currentUser.set({
+      subject: 'mixed', fullName: 'Usuario mixto', email: 'mixed@example.pe',
+      roleScopes: [
+        { role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 1 },
+        { role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 2 },
+      ], roles: ['CONSULTA_EXTERNA', 'ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1, 2], institutionWide: false,
+    });
+    repository.selectedExecutingUnitId.set(2);
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canAdministerRecord()).toBe(false);
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Registrar aprobación');
+  });
 });

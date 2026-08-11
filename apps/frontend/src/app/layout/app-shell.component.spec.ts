@@ -85,6 +85,7 @@ describe('AppShellComponent loading state', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.currentUser.set({
       subject: 'profile-subject', fullName: 'Cristopher Guevara Villegas', email: 'cristopher@example.pe',
+      roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 }],
       roles: ['ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1], institutionWide: false,
     });
     const fixture = TestBed.createComponent(AppShellComponent);
@@ -94,5 +95,29 @@ describe('AppShellComponent loading state', () => {
     expect(profile.textContent).toContain('Cristopher Guevara Villegas');
     expect(profile.textContent).toContain('Administrador PIIP');
     expect(profile.getAttribute('aria-label')).toContain('Cristopher Guevara Villegas');
+  });
+
+  it('recalculates the visible role from the active UE without combining grants', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([
+      { id: 1, code: 'UE-001', name: 'Unidad 1', institutionId: 1 },
+      { id: 2, code: 'UE-002', name: 'Unidad 2', institutionId: 1 },
+    ]);
+    repository.currentUser.set({
+      subject: 'mixed', fullName: 'Usuario mixto', email: 'mixed@example.pe',
+      roleScopes: [
+        { role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 1 },
+        { role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 2 },
+      ], roles: ['CONSULTA_EXTERNA', 'ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1, 2], institutionWide: false,
+    });
+    const fixture = TestBed.createComponent(AppShellComponent);
+
+    repository.selectedExecutingUnitId.set(1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.profile-copy')?.textContent).toContain('Consulta externa');
+
+    repository.selectedExecutingUnitId.set(2);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.profile-copy')?.textContent).toContain('Administrador PIIP');
   });
 });

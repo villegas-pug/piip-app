@@ -53,3 +53,27 @@
 - **Decisión**: antes de enviar el formulario de alta, Angular compara el `subject`, rol, institución y Unidad Ejecutora seleccionados con las asignaciones activas visibles del mismo usuario. Si coincide, muestra un mensaje y no hace la llamada HTTP.
 - **Rationale**: evita una operación y un mensaje de error innecesarios para datos ya cargados, sin sustituir los bloqueos ni la validación de duplicidad del servicio ante concurrencia u otros ámbitos no visibles.
 - **Alternativas consideradas**: confiar sólo en la respuesta 422 del backend —se descarta como única experiencia porque el duplicado visible es determinista—; hacer del chequeo frontend la única regla —se descarta porque el cliente no es autoridad ni es seguro frente a concurrencia.
+
+## D10 — La asignación exacta es la unidad canónica de autorización
+
+- **Decisión**: conservar cada grant como la tupla inmutable `rol + institución + Unidad Ejecutora opcional`; las proyecciones agregadas se derivan únicamente para compatibilidad y consultas de lectura.
+- **Rationale**: separar roles y ámbitos produce un producto cartesiano implícito que permite usar Administrador PIIP de una UE con la cobertura de Consulta externa de otra.
+- **Alternativas consideradas**: mantener conjuntos separados y añadir excepciones por servicio; se descarta porque repite la causa raíz y facilita nuevas omisiones.
+
+## D11 — El rol efectivo depende de la Unidad Ejecutora activa
+
+- **Decisión**: Angular deriva el rol visible desde los grants exactos y la UE seleccionada; Administrador PIIP prevalece si ambos roles cubren la misma UE.
+- **Rationale**: el encabezado y las acciones deben representar el contexto operativo actual, no el rol más privilegiado disponible en cualquier ámbito.
+- **Alternativas consideradas**: mostrar siempre el rol global más alto —se descarta por inducir permisos inexistentes—; selector manual de rol —se descarta porque sería meramente visual sin transportar un contexto de seguridad adicional al backend.
+
+## D12 — Administración de usuarios es transversal, pero su cobertura no
+
+- **Decisión**: el módulo permanece disponible cuando existe al menos un grant Administrador PIIP y filtra instituciones, UE y la opción institucional usando exclusivamente grants de ese rol.
+- **Rationale**: el selector superior gobierna el contexto operativo, mientras la bandeja administra todos los ámbitos válidos del actor; condicionar su apertura a la UE activa añadiría fricción sin mejorar la autorización.
+- **Alternativas consideradas**: exigir seleccionar primero una UE administrable; se descarta porque la misma bandeja ya reúne múltiples ámbitos y el backend debe validar cada operación de todos modos.
+
+## D13 — El contrato de identidad evoluciona de forma aditiva
+
+- **Decisión**: `GET /identity/me` añade `roleScopes[]` con rol, institución y UE opcional. Los campos agregados actuales permanecen temporalmente, pero el frontend deja de usarlos para autorizar.
+- **Rationale**: el cambio aditivo evita romper consumidores mientras elimina la inferencia insegura en Angular.
+- **Alternativas consideradas**: retirar inmediatamente los campos agregados; se pospone para no introducir una ruptura contractual innecesaria durante la corrección.

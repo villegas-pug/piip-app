@@ -1,5 +1,5 @@
 <section class="page form-page derived-form-page">
-  @if (repository.role() === 'Consulta externa') {
+  @if (detail && !repository.canAdministerExecutingUnit(detail.initiative.executingUnitId)) {
     <article class="panel controlled-state"><mat-icon>lock</mat-icon><h2>Acceso de solo lectura</h2><p>El perfil Consulta externa no puede registrar proyectos.</p><a class="primary-button" routerLink="/proyectos">Volver a proyectos</a></article>
   } @else if (!detail) {
     <article class="panel controlled-state"><mat-icon>search_off</mat-icon><h2>Iniciativa no encontrada</h2><p>No existe una iniciativa con el código {{ initiativeCode || 'solicitado' }}.</p><a class="primary-button" routerLink="/iniciativas">Volver a iniciativas</a></article>

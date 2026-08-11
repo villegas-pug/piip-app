@@ -24,13 +24,11 @@ public class LocalAuthorizationService {
         UserEntity user = users.findByKeycloakSubject(subject)
             .orElseThrow(() -> new AccessDeniedException("El usuario no está provisionado en PIIP"));
         List<UserRoleScopeEntity> activeScopes = scopes.findActiveBySubject(subject, Instant.now());
-        Set<RoleCode> roles = new HashSet<>(); Set<Long> institutions = new HashSet<>(); Set<Long> units = new HashSet<>();
-        Set<Long> institutionWideIds = new HashSet<>();
-        for (UserRoleScopeEntity scope : activeScopes) {
-            roles.add(scope.getRole().getCode()); institutions.add(scope.getInstitution().getId());
-            if (scope.getExecutingUnit() == null) institutionWideIds.add(scope.getInstitution().getId()); else units.add(scope.getExecutingUnit().getId());
-        }
-        return new LocalAccessContext(user.getId(), subject, Set.copyOf(roles), Set.copyOf(institutions), Set.copyOf(units), Set.copyOf(institutionWideIds));
+        Set<RoleScopeGrant> grants = activeScopes.stream()
+            .map(scope -> new RoleScopeGrant(scope.getRole().getCode(), scope.getInstitution().getId(),
+                scope.getExecutingUnit() == null ? null : scope.getExecutingUnit().getId()))
+            .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new LocalAccessContext(user.getId(), subject, grants);
     }
 
     @Transactional
@@ -66,12 +64,19 @@ public class LocalAuthorizationService {
 
     public LocalAccessContext requireUnit(RoleCode role, Long unitId) {
         LocalAccessContext context = require(role);
-        if (!coversUnit(context, unitId)) throw new AccessDeniedException("La Unidad Ejecutora está fuera del ámbito autorizado");
+        ExecutingUnitEntity unit = unit(unitId);
+        if (!context.coversExecutingUnit(role, unitId, unit.getInstitution().getId())) {
+            throw new AccessDeniedException("La Unidad Ejecutora está fuera del ámbito autorizado para el rol " + role);
+        }
         return context;
     }
 
     private boolean coversUnit(LocalAccessContext context, Long unitId) {
-        ExecutingUnitEntity unit = executingUnits.findById(unitId).orElseThrow(() -> new AccessDeniedException("Unidad Ejecutora inexistente"));
+        ExecutingUnitEntity unit = unit(unitId);
         return context.coversExecutingUnit(unitId, unit.getInstitution().getId());
+    }
+
+    private ExecutingUnitEntity unit(Long unitId) {
+        return executingUnits.findById(unitId).orElseThrow(() -> new AccessDeniedException("Unidad Ejecutora inexistente"));
     }
 }

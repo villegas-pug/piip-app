@@ -106,7 +106,8 @@ public class PortfolioService {
     public List<PortfolioRecordResponse> eligibleInitiatives() {
         LocalAccessContext actor = authorization.require(RoleCode.ADMINISTRADOR_PIIP);
         return records.findByRecordTypeAndStatusOrderByUpdatedAtDesc(RecordType.INITIATIVE, PortfolioStatus.INITIATIVE_APPROVED).stream()
-            .filter(record -> actor.coversExecutingUnit(record.getExecutingUnit().getId(), record.getExecutingUnit().getInstitution().getId()))
+            .filter(record -> actor.coversExecutingUnit(RoleCode.ADMINISTRADOR_PIIP,
+                record.getExecutingUnit().getId(), record.getExecutingUnit().getInstitution().getId()))
             .filter(record -> !records.existsByOriginRecordId(record.getId())).map(this::toResponse).toList();
     }
 

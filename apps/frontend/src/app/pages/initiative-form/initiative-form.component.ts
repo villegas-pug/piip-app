@@ -29,6 +29,7 @@ export class InitiativeFormComponent {
   readonly uploadedFile = signal<File | null>(null);
   readonly reviewOpen = signal(false);
   readonly submitting = signal(false);
+  readonly canAdministerActiveScope = computed(() => this.repository.canAdministerExecutingUnit(this.repository.selectedExecutingUnitId()));
 
   readonly form = this.formBuilder.nonNullable.group({
     recordType: ['Iniciativa', Validators.required],
@@ -67,6 +68,10 @@ export class InitiativeFormComponent {
   }
 
   openReview(): void {
+    if (!this.canAdministerActiveScope()) {
+      this.snackBar.open('No tienes permisos de Administrador PIIP para la Unidad Ejecutora activa.', 'Cerrar', { duration: 4200 });
+      return;
+    }
     this.form.markAllAsTouched();
     if (this.form.invalid || !this.uploadedFilename()) {
       this.snackBar.open('Completa los campos requeridos y adjunta la ficha inicial.', 'Cerrar', { duration: 4200 });
@@ -76,7 +81,7 @@ export class InitiativeFormComponent {
   }
 
   async registerInitiative(): Promise<void> {
-    if (this.submitting()) return;
+    if (this.submitting() || !this.canAdministerActiveScope()) return;
     const value = this.form.getRawValue();
     this.submitting.set(true);
     try {

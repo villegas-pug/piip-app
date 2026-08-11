@@ -58,6 +58,24 @@ Un administrador PIIP gestiona exclusivamente roles y ámbitos, mientras el cicl
 2. **Given** un usuario local con valor heredado inactivo y una asignación vigente, **When** PIIP resuelve su autorización después de una autenticación válida, **Then** considera la asignación vigente sin usar ese valor heredado.
 3. **Given** una cuenta deshabilitada en Keycloak, **When** se administran sus asignaciones en PIIP, **Then** PIIP no modifica la cuenta ni reemplaza el procedimiento de Keycloak para habilitarla.
 
+---
+
+### User Story 4 - Aplicar cada rol exclusivamente dentro de su ámbito (Priority: P1)
+
+Una persona con distintos roles en distintas Unidades Ejecutoras ejerce en cada ámbito únicamente las capacidades concedidas por la asignación correspondiente, para impedir que un rol privilegiado se combine con la cobertura de otra asignación.
+
+**Why this priority**: La separación entre rol y ámbito puede ampliar privilegios y permitir escrituras administrativas fuera de la Unidad Ejecutora autorizada.
+
+**Independent Test**: Una persona con Consulta externa en UE-001 y Administrador PIIP en UE-002 puede leer UE-001, no puede escribir ni administrar allí, y conserva las operaciones administrativas en UE-002.
+
+**Acceptance Scenarios**:
+
+1. **Given** Consulta externa en UE-001 y Administrador PIIP en UE-002, **When** la persona intenta crear, aprobar o administrar un recurso de UE-001, **Then** el sistema rechaza la operación sin combinar el rol de UE-002 con el ámbito de UE-001.
+2. **Given** las mismas asignaciones, **When** consulta información legible de UE-001, **Then** conserva el acceso de lectura propio de Consulta externa.
+3. **Given** que la persona cambia la Unidad Ejecutora activa, **When** la interfaz actualiza el contexto, **Then** muestra el rol efectivo de esa UE y ajusta las acciones disponibles sin conservar privilegios del contexto anterior.
+4. **Given** Administrador PIIP y Consulta externa sobre la misma UE, **When** se determina el rol efectivo, **Then** prevalece Administrador PIIP.
+5. **Given** que la persona administra al menos un ámbito, **When** abre Administración de usuarios desde una UE donde sólo tiene Consulta externa, **Then** accede al módulo transversal pero sólo puede ver y operar ámbitos cubiertos por sus asignaciones de Administrador PIIP.
+
 ### Edge Cases
 
 - Una persona no tiene aún un registro local disponible para ser administrada porque nunca se autenticó en PIIP.
@@ -67,6 +85,10 @@ Un administrador PIIP gestiona exclusivamente roles y ámbitos, mientras el cicl
 - Dos administradores modifican o retiran la misma asignación de manera simultánea.
 - El administrador pierde su autorización o cambia de ámbito durante una operación de administración.
 - La cuenta de una persona con asignaciones vigentes es deshabilitada en Keycloak; PIIP no altera sus asignaciones ni ofrece una acción local para habilitarla.
+- Una persona posee roles diferentes en Unidades Ejecutoras diferentes; ningún rol puede aprovechar la cobertura de otra asignación.
+- Una asignación institucional de un rol cubre únicamente las Unidades Ejecutoras de esa institución y conserva el rol con el que fue concedida.
+- Una persona posee Administrador PIIP y Consulta externa sobre la misma Unidad Ejecutora; Administrador PIIP prevalece como rol efectivo de esa UE.
+- Se abre mediante URL directa un recurso perteneciente a una UE distinta de la seleccionada; las acciones se calculan con la UE real del recurso.
 
 ## Requirements *(mandatory)*
 
@@ -88,6 +110,13 @@ Un administrador PIIP gestiona exclusivamente roles y ámbitos, mientras el cicl
 - **FR-014**: El acceso funcional PIIP DEBE depender únicamente de una autenticación válida y de asignaciones locales activas y vigentes de rol y ámbito; el estado heredado del registro local no debe modificar esa decisión.
 - **FR-015**: El sistema DEBE ofrecer a cualquier Administrador PIIP los usuarios locales sin ninguna asignación previa como candidatos para su primera asignación, sin incluirlos en el listado administrable principal ni consultar el directorio Keycloak.
 - **FR-016**: Antes de enviar una alta, el frontend DEBE rechazar la combinación exacta ya visible de usuario, rol, institución y Unidad Ejecutora; el backend conserva la validación transaccional y autoritativa de duplicidad.
+- **FR-017**: Toda decisión de autorización sensible DEBE conservar y evaluar conjuntamente el rol, la institución y la Unidad Ejecutora de una misma asignación activa y vigente.
+- **FR-018**: Una operación que requiere Administrador PIIP sobre una Unidad Ejecutora DEBE ser rechazada cuando el rol y la cobertura procedan de asignaciones diferentes.
+- **FR-019**: La lectura general de una Unidad Ejecutora DEBE permitirse cuando cualquier asignación activa y vigente cubra esa Unidad, sin ampliar las capacidades de escritura de su rol.
+- **FR-020**: La identidad funcional entregada al frontend DEBE incluir las asignaciones exactas de rol, institución y Unidad Ejecutora necesarias para representar el contexto sin inferencias agregadas inseguras.
+- **FR-021**: La interfaz DEBE mostrar el rol efectivo de la Unidad Ejecutora activa, dar precedencia a Administrador PIIP cuando ambos roles cubran la misma Unidad y no asumir un rol antes de cargar el contexto.
+- **FR-022**: Administración de usuarios DEBE permanecer accesible para quien posea al menos una asignación de Administrador PIIP, pero sus opciones y operaciones DEBEN limitarse exclusivamente a los ámbitos cubiertos por ese rol.
+- **FR-023**: Las acciones sobre un registro abierto directamente DEBEN calcularse usando la Unidad Ejecutora real del registro, aunque difiera de la Unidad activa seleccionada.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -106,6 +135,8 @@ Un administrador PIIP gestiona exclusivamente roles y ámbitos, mientras el cicl
 - **SC-003**: Al menos el 95 % de los administradores de prueba completa una creación, modificación o retiro de asignación sin asistencia en menos de 2 minutos por operación.
 - **SC-004**: El 100 % de las creaciones, modificaciones y retiros exitosos de asignaciones produce evidencia auditable sin exponer información sensible.
 - **SC-005**: El administrador recibe confirmación o un mensaje accionable de error para el 100 % de las operaciones iniciadas desde la pantalla.
+- **SC-006**: El 100 % de los intentos de combinar un rol privilegiado de un ámbito con la cobertura de otro son rechazados sin modificar datos.
+- **SC-007**: En el 100 % de los cambios de Unidad Ejecutora evaluados, la interfaz muestra el rol efectivo correcto y no conserva acciones privilegiadas del contexto anterior.
 
 ## Assumptions
 
@@ -117,3 +148,7 @@ Un administrador PIIP gestiona exclusivamente roles y ámbitos, mientras el cicl
 - La edición conserva la asignación vigente y permite cambiar su rol, institución y Unidad Ejecutora; la auditoría registra los valores anteriores y nuevos.
 - El retiro de una asignación es una suspensión reversible, no una eliminación física ni lógica definitiva.
 - Las garantías de último Administrador PIIP se aplican a las asignaciones locales activas; la disponibilidad de las cuentas asociadas se gestiona operativamente en Keycloak.
+- Las asignaciones exactas de rol y ámbito son la fuente canónica de autorización; los conjuntos agregados existentes se conservan sólo por compatibilidad temporal.
+- El rol visible se determina por la Unidad Ejecutora activa y Administrador PIIP prevalece cuando ambos roles cubren esa misma Unidad.
+- Administración de usuarios es transversal a la Unidad activa, pero sólo opera sobre ámbitos cubiertos por asignaciones de Administrador PIIP.
+- La semántica global actual de la bandeja de auditoría no cambia en este alcance porque no todos sus registros contienen una Unidad Ejecutora.

@@ -3,6 +3,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { resolveApiUrl } from '../../core/piip-http.repository';
+import { PiipMockRepository } from '../../core/piip-mock.repository';
+import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { UserAdministrationComponent } from './user-administration.component';
 
 describe('UserAdministrationComponent operations', () => {
@@ -15,11 +17,19 @@ describe('UserAdministrationComponent operations', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     await TestBed.configureTestingModule({
       imports: [UserAdministrationComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), PiipMockRepository, { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository }],
     }).overrideComponent(UserAdministrationComponent, {
       add: { providers: [{ provide: MatSnackBar, useValue: snackBar }] },
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
+    TestBed.inject(PiipMockRepository).currentUser.update((user) => user ? ({
+      ...user,
+      roleScopes: [
+        { role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: null },
+        { role: 'ADMINISTRADOR_PIIP', institutionId: 2, executingUnitId: 8 },
+        { role: 'CONSULTA_EXTERNA', institutionId: 3, executingUnitId: 9 },
+      ],
+    }) : null);
   });
 
   afterEach(() => {
@@ -179,6 +189,18 @@ describe('UserAdministrationComponent operations', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Inhabilitar usuario');
     expect(fixture.nativeElement.textContent).not.toContain('Habilitar usuario');
   });
+
+  it('offers only Administrator-covered institutions and units and limits institution-wide scope', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.administrableInstitutions().map((item) => item.id)).toEqual([1, 2]);
+    expect(fixture.componentInstance.canUseInstitutionWide(1)).toBe(true);
+    expect(fixture.componentInstance.canUseInstitutionWide(2)).toBe(false);
+    fixture.componentInstance.assignmentForm.controls.institutionId.setValue(2);
+    expect(fixture.componentInstance.assignmentExecutingUnits().map((item) => item.id)).toEqual([8]);
+  });
 });
 
 function activeScope() {
@@ -188,8 +210,16 @@ function activeScope() {
 function flushAdministrationLoad(http: HttpTestingController, apiUrl: string, users: unknown[] = [], candidates: unknown[] = []): void {
   http.expectOne(`${apiUrl}/admin/users`).flush(jsonBlob(users));
   http.expectOne(`${apiUrl}/admin/users/assignment-candidates`).flush(candidates);
-  http.expectOne(`${apiUrl}/institutions`).flush([]);
-  http.expectOne(`${apiUrl}/executing-units`).flush([]);
+  http.expectOne(`${apiUrl}/institutions`).flush([
+    { id: 1, code: 'INST-1', name: 'Institución 1' },
+    { id: 2, code: 'INST-2', name: 'Institución 2' },
+    { id: 3, code: 'INST-3', name: 'Institución sólo consulta' },
+  ]);
+  http.expectOne(`${apiUrl}/executing-units`).flush([
+    { id: 1, code: 'UE-001', name: 'UE-001', institutionId: 1 },
+    { id: 8, code: 'UE-008', name: 'UE-008', institutionId: 2 },
+    { id: 9, code: 'UE-009', name: 'UE-009', institutionId: 3 },
+  ]);
 }
 
 function jsonBlob(value: unknown): Blob {

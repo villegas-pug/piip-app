@@ -44,6 +44,11 @@ export class InitiativesComponent {
   });
   readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.filteredInitiatives().length));
   readonly pagedInitiatives = computed(() => paginateItems(this.filteredInitiatives(), this.currentPage()));
+  readonly canCreateInActiveScope = computed(() => this.repository.canAdministerExecutingUnit(this.repository.selectedExecutingUnitId()));
+
+  canAdminister(initiative: { executingUnitId?: number }): boolean {
+    return this.repository.canAdministerExecutingUnit(initiative.executingUnitId);
+  }
 
   constructor() {
     this.filters.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.pageIndex.set(0));

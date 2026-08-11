@@ -15,6 +15,12 @@
 
 `UserAssignmentCandidateResponse` no es una entidad ni modifica el esquema. Proyecta `id`, `subject`, `fullName` y `email` de `USUARIO` cuando no existe ninguna fila relacionada de `USUARIO_ROL_AMBITO`. El frontend la combina con los usuarios administrables sólo para el selector de alta.
 
+## Grant funcional exacto
+
+`RoleScopeGrant` es un valor de aplicación, no una entidad ni una tabla nueva. Conserva `role`, `institutionId` y `executingUnitId` opcional de una misma asignación activa y vigente. Un `executingUnitId` nulo representa cobertura institucional únicamente dentro de la institución y con el rol del mismo grant.
+
+`RoleScopeResponse` publica esa misma forma dentro de `/identity/me`. Las colecciones agregadas existentes se conservan temporalmente por compatibilidad, pero no son fuente de decisiones sensibles.
+
 ## Transiciones de estado
 
 | Recurso | Estado inicial | Operación | Estado final | Regla |
@@ -27,6 +33,8 @@
 
 - La versión esperada debe coincidir antes de toda escritura; `@Version` conserva la protección ante actualizaciones optimistas.
 - El actor debe ser Administrador PIIP y tener cobertura persistida de todos los ámbitos origen y destino afectados.
+- El rol Administrador PIIP y la cobertura del ámbito deben proceder del mismo `RoleScopeGrant`; no se pueden combinar grants diferentes.
+- La lectura puede usar cualquier grant que cubra el ámbito, pero las capacidades de escritura permanecen ligadas al rol de ese grant.
 - No puede existir más de una asignación activa para igual usuario, rol, institución y Unidad Ejecutora, excluyendo la misma asignación durante la edición.
 - La Unidad Ejecutora, si existe, debe pertenecer a la institución seleccionada y ambos catálogos deben estar activos.
 - La suspensión, edición o reactivación no puede eliminar la última cobertura activa de Administrador PIIP de un ámbito.

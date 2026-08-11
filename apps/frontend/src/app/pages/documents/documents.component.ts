@@ -48,6 +48,7 @@ export class DocumentsComponent {
   readonly code = computed(() => this.routeParamMap().get('code') ?? '');
   readonly recordType = computed<PiipRecordType>(() => this.routeData()['recordType'] === 'Proyecto' ? 'Proyecto' : 'Iniciativa');
   readonly dossier = computed(() => this.repository.getDocumentDossier(this.recordType(), this.code()));
+  readonly canAdministerRecord = computed(() => this.repository.canAdministerExecutingUnit(this.dossier()?.executingUnitId));
   readonly summary = computed(() => {
     const dossier = this.dossier();
     return dossier ? summarizeDocumentDossier(dossier) : undefined;
@@ -112,6 +113,7 @@ export class DocumentsComponent {
   }
 
   toggleUploadPanel(): void {
+    if (!this.canAdministerRecord()) return;
     if (this.uploadOpen()) {
       this.closeUploadPanel();
       return;
@@ -126,7 +128,7 @@ export class DocumentsComponent {
 
   async upload(): Promise<void> {
     const file = this.uploadFile();
-    if (!file || this.operationPending()) return;
+    if (!file || this.operationPending() || !this.canAdministerRecord()) return;
     this.pendingOperation.set({ kind: 'upload', key: this.uploadType() });
     try {
       await Promise.resolve(this.repository.uploadDocument(this.code(), this.uploadType(), file));
@@ -152,7 +154,7 @@ export class DocumentsComponent {
   }
 
   async togglePublication(document: DocumentRecord): Promise<void> {
-    if (!document.versionId || document.optimisticVersion === undefined || this.operationPending()) return;
+    if (!document.versionId || document.optimisticVersion === undefined || this.operationPending() || !this.canAdministerRecord()) return;
     this.pendingOperation.set({ kind: 'publication', key: this.operationKey(document) });
     try {
       await Promise.resolve(this.repository.setDocumentPublication(this.code(), document.versionId, !document.externallyPublished, document.optimisticVersion));
@@ -165,7 +167,7 @@ export class DocumentsComponent {
   }
 
   async markNotApplicable(document: DocumentRecord): Promise<void> {
-    if (!document.type || this.operationPending()) return;
+    if (!document.type || this.operationPending() || !this.canAdministerRecord()) return;
     this.pendingOperation.set({ kind: 'not-applicable', key: this.operationKey(document) });
     try {
       await Promise.resolve(this.repository.markDocumentNotApplicable(this.code(), document.type, 'Marcado desde el expediente PIIP'));

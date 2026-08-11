@@ -27,6 +27,7 @@ export type { ReassignRequest } from './models/reassign-request';
 export type { ResponsibleUnitInput } from './models/responsible-unit-input';
 export type { RoleAssignmentRequest } from './models/role-assignment-request';
 export type { RoleAssignmentUpdateRequest } from './models/role-assignment-update-request';
+export type { RoleScopeResponse } from './models/role-scope-response';
 export type { ScopeResponse } from './models/scope-response';
 export type { TaskResponse } from './models/task-response';
 export type { UserAssignmentCandidateResponse } from './models/user-assignment-candidate-response';

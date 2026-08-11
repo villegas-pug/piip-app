@@ -36,6 +36,7 @@ export class AppShellComponent {
   readonly activeExecutingUnit = computed(() =>
     this.repository.executingUnits().find((unit) => unit.id === this.repository.selectedExecutingUnitId()),
   );
+  readonly effectiveRoleLabel = computed(() => this.repository.role() ?? 'Sin rol en esta Unidad Ejecutora');
 
   readonly navigation: NavigationItem[] = [
     { label: 'Inicio', icon: 'home', route: '/inicio' },
@@ -99,6 +100,9 @@ export class AppShellComponent {
         'Actualizando información de la Unidad Ejecutora...',
         () => Promise.resolve(this.repository.selectExecutingUnit(executingUnitId)),
       );
+      if (!this.repository.canAdministerExecutingUnit(executingUnitId) && isActiveScopeAdministratorRoute(this.currentUrl())) {
+        await this.router.navigateByUrl('/inicio');
+      }
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible cambiar de Unidad Ejecutora.', 'Cerrar', { duration: 3800 });
     }
@@ -115,6 +119,13 @@ export class AppShellComponent {
       () => Promise.resolve(this.repository.initialize()),
     );
   }
+}
+
+function isActiveScopeAdministratorRoute(url: string): boolean {
+  const path = url.split(/[?#]/, 1)[0];
+  return path === '/iniciativas/nueva'
+    || path === '/proyectos/nuevo/preexistente'
+    || path.startsWith('/proyectos/nuevo/derivado/');
 }
 
 export function isNavigationRouteActive(navigationRoute: string, currentUrl: string): boolean {

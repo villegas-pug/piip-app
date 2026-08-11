@@ -1,13 +1,13 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
   AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier, DocumentDossierSummary,
   DocumentRecord, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput,
   InitiativeRecord, NotificationItem, OrganizationalUnit, PiipPortfolioRecord, PiipRecordType,
-  PreexistingProjectInput, ProjectRecord, UserRole, WorkItem,
+  PreexistingProjectInput, ProjectRecord, UserRole, UserRoleCode, WorkItem,
 } from './piip.models';
-import { EventResponse } from '../api/generated';
+import { CurrentUserResponse, EventResponse } from '../api/generated';
 import { PiipRepository } from './piip.repository';
 import { resolveApiUrl as runtimeApiUrl } from './piip-runtime-config';
 import {
@@ -95,7 +95,6 @@ export class PiipApiError extends Error {
 @Injectable({ providedIn: 'root' })
 export class PiipHttpRepository extends PiipRepository {
   readonly demoMode = false;
-  readonly role = signal<UserRole>('Consulta externa');
   readonly currentUser = signal<CurrentUser | null>(null);
   readonly portfolioRecords = signal<PiipPortfolioRecord[]>([]);
   readonly initiatives = signal<InitiativeRecord[]>([]);
@@ -110,6 +109,7 @@ export class PiipHttpRepository extends PiipRepository {
   readonly executingUnits = signal<ExecutingUnit[]>([]);
   readonly organizationalUnits = signal<OrganizationalUnit[]>([]);
   readonly selectedExecutingUnitId = signal<number | null>(null);
+  readonly role = computed(() => this.effectiveRoleForExecutingUnit(this.selectedExecutingUnitId()));
   readonly loading = signal(false);
   readonly lastError = signal<string | null>(null);
 
@@ -117,6 +117,7 @@ export class PiipHttpRepository extends PiipRepository {
   private readonly apiUrl = runtimeApiUrl();
   private readonly recordVersions = new Map<string, number>();
   private readonly eligibleInitiatives = signal<InitiativeRecord[]>([]);
+  private readonly loadingRecordCodes = new Set<string>();
   private initialization?: Promise<void>;
 
   constructor() {
@@ -151,14 +152,21 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   async refreshAll(): Promise<void> {
+    const activeAdministrator = this.canAdministerExecutingUnit(this.selectedExecutingUnitId());
+    if (!activeAdministrator) this.eligibleInitiatives.set([]);
+    if (!this.hasAnyAdministratorScope()) {
+      this.workItems.set([]);
+      this.auditEvents.set([]);
+      this.auditAccesses.set([]);
+    }
     await Promise.all([
       this.loadPortfolio(),
       this.loadDocumentSummaries(),
       this.loadDashboard(),
       this.loadNotifications(),
-      this.loadEligibleInitiatives(),
-      this.role() === 'Administrador PIIP' ? this.loadWorkItems() : Promise.resolve(),
-      this.role() === 'Administrador PIIP' ? this.loadAudit() : Promise.resolve(),
+      activeAdministrator ? this.loadEligibleInitiatives() : Promise.resolve(),
+      this.hasAnyAdministratorScope() ? this.loadWorkItems() : Promise.resolve(),
+      this.hasAnyAdministratorScope() ? this.loadAudit() : Promise.resolve(),
     ]);
   }
 
@@ -166,10 +174,34 @@ export class PiipHttpRepository extends PiipRepository {
     this.lastError.set(null);
   }
 
+  canReadExecutingUnit(executingUnitId: number | null | undefined): boolean {
+    return this.hasGrantForExecutingUnit(executingUnitId);
+  }
+
+  canAdministerExecutingUnit(executingUnitId: number | null | undefined): boolean {
+    return this.hasGrantForExecutingUnit(executingUnitId, 'ADMINISTRADOR_PIIP');
+  }
+
+  hasAnyAdministratorScope(): boolean {
+    return this.currentUser()?.roleScopes.some((scope) => scope.role === 'ADMINISTRADOR_PIIP') ?? false;
+  }
+
+  effectiveRoleForExecutingUnit(executingUnitId: number | null | undefined): UserRole | null {
+    if (this.canAdministerExecutingUnit(executingUnitId)) return 'Administrador PIIP';
+    return this.hasGrantForExecutingUnit(executingUnitId, 'CONSULTA_EXTERNA') ? 'Consulta externa' : null;
+  }
+
   async selectExecutingUnit(executingUnitId: number): Promise<void> {
     if (!this.executingUnits().some((unit) => unit.id === executingUnitId)) {
       throw new PiipApiError(403, 'La Unidad Ejecutora no pertenece a los ambitos autorizados.');
     }
+    this.portfolioRecords.set([]);
+    this.initiatives.set([]);
+    this.projects.set([]);
+    this.documentDossiers.set([]);
+    this.documentDossierSummaries.set([]);
+    this.eligibleInitiatives.set([]);
+    this.organizationalUnits.set([]);
     this.selectedExecutingUnitId.set(executingUnitId);
     localStorage.setItem('piip-selected-executing-unit', String(executingUnitId));
     await Promise.all([this.loadOrganizationalUnits(executingUnitId), this.refreshAll()]);
@@ -190,7 +222,10 @@ export class PiipHttpRepository extends PiipRepository {
   getInitiativeDetail(code: string): InitiativeDetail | undefined {
     const initiative = this.initiatives().find((item) => item.code === code);
     const portfolioRecord = this.portfolioRecords().find((item) => item.recordType === 'Iniciativa' && item.code === code);
-    if (!initiative || !portfolioRecord) return undefined;
+    if (!initiative || !portfolioRecord) {
+      void this.loadPortfolioRecord('Iniciativa', code).catch((error) => this.captureError(error));
+      return undefined;
+    }
     return {
       initiative,
       portfolioRecord,
@@ -227,6 +262,7 @@ export class PiipHttpRepository extends PiipRepository {
 
   async registerInitiative(input: InitiativeInput): Promise<PiipPortfolioRecord> {
     const executingUnitId = this.requireSelectedExecutingUnit();
+    this.requireAdministratorForExecutingUnit(executingUnitId);
     const request: InitiativeCreateRequest = {
       executingUnitId,
       startDate: input.startDate,
@@ -250,6 +286,7 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   async approveInitiative(input: InitiativeDecisionInput): Promise<PiipPortfolioRecord> {
+    this.requireAdministratorForExecutingUnit(this.executingUnitIdForRecord(input.initiativeCode));
     const version = this.recordVersions.get(input.initiativeCode);
     if (version === undefined) throw new PiipApiError(409, 'No se encontró la versión vigente de la iniciativa. Recarga el expediente.');
     const request: ApprovalRequest = {
@@ -263,6 +300,7 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   async registerDerivedProject(input: DerivedProjectInput): Promise<PiipPortfolioRecord> {
+    this.requireAdministratorForExecutingUnit(this.executingUnitIdForRecord(input.initiativeCode));
     const request: DerivedProjectRequest = {
       initiativeCode: input.initiativeCode,
       startDate: input.startDate,
@@ -284,6 +322,7 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   async registerPreexistingProject(input: PreexistingProjectInput): Promise<PiipPortfolioRecord> {
+    this.requireAdministratorForExecutingUnit(this.requireSelectedExecutingUnit());
     const request: PreexistingProjectRequest = {
       executingUnitId: this.requireSelectedExecutingUnit(),
       startDate: input.startDate,
@@ -348,9 +387,21 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   private async loadIdentity(): Promise<void> {
-    const user = await this.request(this.http.get<CurrentUser>(`${this.apiUrl}/identity/me`));
-    this.currentUser.set(user);
-    this.role.set(user.roles.includes('ADMINISTRADOR_PIIP') ? 'Administrador PIIP' : 'Consulta externa');
+    const response = await this.request(this.http.get<CurrentUserResponse>(`${this.apiUrl}/identity/me`));
+    this.currentUser.set({
+      subject: response.subject ?? '',
+      fullName: response.fullName ?? '',
+      email: response.email ?? '',
+      roleScopes: (response.roleScopes ?? []).flatMap((scope) =>
+        scope.role && scope.institutionId !== undefined
+          ? [{ role: scope.role, institutionId: scope.institutionId, executingUnitId: scope.executingUnitId ?? null }]
+          : [],
+      ),
+      roles: response.roles ?? [],
+      institutionIds: response.institutionIds ?? [],
+      executingUnitIds: response.executingUnitIds ?? [],
+      institutionWide: response.institutionWide ?? false,
+    });
   }
 
   private async loadExecutingUnits(): Promise<void> {
@@ -400,7 +451,8 @@ export class PiipHttpRepository extends PiipRepository {
 
   private async loadDocuments(recordType: PiipRecordType, code: string): Promise<void> {
     const items = await this.request(this.http.get<ApiDocument[]>(`${this.apiUrl}/portfolio-records/${code}/documents`));
-    const record = this.portfolioRecords().find((candidate) => candidate.code === code);
+    const record = this.portfolioRecords().find((candidate) => candidate.code === code)
+      ?? await this.loadPortfolioRecord(recordType, code);
     if (!record) return;
     const dossier: DocumentDossier = {
       recordType,
@@ -409,6 +461,7 @@ export class PiipHttpRepository extends PiipRepository {
       unit: record.responsibleUnits,
       status: record.status,
       lastActivity: formatDate(new Date().toISOString()),
+      executingUnitId: record.executingUnitId,
       stages: [
         { title: '1. Registro inicial', records: mapDocuments(items, ['PUBLIC_INNOVATION_INITIATIVE_SHEET']) },
         { title: '2. Evaluación', records: mapDocuments(items, ['INITIATIVE_TECHNICAL_OPINION']) },
@@ -438,6 +491,27 @@ export class PiipHttpRepository extends PiipRepository {
     this.auditAccesses.set(accesses);
   }
 
+  private async loadPortfolioRecord(recordType: PiipRecordType, code: string): Promise<PiipPortfolioRecord | undefined> {
+    const existing = this.portfolioRecords().find((candidate) => candidate.code === code);
+    if (existing || !code || this.loadingRecordCodes.has(code)) return existing;
+    this.loadingRecordCodes.add(code);
+    try {
+      const path = recordType === 'Iniciativa' ? 'initiatives' : 'projects';
+      const response = await this.request(this.http.get<ApiPortfolioRecord>(`${this.apiUrl}/${path}/${code}`));
+      const portfolioRecord = toPortfolioRecord(response);
+      this.recordVersions.set(response.code, response.version);
+      this.portfolioRecords.update((items) => [portfolioRecord, ...items.filter((item) => item.code !== code)]);
+      if (recordType === 'Iniciativa') {
+        this.initiatives.update((items) => [toInitiativeRecord(response), ...items.filter((item) => item.code !== code)]);
+      } else {
+        this.projects.update((items) => [toProjectRecord(response), ...items.filter((item) => item.code !== code)]);
+      }
+      return portfolioRecord;
+    } finally {
+      this.loadingRecordCodes.delete(code);
+    }
+  }
+
   private async loadWorkItems(): Promise<void> {
     const items = await this.request(this.http.get<ApiWorkTask[]>(`${this.apiUrl}/work-tasks`));
     this.workItems.set(items.map((item) => ({
@@ -465,6 +539,27 @@ export class PiipHttpRepository extends PiipRepository {
     const value = this.selectedExecutingUnitId();
     if (value === null) throw new PiipApiError(422, 'Selecciona una Unidad Ejecutora antes de registrar.');
     return value;
+  }
+
+  private executingUnitIdForRecord(code: string): number | undefined {
+    return this.portfolioRecords().find((record) => record.code === code)?.executingUnitId;
+  }
+
+  private requireAdministratorForExecutingUnit(executingUnitId: number | null | undefined): void {
+    if (!this.canAdministerExecutingUnit(executingUnitId)) {
+      throw new PiipApiError(403, 'No tienes permisos de Administrador PIIP para la Unidad Ejecutora del registro.');
+    }
+  }
+
+  private hasGrantForExecutingUnit(executingUnitId: number | null | undefined, role?: UserRoleCode): boolean {
+    if (executingUnitId == null) return false;
+    const unit = this.executingUnits().find((candidate) => candidate.id === executingUnitId);
+    if (!unit) return false;
+    return this.currentUser()?.roleScopes.some((scope) =>
+      (!role || scope.role === role)
+      && scope.institutionId === unit.institutionId
+      && (scope.executingUnitId === null || scope.executingUnitId === executingUnitId),
+    ) ?? false;
   }
 
   private async request<T>(request: Observable<T>): Promise<T> {
@@ -523,6 +618,7 @@ function toPortfolioRecord(value: ApiPortfolioRecord): PiipPortfolioRecord {
     finalProductApprovalDocument: value.finalProductApprovalDocument ?? '',
     projectManagementDocumentation: value.projectManagementDocumentation ?? '',
     finalClosureReport: value.finalClosureReport ?? '',
+    executingUnitId: value.executingUnitId,
   };
 }
 
@@ -536,6 +632,7 @@ function toInitiativeRecord(value: ApiPortfolioRecord): InitiativeRecord {
     unit: value.responsibleUnits.join(', '),
     status: value.status,
     updatedAt: formatDate(value.updatedAt),
+    executingUnitId: value.executingUnitId,
   };
 }
 
@@ -549,6 +646,7 @@ function toProjectRecord(value: ApiPortfolioRecord): ProjectRecord {
     responsible: value.responsible,
     status: value.status,
     digitalComponent: value.digitalComponent,
+    executingUnitId: value.executingUnitId,
   };
 }
 

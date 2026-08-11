@@ -2,9 +2,11 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { PIIP_REPOSITORY } from './piip-repository.token';
 
-export const administratorGuard: CanActivateFn = async () => {
+export const activeScopeAdministratorGuard: CanActivateFn = async () => {
   const repository = inject(PIIP_REPOSITORY);
   const router = inject(Router);
   await Promise.resolve(repository.initialize());
-  return repository.hasAnyAdministratorScope() ? true : router.createUrlTree(['/inicio']);
+  return repository.canAdministerExecutingUnit(repository.selectedExecutingUnitId())
+    ? true
+    : router.createUrlTree(['/inicio']);
 };

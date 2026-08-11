@@ -13,6 +13,7 @@ import type { Observable } from 'rxjs';
 import { UserAdministrationControllerService } from '../../api/generated';
 import type { ScopeResponse, UserAssignmentCandidateResponse, UserResponse } from '../../api/generated';
 import { resolveApiUrl } from '../../core/piip-http.repository';
+import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 
@@ -38,6 +39,7 @@ export class UserAdministrationComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
   private readonly apiUrl = resolveApiUrl();
+  readonly repository = inject(PIIP_REPOSITORY);
 
   readonly users = signal<UserItem[]>([]);
   readonly assignmentCandidates = signal<AssignmentCandidate[]>([]);
@@ -92,6 +94,10 @@ export class UserAdministrationComponent {
   });
   readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.assignmentRows().length));
   readonly pagedAssignmentRows = computed(() => paginateItems(this.assignmentRows(), this.currentPage()));
+  readonly administrableInstitutions = computed(() => {
+    const ids = new Set(this.administratorScopes().map((scope) => scope.institutionId));
+    return this.institutions().filter((institution) => ids.has(institution.id));
+  });
 
   constructor() {
     this.userAdministration.rootUrl = this.apiUrl;
@@ -119,6 +125,10 @@ export class UserAdministrationComponent {
     if (this.editForm.invalid) return;
 
     const value = this.editForm.getRawValue();
+    if (!this.isAdministrableScope(value.institutionId, value.executingUnitId)) {
+      this.snackBar.open('El ámbito seleccionado no está cubierto por tus asignaciones de Administrador PIIP.', 'Cerrar', { duration: 4200 });
+      return;
+    }
     this.savingScopeId.set(scope.id);
     this.userAdministration.update({
       scopeId: scope.id,
@@ -162,6 +172,10 @@ export class UserAdministrationComponent {
     this.assignmentForm.markAllAsTouched();
     if (this.assignmentForm.invalid) return;
     const value = this.assignmentForm.getRawValue();
+    if (!this.isAdministrableScope(value.institutionId, value.executingUnitId)) {
+      this.snackBar.open('El ámbito seleccionado no está cubierto por tus asignaciones de Administrador PIIP.', 'Cerrar', { duration: 4200 });
+      return;
+    }
     if (this.hasVisibleActiveDuplicate(value)) {
       this.snackBar.open('El usuario ya cuenta con una asignación activa igual. Elige otro rol o ámbito.', 'Cerrar', { duration: 4200 });
       return;
@@ -181,6 +195,36 @@ export class UserAdministrationComponent {
       institutionId: [0, Validators.min(1)],
       executingUnitId: [0],
     });
+  }
+
+  assignmentExecutingUnits(): ExecutingUnitItem[] {
+    return this.administrableExecutingUnits(this.assignmentForm.controls.institutionId.value);
+  }
+
+  editExecutingUnits(): ExecutingUnitItem[] {
+    return this.administrableExecutingUnits(this.editForm.controls.institutionId.value);
+  }
+
+  canUseInstitutionWide(institutionId: number): boolean {
+    return this.administratorScopes().some((scope) => scope.institutionId === institutionId && scope.executingUnitId === null);
+  }
+
+  private administratorScopes() {
+    return this.repository.currentUser()?.roleScopes.filter((scope) => scope.role === 'ADMINISTRADOR_PIIP') ?? [];
+  }
+
+  private administrableExecutingUnits(institutionId: number): ExecutingUnitItem[] {
+    const scopes = this.administratorScopes().filter((scope) => scope.institutionId === institutionId);
+    if (scopes.some((scope) => scope.executingUnitId === null)) {
+      return this.executingUnits().filter((unit) => unit.institutionId === institutionId);
+    }
+    const unitIds = new Set(scopes.map((scope) => scope.executingUnitId));
+    return this.executingUnits().filter((unit) => unit.institutionId === institutionId && unitIds.has(unit.id));
+  }
+
+  private isAdministrableScope(institutionId: number, executingUnitId: number): boolean {
+    if (executingUnitId === 0) return this.canUseInstitutionWide(institutionId);
+    return this.administrableExecutingUnits(institutionId).some((unit) => unit.id === executingUnitId);
   }
 
   private load(): void {
