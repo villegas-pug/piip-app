@@ -33,6 +33,8 @@ export type { Users$Params as Users$Params } from './fn/user-administration-cont
 export { users as users } from './fn/user-administration-controller/users';
 export type { AssignmentCandidates$Params as AssignmentCandidates$Params } from './fn/user-administration-controller/assignment-candidates';
 export { assignmentCandidates as assignmentCandidates } from './fn/user-administration-controller/assignment-candidates';
+export type { AdministrableScopes$Params as AdministrableScopes$Params } from './fn/user-administration-controller/administrable-scopes';
+export { administrableScopes as administrableScopes } from './fn/user-administration-controller/administrable-scopes';
 export type { Preexisting$Params as Preexisting$Params } from './fn/portfolio-controller/preexisting';
 export { preexisting as preexisting } from './fn/portfolio-controller/preexisting';
 export type { Derived$Params as Derived$Params } from './fn/portfolio-controller/derived';

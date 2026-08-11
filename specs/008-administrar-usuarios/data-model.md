@@ -21,6 +21,12 @@
 
 `RoleScopeResponse` publica esa misma forma dentro de `/identity/me`. Las colecciones agregadas existentes se conservan temporalmente por compatibilidad, pero no son fuente de decisiones sensibles.
 
+## Proyección de cobertura administrativa
+
+`AdministrableScopeResponse` tampoco es una entidad ni crea tablas. Proyecta cada institución donde el actor posee al menos un `RoleScopeGrant` activo `ADMINISTRADOR_PIIP`, junto con todas sus Unidades Ejecutoras activas y la disponibilidad de `Toda la institución`.
+
+Esta proyección sólo autoriza operaciones sobre asignaciones de usuarios. No crea grants heredados, no cambia `/identity/me`, no añade UE al selector operativo y no concede capacidades funcionales sobre iniciativas, proyectos, documentos o tareas.
+
 ## Transiciones de estado
 
 | Recurso | Estado inicial | Operación | Estado final | Regla |
@@ -32,12 +38,14 @@
 ## Reglas de validación e integridad
 
 - La versión esperada debe coincidir antes de toda escritura; `@Version` conserva la protección ante actualizaciones optimistas.
-- El actor debe ser Administrador PIIP y tener cobertura persistida de todos los ámbitos origen y destino afectados.
-- El rol Administrador PIIP y la cobertura del ámbito deben proceder del mismo `RoleScopeGrant`; no se pueden combinar grants diferentes.
+- El actor debe poseer un grant Administrador PIIP persistido en la institución de los ámbitos origen y destino afectados por Administración de usuarios.
+- Para operaciones funcionales, el rol Administrador PIIP y la cobertura del ámbito deben proceder del mismo `RoleScopeGrant`; no se pueden combinar grants diferentes.
 - La lectura puede usar cualquier grant que cubra el ámbito, pero las capacidades de escritura permanecen ligadas al rol de ese grant.
+- La excepción anterior sólo aplica a la gestión de asignaciones: un grant Administrador en cualquier UE de una institución permite administrar asignaciones de todas sus UE, sin convertirse en un grant operativo institucional.
 - No puede existir más de una asignación activa para igual usuario, rol, institución y Unidad Ejecutora, excluyendo la misma asignación durante la edición.
 - La Unidad Ejecutora, si existe, debe pertenecer a la institución seleccionada y ambos catálogos deben estar activos.
 - La suspensión, edición o reactivación no puede eliminar la última cobertura activa de Administrador PIIP de un ámbito.
 - Las comprobaciones de duplicidad y última cobertura se serializan mediante bloqueos JPA dentro de la transacción.
 - Ninguna transición modifica el subject de autenticación, el ciclo de vida de la cuenta en Keycloak, credenciales ni contenido de auditoría previo.
 - El rechazo preventivo del frontend considera sólo asignaciones activas ya visibles; el servicio conserva la comprobación bloqueada y transaccional como regla definitiva.
+- El usuario objetivo puede ser el propio actor; una autoasignación institucional pasa las mismas validaciones y, una vez persistida, sí modifica sus grants operativos futuros.

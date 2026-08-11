@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { PiipActivityService } from '../core/piip-activity.service';
 import { PiipMockRepository } from '../core/piip-mock.repository';
 import { PIIP_REPOSITORY } from '../core/piip-repository.token';
@@ -120,4 +121,82 @@ describe('AppShellComponent loading state', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.profile-copy')?.textContent).toContain('Administrador PIIP');
   });
+
+  it('keeps user administration visible but disabled and identifies its available UE', async () => {
+    const repository = configureMixedScopes();
+    repository.selectedExecutingUnitId.set(1);
+    const overlay = TestBed.inject(OverlayContainer);
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.profile-button')?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const option = overlay.getContainerElement().querySelector<HTMLButtonElement>('[data-testid="user-administration-option"]');
+    expect(option).not.toBeNull();
+    expect(option?.disabled).toBe(true);
+    expect(option?.textContent).toContain('Administrar usuarios');
+    expect(option?.textContent).toContain('Disponible al seleccionar: UE-002');
+  });
+
+  it('hides user administration without any Administrator grant', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.toggleRole();
+    const overlay = TestBed.inject(OverlayContainer);
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.profile-button')?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(overlay.getContainerElement().querySelector('[data-testid="user-administration-option"]')).toBeNull();
+  });
+
+  it('leaves user administration and explains the active-scope change', async () => {
+    const repository = configureMixedScopes();
+    repository.selectedExecutingUnitId.set(2);
+    const fixture = TestBed.createComponent(AppShellComponent);
+    const router = TestBed.inject(Router);
+    const navigateByUrl = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const snackBar = TestBed.inject(MatSnackBar);
+    const open = vi.spyOn(snackBar, 'open');
+    fixture.componentInstance.currentUrl.set('/administracion/usuarios');
+
+    await fixture.componentInstance.selectExecutingUnit(1);
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/inicio');
+    expect(open).toHaveBeenCalledWith(
+      'Saliste de Administración de usuarios porque la UE activa no tiene rol Administrador PIIP.',
+      'Cerrar',
+      { duration: 5200 },
+    );
+    expect(repository.administrableScopes()).toEqual([]);
+  });
+
+  function configureMixedScopes(): PiipMockRepository {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([
+      { id: 1, code: 'UE-001', name: 'Unidad de consulta', institutionId: 1 },
+      { id: 2, code: 'UE-002', name: 'Unidad administrable', institutionId: 1 },
+    ]);
+    repository.currentUser.set({
+      subject: 'mixed', fullName: 'Usuario mixto', email: 'mixed@example.pe',
+      roleScopes: [
+        { role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 1 },
+        { role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 2 },
+      ], roles: ['CONSULTA_EXTERNA', 'ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1, 2], institutionWide: false,
+    });
+    repository.administrableScopes.set([{
+      institutionId: 1,
+      institutionCode: 'MIDAGRI',
+      institutionName: 'Ministerio de Desarrollo Agrario y Riego',
+      institutionWideAllowed: true,
+      executingUnits: [
+        { id: 1, code: 'UE-001', name: 'Unidad de consulta' },
+        { id: 2, code: 'UE-002', name: 'Unidad administrable' },
+      ],
+    }]);
+    return repository;
+  }
 });

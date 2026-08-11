@@ -10,6 +10,9 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { AdministrableScopeResponse } from '../models/administrable-scope-response';
+import { administrableScopes } from '../fn/user-administration-controller/administrable-scopes';
+import { AdministrableScopes$Params } from '../fn/user-administration-controller/administrable-scopes';
 import { assign } from '../fn/user-administration-controller/assign';
 import { Assign$Params } from '../fn/user-administration-controller/assign';
 import { assignmentCandidates } from '../fn/user-administration-controller/assignment-candidates';
@@ -191,6 +194,33 @@ export class UserAdministrationControllerService extends BaseService {
     const resp = this.assignmentCandidates$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<Array<UserAssignmentCandidateResponse>>): Array<UserAssignmentCandidateResponse> => r.body)
+    );
+  }
+
+  /** Path part for operation `administrableScopes()` */
+  static readonly AdministrableScopesPath = '/admin/users/administrable-scopes';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `administrableScopes()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  administrableScopes$Response(params?: AdministrableScopes$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<AdministrableScopeResponse>>> {
+    const obs = administrableScopes(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `administrableScopes$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  administrableScopes(params?: AdministrableScopes$Params, context?: HttpContext): Observable<Array<AdministrableScopeResponse>> {
+    const resp = this.administrableScopes$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Array<AdministrableScopeResponse>>): Array<AdministrableScopeResponse> => r.body)
     );
   }
 

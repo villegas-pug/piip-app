@@ -22,14 +22,34 @@ describe('UserAdministrationComponent operations', () => {
       add: { providers: [{ provide: MatSnackBar, useValue: snackBar }] },
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
-    TestBed.inject(PiipMockRepository).currentUser.update((user) => user ? ({
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.currentUser.update((user) => user ? ({
       ...user,
       roleScopes: [
-        { role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: null },
+        { role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 2 },
         { role: 'ADMINISTRADOR_PIIP', institutionId: 2, executingUnitId: 8 },
         { role: 'CONSULTA_EXTERNA', institutionId: 3, executingUnitId: 9 },
       ],
     }) : null);
+    repository.administrableScopes.set([
+      {
+        institutionId: 1,
+        institutionCode: 'INST-1',
+        institutionName: 'Institución 1',
+        institutionWideAllowed: true,
+        executingUnits: [
+          { id: 1, code: 'UE-001', name: 'UE-001' },
+          { id: 2, code: 'UE-002', name: 'UE-002' },
+        ],
+      },
+      {
+        institutionId: 2,
+        institutionCode: 'INST-2',
+        institutionName: 'Institución 2',
+        institutionWideAllowed: true,
+        executingUnits: [{ id: 8, code: 'UE-008', name: 'UE-008' }],
+      },
+    ]);
   });
 
   afterEach(() => {
@@ -152,8 +172,6 @@ describe('UserAdministrationComponent operations', () => {
     }));
     http.expectOne(`${apiUrl}/admin/users`).flush(jsonBlob(users));
     http.expectOne(`${apiUrl}/admin/users/assignment-candidates`).flush([]);
-    http.expectOne(`${apiUrl}/institutions`).flush([]);
-    http.expectOne(`${apiUrl}/executing-units`).flush([]);
     await fixture.whenStable();
 
     expect(fixture.componentInstance.assignmentRows()).toHaveLength(6);
@@ -179,8 +197,6 @@ describe('UserAdministrationComponent operations', () => {
     const fixture = TestBed.createComponent(UserAdministrationComponent);
     http.expectOne(`${apiUrl}/admin/users`).flush(jsonBlob([{ id: 7, subject: 'usuario', fullName: 'Usuario', email: 'usuario@midagri.gob.pe', scopes: [{ ...activeScope(), active: false }] }]));
     http.expectOne(`${apiUrl}/admin/users/assignment-candidates`).flush([]);
-    http.expectOne(`${apiUrl}/institutions`).flush([]);
-    http.expectOne(`${apiUrl}/executing-units`).flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -190,16 +206,123 @@ describe('UserAdministrationComponent operations', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Habilitar usuario');
   });
 
-  it('offers only Administrator-covered institutions and units and limits institution-wide scope', async () => {
+  it('uses only the administrative catalog for institutions, all active units and institution-wide scope', async () => {
     const fixture = TestBed.createComponent(UserAdministrationComponent);
     flushAdministrationLoad(http, apiUrl);
     await fixture.whenStable();
 
     expect(fixture.componentInstance.administrableInstitutions().map((item) => item.id)).toEqual([1, 2]);
     expect(fixture.componentInstance.canUseInstitutionWide(1)).toBe(true);
-    expect(fixture.componentInstance.canUseInstitutionWide(2)).toBe(false);
-    fixture.componentInstance.assignmentForm.controls.institutionId.setValue(2);
-    expect(fixture.componentInstance.assignmentExecutingUnits().map((item) => item.id)).toEqual([8]);
+    expect(fixture.componentInstance.canUseInstitutionWide(2)).toBe(true);
+    fixture.componentInstance.assignmentForm.controls.institutionId.setValue(1);
+    expect(fixture.componentInstance.assignmentExecutingUnits().map((item) => item.id)).toEqual([1, 2]);
+  });
+
+  it('allows assigning the current user within the administrative catalog', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl, [{
+      id: 1,
+      subject: 'demo-admin',
+      fullName: 'Administrador PIIP',
+      email: 'admin.piip@midagri.gob.pe',
+      scopes: [],
+    }]);
+    await fixture.whenStable();
+    fixture.componentInstance.assignmentForm.setValue({
+      userSubject: 'demo-admin',
+      role: 'CONSULTA_EXTERNA',
+      institutionId: 1,
+      executingUnitId: 1,
+    });
+
+    fixture.componentInstance.assign();
+
+    const assignment = http.expectOne(`${apiUrl}/admin/role-assignments`);
+    expect(assignment.request.body).toEqual({
+      userSubject: 'demo-admin',
+      role: 'CONSULTA_EXTERNA',
+      institutionId: 1,
+      executingUnitId: 1,
+    });
+    assignment.flush(jsonBlob({}));
+    flushAdministrationLoad(http, apiUrl);
+  });
+
+  it('does not filter the authorized catalog or table when another Administrator UE becomes active', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([
+      { id: 2, code: 'UE-002', name: 'Unidad administradora 2', institutionId: 1 },
+      { id: 8, code: 'UE-008', name: 'Unidad administradora 8', institutionId: 2 },
+    ]);
+    repository.selectedExecutingUnitId.set(2);
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl, [{
+      id: 1,
+      subject: 'usuario',
+      fullName: 'Usuario transversal',
+      email: 'usuario@example.pe',
+      scopes: [activeScope(), { ...activeScope(), id: 10, institutionId: 2, executingUnitId: 8 }],
+    }]);
+    await fixture.whenStable();
+
+    repository.selectExecutingUnit(8);
+    fixture.componentInstance.assignmentForm.controls.institutionId.setValue(1);
+
+    expect(fixture.componentInstance.assignmentRows()).toHaveLength(2);
+    expect(fixture.componentInstance.administrableInstitutions().map((item) => item.id)).toEqual([1, 2]);
+    expect(fixture.componentInstance.assignmentExecutingUnits().map((item) => item.id)).toEqual([1, 2]);
+  });
+
+  it('shows the active Administrator UE while keeping assignments from every administrable scope', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([
+      { id: 2, code: 'UE-002', name: 'Unidad activa', institutionId: 1 },
+      { id: 8, code: 'UE-008', name: 'Otra unidad administrable', institutionId: 2 },
+    ]);
+    repository.selectedExecutingUnitId.set(2);
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl, [{
+      id: 1, subject: 'usuario', fullName: 'Usuario transversal', email: 'usuario@example.pe',
+      scopes: [
+        activeScope(),
+        { ...activeScope(), id: 10, institutionId: 2, institution: 'Institución 2', executingUnitId: 8, executingUnit: 'UE-008' },
+      ],
+    }]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const context = (fixture.nativeElement as HTMLElement).querySelector('.administration-context');
+    expect(context?.textContent).toContain('Administrando con el rol Administrador PIIP desde UE-002.');
+    expect(context?.textContent).toContain('La bandeja incluye todas las Unidades Ejecutoras de las instituciones que puedes administrar.');
+    expect(context?.textContent).toContain('Unidad activa');
+    expect(fixture.componentInstance.assignmentRows()).toHaveLength(2);
+  });
+
+  it('requires explicit confirmation before assigning an institution-wide role', async () => {
+    vi.mocked(window.confirm).mockReturnValue(false);
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl);
+    await fixture.whenStable();
+    fixture.componentInstance.assignmentForm.setValue({ userSubject: 'usuario-1', role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 0 });
+
+    fixture.componentInstance.assign();
+
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('toda la institución'));
+    http.expectNone(`${apiUrl}/admin/role-assignments`);
+  });
+
+  it('requires explicit confirmation before changing an assignment to institution-wide', async () => {
+    vi.mocked(window.confirm).mockReturnValue(false);
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl);
+    await fixture.whenStable();
+    fixture.componentInstance.openEdit(activeScope());
+    fixture.componentInstance.editForm.setValue({ role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 0 });
+
+    fixture.componentInstance.saveEdit();
+
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('toda la institución'));
+    http.expectNone(`${apiUrl}/admin/role-assignments/9?version=2`);
   });
 });
 
@@ -210,16 +333,6 @@ function activeScope() {
 function flushAdministrationLoad(http: HttpTestingController, apiUrl: string, users: unknown[] = [], candidates: unknown[] = []): void {
   http.expectOne(`${apiUrl}/admin/users`).flush(jsonBlob(users));
   http.expectOne(`${apiUrl}/admin/users/assignment-candidates`).flush(candidates);
-  http.expectOne(`${apiUrl}/institutions`).flush([
-    { id: 1, code: 'INST-1', name: 'Institución 1' },
-    { id: 2, code: 'INST-2', name: 'Institución 2' },
-    { id: 3, code: 'INST-3', name: 'Institución sólo consulta' },
-  ]);
-  http.expectOne(`${apiUrl}/executing-units`).flush([
-    { id: 1, code: 'UE-001', name: 'UE-001', institutionId: 1 },
-    { id: 8, code: 'UE-008', name: 'UE-008', institutionId: 2 },
-    { id: 9, code: 'UE-009', name: 'UE-009', institutionId: 3 },
-  ]);
 }
 
 function jsonBlob(value: unknown): Blob {

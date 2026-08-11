@@ -1,9 +1,9 @@
 import { Signal, WritableSignal } from '@angular/core';
 import {
-  AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier, DocumentDossierSummary,
-  DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput, InitiativeRecord,
-  NotificationItem, OrganizationalUnit, PiipPortfolioRecord, PreexistingProjectInput, ProjectRecord, PiipRecordType,
-  UserRole, WorkItem,
+  AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
+  DocumentDossierSummary, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput,
+  InitiativeRecord, NotificationItem, OrganizationalUnit, PiipPortfolioRecord, PreexistingProjectInput, ProjectRecord,
+  PiipRecordType, UserRole, WorkItem,
 } from './piip.models';
 
 export type RepositoryOperation<T> = T | Promise<T>;
@@ -23,12 +23,14 @@ export abstract class PiipRepository {
   abstract readonly dashboardSummary: WritableSignal<DashboardSummary>;
   abstract readonly currentUser: WritableSignal<CurrentUser | null>;
   abstract readonly executingUnits: WritableSignal<ExecutingUnit[]>;
+  abstract readonly administrableScopes: WritableSignal<AdministrableScope[]>;
   abstract readonly organizationalUnits: WritableSignal<OrganizationalUnit[]>;
   abstract readonly selectedExecutingUnitId: WritableSignal<number | null>;
   abstract readonly loading: WritableSignal<boolean>;
   abstract readonly lastError: WritableSignal<string | null>;
   abstract initialize(): RepositoryOperation<void>;
   abstract refreshAll(): RepositoryOperation<void>;
+  abstract loadAdministrableScopes(): RepositoryOperation<void>;
   abstract clearError(): void;
   abstract canReadExecutingUnit(executingUnitId: number | null | undefined): boolean;
   abstract canAdministerExecutingUnit(executingUnitId: number | null | undefined): boolean;

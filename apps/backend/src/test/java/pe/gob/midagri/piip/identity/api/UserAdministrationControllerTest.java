@@ -26,4 +26,13 @@ class UserAdministrationControllerTest {
         assertThat(mapping.value()).containsExactly("/users/assignment-candidates");
         assertThat(mapping.produces()).containsExactly(MediaType.APPLICATION_JSON_VALUE);
     }
+
+    @Test
+    void publishesTheAdministrableScopesRouteAsJson() throws NoSuchMethodException {
+        GetMapping mapping = UserAdministrationController.class.getDeclaredMethod("administrableScopes")
+            .getAnnotation(GetMapping.class);
+
+        assertThat(mapping.value()).containsExactly("/users/administrable-scopes");
+        assertThat(mapping.produces()).containsExactly(MediaType.APPLICATION_JSON_VALUE);
+    }
 }

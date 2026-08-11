@@ -1,84 +1,93 @@
-# Plan de implementación: Autorización exacta por rol y ámbito
+# Plan de implementación: Administración de usuarios por institución
 
-**Rama**: `main` | **Fecha**: 2026-08-10 | **Spec**: [spec.md](spec.md)
+**Rama**: `main` | **Fecha**: 2026-08-11 | **Spec**: [spec.md](spec.md)
 
 ## Resumen
 
-Corregir la autorización para que cada decisión sensible evalúe una misma asignación `rol + institución + Unidad Ejecutora`, sin combinar Administrador PIIP de un ámbito con la cobertura de otro. El backend conservará los grants exactos como fuente canónica y Angular derivará el rol visible y las acciones desde esos grants y la UE correspondiente.
+Mantener la autorización funcional exacta `rol + institución + Unidad Ejecutora` ya implementada y separar de ella una cobertura exclusiva para Administración de usuarios. La UE activa seguirá determinando el rol visible y el acceso al módulo; una vez dentro desde una UE con Administrador PIIP, el actor podrá gestionar asignaciones de todas las UE de la misma institución.
 
-El CRUD de asignaciones, los candidatos y Keycloak como autoridad de cuenta son baseline implementado. Este incremento no los reimplementa, no cambia el esquema y mantiene la auditoría global fuera de la corrección de ámbito.
+El CRUD, los candidatos, `roleScopes`, los guards por UE activa y Keycloak como autoridad de cuenta son baseline completado. Este incremento amplía únicamente la cobertura de Administración de usuarios, añade un catálogo administrativo explícito y adapta su consumidor Angular.
 
 ## Contexto técnico y restricciones
 
 - **Tecnologías**: Java 21/Spring Boot 4.1/JPA Oracle; Angular 22/TypeScript/Material; OpenAPI con `ng-openapi-gen`.
-- **Seguridad**: Keycloak autentica; Oracle/JPA autoriza con asignaciones activas y vigentes. Spring Security conserva autoridades agregadas como barrera gruesa y los servicios aplican la autorización definitiva.
-- **Persistencia**: no se modifican entidades, tablas, constraints ni datos. `RoleScopeGrant` es un valor de aplicación derivado de `USUARIO_ROL_AMBITO`.
-- **Contrato**: `/identity/me` añade `roleScopes[]` de forma compatible; los campos agregados existentes permanecen temporalmente y Angular deja de usarlos para autorizar.
-- **UX**: el rol visible depende de la UE activa; Administrador PIIP prevalece ante doble rol en la misma UE. Administración de usuarios es transversal, limitada exclusivamente por grants Administrador.
-- **Alcance excluido**: Keycloak Admin API, estado de cuenta local, rediseño de auditoría global, migraciones y nuevas reglas funcionales.
+- **Seguridad**: Keycloak autentica y Oracle autoriza. Los grants exactos continúan gobernando portafolio, documentos, trabajo, dashboard y el rol operativo visible.
+- **Cobertura administrativa**: una institución es administrable cuando el actor posee al menos un grant activo y vigente `ADMINISTRADOR_PIIP` en cualquier UE de esa institución o con alcance institucional.
+- **Persistencia**: no se modifican entidades, tablas, constraints ni datos. La cobertura administrativa se deriva de `USUARIO_ROL_AMBITO` y de los catálogos organizacionales activos.
+- **Contrato**: se añade un endpoint administrativo para exponer instituciones y UE gestionables. `/identity/me` y `/executing-units` conservan su semántica actual.
+- **UX**: UE-001 puede mostrar Consulta externa y UE-002 Administrador PIIP; sólo UE-002 habilita la entrada, pero la bandeja abierta desde allí incluye las asignaciones de toda MIDAGRI.
+- **Decisiones sensibles confirmadas**: cualquier administrador de una UE puede conceder `Toda la institución` y administrar sus propias asignaciones.
+- **Alcance excluido**: Keycloak Admin API, estado de cuenta local, migraciones, administración entre instituciones y cambios de autorización funcional fuera del módulo de usuarios.
 
 ## Diseño backend
 
-### Contexto canónico
+### Cobertura especializada
 
-- Crear `RoleScopeGrant(role, institutionId, executingUnitId)` como valor inmutable.
-- Hacer que `LocalAccessContext` conserve grants exactos y derive sólo cuando sea necesario los roles y ámbitos agregados para compatibilidad, autoridades y consultas de lectura.
-- Exponer operaciones explícitas para rol global, lectura de UE, rol en UE y rol institucional. Una cobertura institucional sólo cubre UE de su institución y conserva el rol del grant.
-- Mapear cada `UserRoleScopeEntity` activa y vigente a un grant en `LocalAuthorizationService.resolve`.
-- Corregir `requireUnit` para exigir el rol y la cobertura en el mismo grant; `requireReadableUnit` seguirá aceptando cualquier grant que cubra la UE.
+- Conservar `RoleScopeGrant` y `LocalAccessContext` como fuente exacta de autorización funcional.
+- Derivar para Administración de usuarios el conjunto de `institutionIds(ADMINISTRADOR_PIIP)` del actor persistido; no reutilizar `coversExecutingUnit(ADMINISTRADOR_PIIP, ...)` para decidir el destino administrativo.
+- Limitar `UserAdministrationService` a esas instituciones para listado, alta, edición, suspensión y reactivación.
+- Aceptar cualquier UE activa perteneciente a una institución administrable, aunque el actor no tenga un grant operativo en esa UE.
+- Aceptar `executingUnitId = null` para crear o editar `Toda la institución` cuando la institución sea administrable.
+- Permitir que el usuario objetivo sea el propio actor, sin omitir duplicidad, versión, último administrador, catálogos, bloqueos ni auditoría.
+- Mantener la autorización exacta existente en los demás servicios; gestionar asignaciones de UE-001 desde UE-002 no concede escritura funcional sobre UE-001.
 
-### Consumidores de autorización
+### Catálogo administrativo
 
-- **Portafolio**: aplicar rol exacto en creación y aprobación de iniciativas, proyectos derivados/preexistentes e iniciativas elegibles. Los listados mantienen cobertura legible por cualquier grant.
-- **Documentos**: usar rol exacto del registro para carga, publicación, visibilidad interna y descarga; Administrador en otra UE no podrá ver una versión no publicada.
-- **Trabajo y dashboard**: filtrar tareas administrativas por la UE del registro y exigir rol exacto en completar o reasignar.
-- **Administración de usuarios**: `currentAdministrator` exige al menos un grant Administrador; listado, origen, destino y opción institucional se validan sólo con grants Administrador. Consulta externa no amplía la cobertura administrativa.
-- **Organización y filtros**: `/executing-units` continúa devolviendo todas las UE legibles. `LocalAuthorityFilter` conserva autoridades agregadas como control grueso.
+- Publicar `GET /api/v1/admin/users/administrable-scopes`.
+- Responder una colección por institución administrable con sus datos y todas sus UE activas, además de indicar que el alcance institucional está permitido.
+- Obtener el catálogo desde las instituciones derivadas de los grants Administrador del actor y los repositorios JPA existentes.
+- No ampliar `GET /executing-units`: ese endpoint sigue representando UE operativamente legibles y alimentando el selector superior.
+
+### Auditoría y errores
+
+- Conservar `ROL_ASIGNADO`, `ROL_ACTUALIZADO`, `ROL_SUSPENDIDO` y `ROL_REACTIVADO` con actor y antes/después no sensible.
+- Mantener 403 para otra institución, 404 para recursos inexistentes, 409 para versión desactualizada y 422 para duplicados o reglas de último administrador.
+- Revalidar al actor contra persistencia antes de cada operación para que una revocación concurrente invalide inmediatamente la cobertura administrativa.
 
 ## Contrato y frontend
 
 ### Contrato HTTP
 
-- Añadir `RoleScopeResponse { role, institutionId, executingUnitId? }` y `roleScopes[]` a `CurrentUserResponse`.
-- Mantener `roles`, `institutionIds`, `executingUnitIds` e `institutionWide` durante esta corrección para compatibilidad.
-- Actualizar la prueba de generación OpenAPI, publicar el contrato con autorización explícita y después regenerar el cliente Angular sin editar generated manualmente.
+- Añadir `AdministrableScopeResponse` con institución, `institutionWideAllowed` y UE activas.
+- Actualizar la prueba OpenAPI; publicar y regenerar el cliente Angular sólo con autorización explícita, sin editar archivos generados manualmente.
+- Mantener sin cambios `RoleAssignmentRequest`, `RoleAssignmentUpdateRequest`, `UserResponse`, candidatos y `/identity/me`.
 
-### Estado y presentación Angular
+### Angular
 
-- Añadir capacidades de repositorio `canReadExecutingUnit`, `canAdministerExecutingUnit`, `hasAnyAdministratorScope` y rol efectivo por UE.
-- Derivar el rol visible desde `roleScopes` y `selectedExecutingUnitId`; no asumir Consulta externa antes de que el contexto esté cargado.
-- Mantener todas las UE legibles en el selector superior. Al cambiar de UE, recalcular rol, navegación y acciones y limpiar cargas privilegiadas que ya no correspondan.
-- Separar el guard de Administrador en cualquier ámbito, usado por Administración de usuarios y Auditoría, del guard Administrador de la UE activa usado por rutas de creación.
-- Calcular acciones sobre iniciativas, proyectos y documentos con la UE real del registro para cubrir enlaces directos.
-- En Administración de usuarios, filtrar instituciones y UE con grants Administrador y mostrar `Toda la institución` sólo para cobertura institucional Administrador.
-- Mantener 403 como protección de respaldo y refrescar el contexto ante una revocación concurrente.
+- Mantener el rol visible y las capacidades funcionales derivados exclusivamente de `roleScopes` exactos.
+- Mantener `activeScopeAdministratorGuard` para `/administracion/usuarios`: UE-001 Consulta externa no abre el módulo y UE-002 Administrador PIIP sí.
+- Cargar el nuevo catálogo administrativo junto con usuarios y candidatos al abrir la pantalla.
+- Construir instituciones, UE y `Toda la institución` desde el catálogo administrativo, no desde `roleScopes` ni desde el selector superior.
+- Mantener la bandeja transversal dentro de las instituciones administrables y explicar que UE-002 habilita la entrada mientras el módulo gestiona toda MIDAGRI.
+- Permitir seleccionar al usuario actual y conservar confirmación expresa para `Toda la institución`.
+- Al cambiar a una UE sin Administrador mientras el módulo está abierto, limpiar datos y redirigir a Inicio.
 
 ## Verificación
 
 ### Backend
 
-- Reproducir con prueba la combinación `CONSULTA_EXTERNA · UE-001` más `ADMINISTRADOR_PIIP · UE-002` y confirmar que UE-001 es legible pero no administrable.
-- Cubrir grants institucionales, doble rol en la misma UE, identidad exacta, portafolio, documentos no publicados, tareas y Administración de usuarios.
-- Conservar duplicidad, último administrador, vigencia, concurrencia y auditoría de escrituras.
+- Probar que `ADMINISTRADOR_PIIP · UE-002` permite listar y gestionar asignaciones de UE-001 dentro de MIDAGRI, incluida la propia cuenta.
+- Probar que ese mismo grant no permite crear, aprobar, cargar, publicar ni completar recursos funcionales de UE-001.
+- Cubrir catálogo administrativo, UE activas, `Toda la institución`, otra institución, duplicados, versión, último administrador, bloqueos y auditoría.
 
 ### Frontend
 
-- Cubrir cambio de UE y rol visible, precedencia Administrador, guards, acciones por UE real y limpieza de estado privilegiado.
-- Confirmar que Administración de usuarios permanece transversal pero sólo ofrece ámbitos Administrador y que la opción institucional respeta ese rol.
-- Mantener pruebas de errores 403/409/422, duplicados, doble envío y accesibilidad.
+- Confirmar UE-001 `Consulta externa`, UE-002 `Administrador PIIP`, opción deshabilitada en UE-001 y acceso válido sólo desde UE-002.
+- Confirmar que la bandeja y formularios abiertos desde UE-002 incluyen UE-001, UE-002 y las demás UE activas de MIDAGRI.
+- Cubrir autoasignación, confirmación institucional, errores 403/409/422, doble envío, accesibilidad y cambio de UE.
 
 ### Integración
 
 - Publicar OpenAPI y regenerar Angular en secuencia sólo con autorización explícita.
-- Ejecutar pruebas focalizadas backend y frontend sólo con autorización explícita.
-- Recorrer E2E con UE-001 Consulta externa y UE-002 Administrador PIIP, restaurando cualquier operación reversible.
+- Ejecutar pruebas backend/frontend y E2E únicamente con autorización explícita.
+- En E2E, usar Consulta externa en UE-001 y Administrador PIIP en UE-002; administrar reversiblemente una asignación de UE-001 desde UE-002 y confirmar que el rol operativo no cambia.
 
 ## Dependencias y orden
 
-1. Incorporar el grant exacto y las pruebas de regresión backend.
-2. Corregir todos los consumidores backend antes de publicar el contrato.
-3. Añadir `roleScopes`, publicar OpenAPI y regenerar el cliente Angular en ese orden.
-4. Adaptar el repositorio, guards, shell, pantallas y pruebas frontend.
-5. Ejecutar validaciones autorizadas, E2E reversible, `git diff --check` y actualización incremental de Graphify.
+1. Incorporar pruebas backend de separación entre autorización funcional y cobertura administrativa.
+2. Implementar la cobertura institucional y el endpoint de catálogo administrativo.
+3. Publicar OpenAPI y regenerar el cliente Angular.
+4. Adaptar la pantalla y sus pruebas sin modificar los guards funcionales existentes.
+5. Ejecutar validaciones autorizadas, E2E reversible, `git diff --check` y `graphify update .`.
 
-No hay `NEEDS CLARIFICATION`: el rol visible es el de la UE activa, Administrador prevalece en doble rol y Administración de usuarios es transversal con cobertura exclusivamente administrativa.
+No hay `NEEDS CLARIFICATION`: la entrada depende de una UE activa con Administrador, la gestión de usuarios abarca toda la institución, el rol operativo permanece exacto y la autoasignación y `Toda la institución` están permitidas.

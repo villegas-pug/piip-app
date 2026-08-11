@@ -1,5 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import {
+  AdministrableScope,
   AuditEvent,
   AuditAccess,
   CurrentUser,
@@ -26,6 +27,13 @@ export class PiipMockRepository extends PiipRepository {
   readonly demoMode: boolean = true;
   readonly currentUser = signal<CurrentUser | null>({ subject: 'demo-admin', fullName: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 }], roles: ['ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1], institutionWide: false });
   readonly executingUnits = signal([{ id: 1, code: 'UE-DEMO', name: 'Unidad Ejecutora de demostracion', institutionId: 1 }]);
+  readonly administrableScopes = signal<AdministrableScope[]>([{
+    institutionId: 1,
+    institutionCode: 'INST-DEMO',
+    institutionName: 'Institución de demostración',
+    institutionWideAllowed: true,
+    executingUnits: [{ id: 1, code: 'UE-DEMO', name: 'Unidad Ejecutora de demostración' }],
+  }]);
   readonly organizationalUnits = signal([]);
   readonly selectedExecutingUnitId = signal<number | null>(1);
   readonly role = computed(() => this.effectiveRoleForExecutingUnit(this.selectedExecutingUnitId()));
@@ -237,6 +245,7 @@ export class PiipMockRepository extends PiipRepository {
 
   initialize(): void {}
   refreshAll(): void {}
+  loadAdministrableScopes(): void {}
   clearError(): void { this.lastError.set(null); }
   canReadExecutingUnit(executingUnitId: number | null | undefined): boolean { return this.hasGrantForExecutingUnit(executingUnitId); }
   canAdministerExecutingUnit(executingUnitId: number | null | undefined): boolean { return this.hasGrantForExecutingUnit(executingUnitId, 'ADMINISTRADOR_PIIP'); }
@@ -245,7 +254,10 @@ export class PiipMockRepository extends PiipRepository {
     if (this.canAdministerExecutingUnit(executingUnitId)) return 'Administrador PIIP';
     return this.hasGrantForExecutingUnit(executingUnitId, 'CONSULTA_EXTERNA') ? 'Consulta externa' : null;
   }
-  selectExecutingUnit(executingUnitId: number): void { this.selectedExecutingUnitId.set(executingUnitId); }
+  selectExecutingUnit(executingUnitId: number): void {
+    this.selectedExecutingUnitId.set(executingUnitId);
+    if (!this.canAdministerExecutingUnit(executingUnitId)) this.administrableScopes.set([]);
+  }
 
   getDocumentDossier(recordType: PiipRecordType, code: string): DocumentDossier | undefined {
     return this.documentDossiers().find((dossier) => dossier.recordType === recordType && dossier.code === code);

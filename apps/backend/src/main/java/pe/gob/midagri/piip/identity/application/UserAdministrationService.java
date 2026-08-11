@@ -39,10 +39,26 @@ public class UserAdministrationService {
     public List<UserResponse> list() {
         LocalAccessContext actor = currentAdministrator();
         return scopes.findForAdministration(actor.institutionIds(RoleCode.ADMINISTRADOR_PIIP)).stream()
-            .filter(scope -> isCovered(actor, scope))
             .collect(Collectors.groupingBy(UserRoleScopeEntity::getUser, LinkedHashMap::new, Collectors.toList()))
             .entrySet().stream()
             .map(entry -> toResponse(entry.getKey(), entry.getValue()))
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdministrableScopeResponse> listAdministrableScopes() {
+        Set<Long> administrableInstitutionIds = currentAdministrator().institutionIds(RoleCode.ADMINISTRADOR_PIIP);
+        return institutions.findAllById(administrableInstitutionIds).stream()
+            .filter(InstitutionEntity::isActive)
+            .sorted(Comparator.comparing(InstitutionEntity::getName))
+            .map(institution -> new AdministrableScopeResponse(
+                institution.getId(),
+                institution.getCode(),
+                institution.getName(),
+                true,
+                units.findByInstitutionIdAndActiveTrueOrderByName(institution.getId()).stream()
+                    .map(unit -> new AdministrableExecutingUnitResponse(unit.getId(), unit.getCode(), unit.getName()))
+                    .toList()))
             .toList();
     }
 
@@ -141,9 +157,7 @@ public class UserAdministrationService {
         if (unit != null && (!unit.isActive() || !unit.getInstitution().getId().equals(institution.getId()))) {
             throw new BusinessRuleException("La Unidad Ejecutora debe estar activa y pertenecer a la institución");
         }
-        if (unit == null
-                ? !actor.coversInstitutionWide(RoleCode.ADMINISTRADOR_PIIP, institution.getId())
-                : !actor.coversExecutingUnit(RoleCode.ADMINISTRADOR_PIIP, unit.getId(), institution.getId())) {
+        if (!administersInstitution(actor, institution.getId())) {
             throw new AccessDeniedException("Ámbito fuera de la cobertura autorizada");
         }
         return new TargetScope(role, institution, unit);
@@ -157,9 +171,11 @@ public class UserAdministrationService {
     }
 
     private boolean isCovered(LocalAccessContext actor, UserRoleScopeEntity scope) {
-        return scope.getExecutingUnit() == null
-            ? actor.coversInstitutionWide(RoleCode.ADMINISTRADOR_PIIP, scope.getInstitution().getId())
-            : actor.coversExecutingUnit(RoleCode.ADMINISTRADOR_PIIP, scope.getExecutingUnit().getId(), scope.getInstitution().getId());
+        return administersInstitution(actor, scope.getInstitution().getId());
+    }
+
+    private boolean administersInstitution(LocalAccessContext actor, Long institutionId) {
+        return actor.institutionIds(RoleCode.ADMINISTRADOR_PIIP).contains(institutionId);
     }
 
     private void requireCovered(LocalAccessContext actor, UserRoleScopeEntity scope) {

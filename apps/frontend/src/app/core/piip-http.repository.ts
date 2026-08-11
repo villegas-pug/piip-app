@@ -2,12 +2,12 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-  AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier, DocumentDossierSummary,
-  DocumentRecord, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput,
-  InitiativeRecord, NotificationItem, OrganizationalUnit, PiipPortfolioRecord, PiipRecordType,
+  AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
+  DocumentDossierSummary, DocumentRecord, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail,
+  InitiativeInput, InitiativeRecord, NotificationItem, OrganizationalUnit, PiipPortfolioRecord, PiipRecordType,
   PreexistingProjectInput, ProjectRecord, UserRole, UserRoleCode, WorkItem,
 } from './piip.models';
-import { CurrentUserResponse, EventResponse } from '../api/generated';
+import { CurrentUserResponse, EventResponse, UserAdministrationControllerService } from '../api/generated';
 import { PiipRepository } from './piip.repository';
 import { resolveApiUrl as runtimeApiUrl } from './piip-runtime-config';
 import {
@@ -96,6 +96,7 @@ export class PiipApiError extends Error {
 export class PiipHttpRepository extends PiipRepository {
   readonly demoMode = false;
   readonly currentUser = signal<CurrentUser | null>(null);
+  readonly administrableScopes = signal<AdministrableScope[]>([]);
   readonly portfolioRecords = signal<PiipPortfolioRecord[]>([]);
   readonly initiatives = signal<InitiativeRecord[]>([]);
   readonly projects = signal<ProjectRecord[]>([]);
@@ -114,6 +115,7 @@ export class PiipHttpRepository extends PiipRepository {
   readonly lastError = signal<string | null>(null);
 
   private readonly http = inject(HttpClient);
+  private readonly userAdministration = inject(UserAdministrationControllerService);
   private readonly apiUrl = runtimeApiUrl();
   private readonly recordVersions = new Map<string, number>();
   private readonly eligibleInitiatives = signal<InitiativeRecord[]>([]);
@@ -122,6 +124,7 @@ export class PiipHttpRepository extends PiipRepository {
 
   constructor() {
     super();
+    this.userAdministration.rootUrl = this.apiUrl;
     void this.initialize();
   }
 
@@ -174,6 +177,25 @@ export class PiipHttpRepository extends PiipRepository {
     this.lastError.set(null);
   }
 
+  async loadAdministrableScopes(): Promise<void> {
+    const response = await this.request(this.userAdministration.administrableScopes());
+    this.administrableScopes.set(response.flatMap((scope) =>
+      scope.institutionId !== undefined && scope.institutionCode && scope.institutionName
+        ? [{
+            institutionId: scope.institutionId,
+            institutionCode: scope.institutionCode,
+            institutionName: scope.institutionName,
+            institutionWideAllowed: scope.institutionWideAllowed ?? false,
+            executingUnits: (scope.executingUnits ?? []).flatMap((unit) =>
+              unit.id !== undefined && unit.code && unit.name
+                ? [{ id: unit.id, code: unit.code, name: unit.name }]
+                : [],
+            ),
+          }]
+        : [],
+    ));
+  }
+
   canReadExecutingUnit(executingUnitId: number | null | undefined): boolean {
     return this.hasGrantForExecutingUnit(executingUnitId);
   }
@@ -203,6 +225,7 @@ export class PiipHttpRepository extends PiipRepository {
     this.eligibleInitiatives.set([]);
     this.organizationalUnits.set([]);
     this.selectedExecutingUnitId.set(executingUnitId);
+    if (!this.canAdministerExecutingUnit(executingUnitId)) this.administrableScopes.set([]);
     localStorage.setItem('piip-selected-executing-unit', String(executingUnitId));
     await Promise.all([this.loadOrganizationalUnits(executingUnitId), this.refreshAll()]);
   }

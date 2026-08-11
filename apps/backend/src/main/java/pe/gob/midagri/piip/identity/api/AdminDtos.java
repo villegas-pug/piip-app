@@ -11,6 +11,9 @@ public final class AdminDtos {
             @NotNull Long institutionId, Long executingUnitId) {}
     public record RoleAssignmentUpdateRequest(@NotNull RoleCode role, @NotNull Long institutionId, Long executingUnitId) {}
     public record UserAssignmentCandidateResponse(Long id, String subject, String fullName, String email) {}
+    public record AdministrableScopeResponse(Long institutionId, String institutionCode, String institutionName,
+            boolean institutionWideAllowed, List<AdministrableExecutingUnitResponse> executingUnits) {}
+    public record AdministrableExecutingUnitResponse(Long id, String code, String name) {}
     public record UserResponse(Long id, String subject, String fullName, String email, List<ScopeResponse> scopes) {}
     public record ScopeResponse(Long id, RoleCode role, Long institutionId, String institution,
             Long executingUnitId, String executingUnit, boolean active, Instant validFrom, Instant validUntil, long version) {}

@@ -14,6 +14,8 @@ public class UserAdministrationController {
     private final UserAdministrationService service;
     public UserAdministrationController(UserAdministrationService service) { this.service = service; }
     @GetMapping("/users") public List<UserResponse> users() { return service.list(); }
+    @GetMapping(value = "/users/administrable-scopes", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<AdministrableScopeResponse> administrableScopes() { return service.listAdministrableScopes(); }
     @GetMapping(value = "/users/assignment-candidates", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<UserAssignmentCandidateResponse> assignmentCandidates() { return service.listAssignmentCandidates(); }
     @PostMapping("/role-assignments") @ResponseStatus(HttpStatus.CREATED) public ScopeResponse assign(@Valid @RequestBody RoleAssignmentRequest request) { return service.assign(request); }

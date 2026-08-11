@@ -5,6 +5,12 @@ header p { margin: 0 0 4px; color: var(--piip-green-800); font-weight: 700; }
 header h2 { margin: 0; font-family: var(--piip-display); font-size: 32px; color: var(--piip-green-950); }
 header span { display: block; margin-top: 8px; color: var(--piip-muted); }
 header button { min-width: 180px; }
+.administration-context { display: flex; align-items: flex-start; gap: 13px; margin: 22px 0 4px; padding: 16px 18px; border: 1px solid #a9cdbd; border-radius: 8px; color: var(--piip-green-900); background: linear-gradient(135deg, #eef8f3, #f8fbf9); }
+.administration-context > mat-icon { flex: 0 0 auto; margin-top: 1px; }
+.administration-context div { display: grid; gap: 3px; }
+.administration-context strong { font-size: 15px; }
+.administration-context span { color: var(--piip-text); font-size: 14px; }
+.administration-context small { color: var(--piip-muted); font-size: 13px; }
 .scope-note { display: flex; gap: 12px; align-items: center; margin: 24px 0 18px; padding: 14px 18px; border: 1px solid #b9d5c8; border-radius: 7px; color: var(--piip-green-900); background: #f1f8f4; }
 .assignment { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 14px; align-items: start; margin: 22px 0; padding: 20px; border: 1px solid var(--piip-border); border-radius: 8px; background: #fff; box-shadow: var(--piip-shadow); }
 .edit-assignment { grid-template-columns: 1fr 1fr 1.2fr; }

@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,7 +12,8 @@ import { catchError, finalize, forkJoin, from, map, of, switchMap } from 'rxjs';
 import type { Observable } from 'rxjs';
 import { UserAdministrationControllerService } from '../../api/generated';
 import type { ScopeResponse, UserAssignmentCandidateResponse, UserResponse } from '../../api/generated';
-import { resolveApiUrl } from '../../core/piip-http.repository';
+import { PiipApiError, resolveApiUrl } from '../../core/piip-http.repository';
+import type { AdministrableExecutingUnit } from '../../core/piip.models';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
@@ -24,7 +25,6 @@ type Role = NonNullable<UserScope['role']>;
 interface UserAssignmentRow { user: UserItem; scope: UserScope | null; }
 interface AssignmentUser { subject: string; fullName: string; email: string; withoutAssignments: boolean; }
 interface InstitutionItem { id: number; code: string; name: string; }
-interface ExecutingUnitItem { id: number; code: string; name: string; institutionId: number; }
 
 @Component({
   selector: 'app-user-administration',
@@ -34,7 +34,6 @@ interface ExecutingUnitItem { id: number; code: string; name: string; institutio
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserAdministrationComponent {
-  private readonly http = inject(HttpClient);
   private readonly userAdministration = inject(UserAdministrationControllerService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
@@ -43,8 +42,6 @@ export class UserAdministrationComponent {
 
   readonly users = signal<UserItem[]>([]);
   readonly assignmentCandidates = signal<AssignmentCandidate[]>([]);
-  readonly institutions = signal<InstitutionItem[]>([]);
-  readonly executingUnits = signal<ExecutingUnitItem[]>([]);
   readonly loading = signal(true);
   readonly error = signal('');
   readonly assignmentOpen = signal(false);
@@ -95,8 +92,16 @@ export class UserAdministrationComponent {
   readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.assignmentRows().length));
   readonly pagedAssignmentRows = computed(() => paginateItems(this.assignmentRows(), this.currentPage()));
   readonly administrableInstitutions = computed(() => {
-    const ids = new Set(this.administratorScopes().map((scope) => scope.institutionId));
-    return this.institutions().filter((institution) => ids.has(institution.id));
+    return this.repository.administrableScopes().map((scope) => ({
+      id: scope.institutionId,
+      code: scope.institutionCode,
+      name: scope.institutionName,
+    }));
+  });
+  readonly activeAdministratorUnit = computed(() => {
+    const executingUnitId = this.repository.selectedExecutingUnitId();
+    if (!this.repository.canAdministerExecutingUnit(executingUnitId)) return undefined;
+    return this.repository.executingUnits().find((unit) => unit.id === executingUnitId);
   });
 
   constructor() {
@@ -129,6 +134,7 @@ export class UserAdministrationComponent {
       this.snackBar.open('El ámbito seleccionado no está cubierto por tus asignaciones de Administrador PIIP.', 'Cerrar', { duration: 4200 });
       return;
     }
+    if (value.executingUnitId === 0 && !this.confirmInstitutionWide('editar', value.institutionId)) return;
     this.savingScopeId.set(scope.id);
     this.userAdministration.update({
       scopeId: scope.id,
@@ -180,6 +186,7 @@ export class UserAdministrationComponent {
       this.snackBar.open('El usuario ya cuenta con una asignación activa igual. Elige otro rol o ámbito.', 'Cerrar', { duration: 4200 });
       return;
     }
+    if (value.executingUnitId === 0 && !this.confirmInstitutionWide('crear', value.institutionId)) return;
     this.assigning.set(true);
     this.userAdministration.assign({ body: { ...value, executingUnitId: value.executingUnitId || undefined } })
       .pipe(finalize(() => this.assigning.set(false)))
@@ -197,34 +204,35 @@ export class UserAdministrationComponent {
     });
   }
 
-  assignmentExecutingUnits(): ExecutingUnitItem[] {
+  assignmentExecutingUnits(): AdministrableExecutingUnit[] {
     return this.administrableExecutingUnits(this.assignmentForm.controls.institutionId.value);
   }
 
-  editExecutingUnits(): ExecutingUnitItem[] {
+  editExecutingUnits(): AdministrableExecutingUnit[] {
     return this.administrableExecutingUnits(this.editForm.controls.institutionId.value);
   }
 
   canUseInstitutionWide(institutionId: number): boolean {
-    return this.administratorScopes().some((scope) => scope.institutionId === institutionId && scope.executingUnitId === null);
+    return this.repository.administrableScopes()
+      .some((scope) => scope.institutionId === institutionId && scope.institutionWideAllowed);
   }
 
-  private administratorScopes() {
-    return this.repository.currentUser()?.roleScopes.filter((scope) => scope.role === 'ADMINISTRADOR_PIIP') ?? [];
-  }
-
-  private administrableExecutingUnits(institutionId: number): ExecutingUnitItem[] {
-    const scopes = this.administratorScopes().filter((scope) => scope.institutionId === institutionId);
-    if (scopes.some((scope) => scope.executingUnitId === null)) {
-      return this.executingUnits().filter((unit) => unit.institutionId === institutionId);
-    }
-    const unitIds = new Set(scopes.map((scope) => scope.executingUnitId));
-    return this.executingUnits().filter((unit) => unit.institutionId === institutionId && unitIds.has(unit.id));
+  private administrableExecutingUnits(institutionId: number): AdministrableExecutingUnit[] {
+    return this.repository.administrableScopes()
+      .find((scope) => scope.institutionId === institutionId)?.executingUnits ?? [];
   }
 
   private isAdministrableScope(institutionId: number, executingUnitId: number): boolean {
     if (executingUnitId === 0) return this.canUseInstitutionWide(institutionId);
     return this.administrableExecutingUnits(institutionId).some((unit) => unit.id === executingUnitId);
+  }
+
+  private confirmInstitutionWide(action: 'crear' | 'editar', institutionId: number): boolean {
+    const institution = this.administrableInstitutions().find((item) => item.id === institutionId);
+    const verb = action === 'crear' ? 'crear esta asignación' : 'guardar este cambio';
+    return window.confirm(
+      `Vas a ${verb} con alcance para toda la institución ${institution?.name ?? institutionId}. Esto cubrirá todas sus Unidades Ejecutoras. ¿Deseas continuar?`,
+    );
   }
 
   private load(): void {
@@ -238,12 +246,19 @@ export class UserAdministrationComponent {
         switchMap((candidates) => this.readGeneratedList<AssignmentCandidate>(candidates)),
         catchError(() => of([] as AssignmentCandidate[])),
       ),
+      administrableScopes: from(Promise.resolve(this.repository.loadAdministrableScopes())).pipe(
+        catchError((response) => {
+          const status = response instanceof HttpErrorResponse || response instanceof PiipApiError ? response.status : undefined;
+          this.error.set(status === 403
+            ? 'Ya no tienes autorización para consultar la administración de usuarios.'
+            : 'No fue posible consultar los ámbitos administrativos.');
+          return of(undefined);
+        }),
+      ),
     }).pipe(finalize(() => this.loading.set(false))).subscribe(({ users, candidates }) => {
       this.users.set(users);
       this.assignmentCandidates.set(candidates);
     });
-    this.http.get<InstitutionItem[]>(`${this.apiUrl}/institutions`).pipe(catchError(() => of([]))).subscribe((items) => this.institutions.set(items));
-    this.http.get<ExecutingUnitItem[]>(`${this.apiUrl}/executing-units`).pipe(catchError(() => of([]))).subscribe((items) => this.executingUnits.set(items));
   }
 
   private hasVisibleActiveDuplicate(value: { userSubject: string; role: Role; institutionId: number; executingUnitId: number }): boolean {

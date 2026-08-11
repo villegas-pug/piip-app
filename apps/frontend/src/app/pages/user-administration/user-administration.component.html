@@ -4,6 +4,17 @@
     <button mat-flat-button type="button" [disabled]="operationPending()" (click)="assignmentOpen.set(!assignmentOpen())"><mat-icon>person_add</mat-icon>Nueva asignación</button>
   </header>
 
+  @if (activeAdministratorUnit(); as activeUnit) {
+    <section class="administration-context" aria-label="Contexto de acceso administrativo">
+      <mat-icon>admin_panel_settings</mat-icon>
+      <div>
+        <strong>Administrando con el rol Administrador PIIP desde {{ activeUnit.code }}.</strong>
+        <span>La bandeja incluye todas las Unidades Ejecutoras de las instituciones que puedes administrar.</span>
+        <small>{{ activeUnit.name }} es la Unidad Ejecutora activa que habilita el ingreso; cambiarla no filtra esta tabla.</small>
+      </div>
+    </section>
+  }
+
   @if (assignmentOpen()) {
     <form class="assignment" [formGroup]="assignmentForm" [attr.aria-busy]="assigning()" (ngSubmit)="assign()">
       <mat-form-field appearance="outline"><mat-label>Usuario</mat-label><mat-select formControlName="userSubject">@for (user of assignmentUsers(); track user.subject) { <mat-option [value]="user.subject" [attr.aria-label]="user.withoutAssignments ? user.fullName + ', ' + user.email + ', sin asignaciones previas' : user.fullName + ', ' + user.email">{{ user.fullName }} · {{ user.email }}@if (user.withoutAssignments) { <span class="candidate-detail"> · Sin asignaciones previas</span> }</mat-option> }</mat-select></mat-form-field>
@@ -24,7 +35,7 @@
     </form>
   }
 
-  <div class="scope-note"><mat-icon>verified_user</mat-icon><span>Solo puedes administrar usuarios dentro de los ámbitos cubiertos por tus asignaciones de Administrador PIIP.</span></div>
+  <div class="scope-note"><mat-icon>verified_user</mat-icon><span>Las instituciones, sus Unidades Ejecutoras activas y la opción “Toda la institución” provienen del catálogo administrativo autorizado. El alcance institucional requiere una confirmación expresa.</span></div>
 
   @if (loading()) {
     <div class="state" role="status"><mat-spinner diameter="36" /><span>Consultando usuarios...</span></div>

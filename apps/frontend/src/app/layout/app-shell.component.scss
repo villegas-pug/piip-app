@@ -73,6 +73,10 @@ nav mat-icon { width: 29px; height: 29px; font-size: 29px; }
 .profile-copy strong { color: var(--piip-green-900); font-size: 15px; font-weight: 700; }
 .profile-copy small { margin-top: 2px; color: #657169; font-size: 12px; }
 .profile-button > mat-icon:last-child { margin-left: auto; }
+.user-administration-option { min-width: 290px; height: auto !important; min-height: 52px; }
+.user-administration-option > span { display: grid; line-height: 1.2; }
+.user-administration-option strong { font-weight: 600; }
+.user-administration-option small { margin-top: 3px; color: #657169; font-size: 11px; white-space: normal; }
 
 main { min-height: calc(100vh - var(--piip-topbar-height)); }
 .global-api-error { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 8px 24px; color: #7d1d1d; background: #fff0f0; border-bottom: 1px solid #e9bcbc; }

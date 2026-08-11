@@ -63,4 +63,36 @@ describe('PiipHttpRepository', () => {
       { status: 403, statusText: 'Forbidden' },
     );
   });
+
+  it('maps the generated administrable scope catalog without expanding operational executing units', async () => {
+    const loading = repository.loadAdministrableScopes();
+    http.expectOne('http://127.0.0.1:4001/api/v1/admin/users/administrable-scopes').flush([{
+      institutionId: 1,
+      institutionCode: 'MIDAGRI',
+      institutionName: 'Ministerio de Desarrollo Agrario y Riego',
+      institutionWideAllowed: true,
+      executingUnits: [
+        { id: 1, code: 'UE-001', name: 'Unidad Ejecutora 001' },
+        { id: 2, code: 'UE-002', name: 'Unidad Ejecutora 002' },
+      ],
+    }]);
+    await loading;
+
+    expect(repository.administrableScopes()).toEqual([{
+      institutionId: 1,
+      institutionCode: 'MIDAGRI',
+      institutionName: 'Ministerio de Desarrollo Agrario y Riego',
+      institutionWideAllowed: true,
+      executingUnits: [
+        { id: 1, code: 'UE-001', name: 'Unidad Ejecutora 001' },
+        { id: 2, code: 'UE-002', name: 'Unidad Ejecutora 002' },
+      ],
+    }]);
+    expect(repository.executingUnits()).toEqual([]);
+
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Fin de prueba', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+  });
 });

@@ -66,11 +66,29 @@
 - **Rationale**: el encabezado y las acciones deben representar el contexto operativo actual, no el rol más privilegiado disponible en cualquier ámbito.
 - **Alternativas consideradas**: mostrar siempre el rol global más alto —se descarta por inducir permisos inexistentes—; selector manual de rol —se descarta porque sería meramente visual sin transportar un contexto de seguridad adicional al backend.
 
-## D12 — Administración de usuarios es transversal, pero su cobertura no
+## D12 — La UE activa gobierna la entrada, pero no reduce la bandeja administrativa
 
-- **Decisión**: el módulo permanece disponible cuando existe al menos un grant Administrador PIIP y filtra instituciones, UE y la opción institucional usando exclusivamente grants de ese rol.
-- **Rationale**: el selector superior gobierna el contexto operativo, mientras la bandeja administra todos los ámbitos válidos del actor; condicionar su apertura a la UE activa añadiría fricción sin mejorar la autorización.
-- **Alternativas consideradas**: exigir seleccionar primero una UE administrable; se descarta porque la misma bandeja ya reúne múltiples ámbitos y el backend debe validar cada operación de todos modos.
+- **Decisión**: Administración de usuarios sólo se habilita cuando la UE activa está cubierta por un grant Administrador PIIP. Si el actor administra otra UE, la opción permanece visible pero deshabilitada e indica dónde está disponible. Una vez dentro, la bandeja reúne todas las asignaciones de las instituciones donde el actor tenga al menos un grant Administrador.
+- **Rationale**: la cabecera y la entrada continúan expresando el rol operativo exacto, mientras la gestión institucional evita obligar a otorgar un segundo rol operativo únicamente para administrar asignaciones de otra UE de MIDAGRI.
+- **Alternativas consideradas**: permitir la entrada desde cualquier UE cuando exista algún grant Administrador —se descarta por resultar visualmente contradictorio—; exigir un grant Administrador exacto por cada UE gestionada —se reemplaza porque mezclaría la administración de accesos con las capacidades funcionales del actor—.
+
+## D14 — El alcance institucional requiere confirmación explícita
+
+- **Decisión**: `Toda la institución` está disponible para cualquier Administrador PIIP de esa institución y una creación o edición que la seleccione exige confirmar que el cambio alcanza todas sus UE. La misma regla permite autoasignación.
+- **Rationale**: el usuario confirmó que la gestión de accesos es institucional y que un administrador de UE puede ampliar asignaciones propias o de terceros; la confirmación hace visible el alcance antes de persistir.
+- **Alternativas consideradas**: exigir previamente un grant Administrador institucional —se reemplaza por la decisión funcional confirmada—; prohibir autoasignación —se descarta explícitamente—.
+
+## D15 — La cobertura de Administración de usuarios no es un rol operativo heredado
+
+- **Decisión**: derivar la cobertura administrativa desde las instituciones de los grants Administrador, pero aplicarla únicamente en `UserAdministrationService` y en su catálogo HTTP. Los demás servicios y el rol visible continúan evaluando grants exactos.
+- **Rationale**: permite que `Administrador PIIP · UE-002` gestione asignaciones de UE-001 sin aparentar ni conceder capacidades de creación, aprobación, carga o publicación sobre UE-001.
+- **Alternativas consideradas**: tratar cualquier Administrador de una UE como Administrador operativo institucional —se descarta porque cambiaría el rol mostrado y ampliaría privilegios funcionales—; agregar una tabla de delegaciones administrativas —se descarta por YAGNI, ya que la regla confirmada es uniforme dentro de la institución.
+
+## D16 — Un catálogo administrativo separado evita contaminar las UE legibles
+
+- **Decisión**: publicar un endpoint específico con instituciones y UE administrables para la pantalla de usuarios. `/executing-units` conserva las UE cubiertas por grants operativos y continúa alimentando el selector superior.
+- **Rationale**: un Administrador de UE-002 puede gestionar asignaciones de una UE que no sea operativamente legible para él; reutilizar el selector general confundiría cobertura administrativa con acceso funcional.
+- **Alternativas consideradas**: ampliar `/executing-units` para administradores —se descarta porque mostraría como seleccionables UE sin rol operativo—; inferir opciones desde las filas visibles —se descarta porque una institución puede tener UE activas aún sin asignaciones.
 
 ## D13 — El contrato de identidad evoluciona de forma aditiva
 

@@ -37,6 +37,15 @@ export class AppShellComponent {
     this.repository.executingUnits().find((unit) => unit.id === this.repository.selectedExecutingUnitId()),
   );
   readonly effectiveRoleLabel = computed(() => this.repository.role() ?? 'Sin rol en esta Unidad Ejecutora');
+  readonly canOpenUserAdministration = computed(() =>
+    this.repository.canAdministerExecutingUnit(this.repository.selectedExecutingUnitId()),
+  );
+  readonly userAdministrationUnits = computed(() =>
+    this.repository.executingUnits().filter((unit) => this.repository.canAdministerExecutingUnit(unit.id)),
+  );
+  readonly userAdministrationAvailability = computed(() =>
+    this.userAdministrationUnits().map((unit) => unit.code).join(', '),
+  );
 
   readonly navigation: NavigationItem[] = [
     { label: 'Inicio', icon: 'home', route: '/inicio' },
@@ -101,6 +110,13 @@ export class AppShellComponent {
         () => Promise.resolve(this.repository.selectExecutingUnit(executingUnitId)),
       );
       if (!this.repository.canAdministerExecutingUnit(executingUnitId) && isActiveScopeAdministratorRoute(this.currentUrl())) {
+        if (this.currentUrl().startsWith('/administracion/usuarios')) {
+          this.snackBar.open(
+            'Saliste de Administración de usuarios porque la UE activa no tiene rol Administrador PIIP.',
+            'Cerrar',
+            { duration: 5200 },
+          );
+        }
         await this.router.navigateByUrl('/inicio');
       }
     } catch (error) {
@@ -110,6 +126,11 @@ export class AppShellComponent {
 
   async logout(): Promise<void> {
     await this.auth.logout();
+  }
+
+  async openUserAdministration(): Promise<void> {
+    if (!this.canOpenUserAdministration()) return;
+    await this.router.navigateByUrl('/administracion/usuarios');
   }
 
   async retryConnection(): Promise<void> {
@@ -125,7 +146,8 @@ function isActiveScopeAdministratorRoute(url: string): boolean {
   const path = url.split(/[?#]/, 1)[0];
   return path === '/iniciativas/nueva'
     || path === '/proyectos/nuevo/preexistente'
-    || path.startsWith('/proyectos/nuevo/derivado/');
+    || path.startsWith('/proyectos/nuevo/derivado/')
+    || path === '/administracion/usuarios';
 }
 
 export function isNavigationRouteActive(navigationRoute: string, currentUrl: string): boolean {

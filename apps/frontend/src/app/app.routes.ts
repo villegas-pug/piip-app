@@ -111,7 +111,7 @@ export const routes: Routes = [
       {
         path: 'administracion/usuarios',
         title: 'PIIP | Administración de usuarios',
-        canActivate: [administratorGuard],
+        canActivate: [activeScopeAdministratorGuard],
         loadComponent: () =>
           import('./pages/user-administration/user-administration.component').then(
             (module) => module.UserAdministrationComponent,

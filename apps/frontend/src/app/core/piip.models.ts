@@ -253,6 +253,20 @@ export interface ExecutingUnit {
   institutionId: number;
 }
 
+export interface AdministrableExecutingUnit {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export interface AdministrableScope {
+  institutionId: number;
+  institutionCode: string;
+  institutionName: string;
+  institutionWideAllowed: boolean;
+  executingUnits: AdministrableExecutingUnit[];
+}
+
 export interface OrganizationalUnit {
   id: number;
   code: string;

@@ -62,10 +62,10 @@
         </button>
         <mat-menu #profileMenu="matMenu" xPosition="before">
           @if (repository.hasAnyAdministratorScope()) {
-            <a mat-menu-item routerLink="/administracion/usuarios">
+            <button mat-menu-item type="button" data-testid="user-administration-option" class="user-administration-option" [disabled]="!canOpenUserAdministration()" (click)="openUserAdministration()">
               <mat-icon>manage_accounts</mat-icon>
-              <span>Administrar usuarios</span>
-            </a>
+              <span><strong>Administrar usuarios</strong>@if (!canOpenUserAdministration()) {<small>Disponible al seleccionar: {{ userAdministrationAvailability() }}</small>}</span>
+            </button>
           }
           @if (repository.demoMode) {
             <button mat-menu-item type="button" (click)="toggleRole()">

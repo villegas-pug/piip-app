@@ -1,6 +1,8 @@
 package pe.gob.midagri.piip.portfolio.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 import pe.gob.midagri.piip.audit.application.AuditService;
 import pe.gob.midagri.piip.documents.persistence.DocumentRepository;
@@ -23,6 +26,8 @@ import pe.gob.midagri.piip.organization.persistence.ExecutingUnitEntity;
 import pe.gob.midagri.piip.organization.persistence.ExecutingUnitRepository;
 import pe.gob.midagri.piip.organization.persistence.InstitutionEntity;
 import pe.gob.midagri.piip.organization.persistence.OrganizationalUnitRepository;
+import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.InitiativeCreateRequest;
+import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ResponsibleUnitInput;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
@@ -69,6 +74,30 @@ class PortfolioAuthorizationTest {
         when(responsibleUnits.findByRecordIdOrderByDisplayOrder(2L)).thenReturn(List.of());
 
         assertThat(service.eligibleInitiatives()).extracting(response -> response.code()).containsExactly("INI-UE2");
+    }
+
+    @Test
+    void institutionalUserAdministrationCoverageDoesNotAuthorizeFunctionalWritesInAnotherUnit() {
+        when(authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, 100L))
+            .thenThrow(new AccessDeniedException("La Unidad Ejecutora está fuera del ámbito autorizado"));
+        InitiativeCreateRequest request = new InitiativeCreateRequest(
+            100L,
+            "Iniciativa UE-001",
+            SolutionType.TO_BE_DEFINED,
+            SourceOrigin.OTHER,
+            LocalDate.now(),
+            "Responsable",
+            null,
+            null,
+            "Descripción",
+            null,
+            DigitalComponent.NO,
+            List.of(new ResponsibleUnitInput(null, "Unidad responsable")));
+
+        assertThatThrownBy(() -> service.createInitiative(request))
+            .isInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(records, codes, audit);
     }
 
     private PortfolioRecordEntity approvedInitiative(String code, Long institutionId, Long unitId) {
