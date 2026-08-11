@@ -2,12 +2,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
 import { catchError, finalize, forkJoin, from, map, of, switchMap } from 'rxjs';
 import type { Observable } from 'rxjs';
 import { UserAdministrationControllerService } from '../../api/generated';
@@ -17,13 +19,17 @@ import type { AdministrableExecutingUnit } from '../../core/piip.models';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
+import { EditUserAssignmentDialogComponent } from './edit-user-assignment-dialog.component';
+import { NewUserAssignmentDialogComponent } from './new-user-assignment-dialog.component';
+import { SuspendUserAssignmentDialogComponent } from './suspend-user-assignment-dialog.component';
 
 type UserScope = ScopeResponse;
 type UserItem = UserResponse;
 type AssignmentCandidate = UserAssignmentCandidateResponse;
 type Role = NonNullable<UserScope['role']>;
 interface UserAssignmentRow { user: UserItem; scope: UserScope | null; }
-interface AssignmentUser { subject: string; fullName: string; email: string; withoutAssignments: boolean; }
+interface UserAssignmentGroup { user: UserItem; scopes: UserScope[]; }
+export interface AssignmentUser { subject: string; fullName: string; email: string; withoutAssignments: boolean; }
 interface InstitutionItem { id: number; code: string; name: string; }
 
 @Component({
@@ -37,6 +43,8 @@ export class UserAdministrationComponent {
   private readonly userAdministration = inject(UserAdministrationControllerService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
   private readonly apiUrl = resolveApiUrl();
   readonly repository = inject(PIIP_REPOSITORY);
 
@@ -44,12 +52,16 @@ export class UserAdministrationComponent {
   readonly assignmentCandidates = signal<AssignmentCandidate[]>([]);
   readonly loading = signal(true);
   readonly error = signal('');
-  readonly assignmentOpen = signal(false);
   readonly assigning = signal(false);
   readonly editingScope = signal<UserScope | null>(null);
   readonly savingScopeId = signal<number | null>(null);
   readonly changingScopeId = signal<number | null>(null);
   readonly pageIndex = signal(0);
+  readonly searchTerm = signal('');
+  readonly roleFilter = signal<Role | 'ALL'>('ALL');
+  readonly executingUnitFilter = signal<number | 'ALL'>('ALL');
+  readonly stateFilter = signal<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  readonly expandedSubjects = signal<ReadonlySet<string>>(new Set());
   readonly operationPending = computed(() => this.assigning() || this.savingScopeId() !== null || this.changingScopeId() !== null);
   readonly assignmentForm = this.formBuilder.nonNullable.group({
     userSubject: ['', Validators.required],
@@ -61,6 +73,10 @@ export class UserAdministrationComponent {
   readonly assignmentRows = computed<UserAssignmentRow[]>(() => this.users().flatMap<UserAssignmentRow>((user) =>
     user.scopes?.length ? user.scopes.map((scope) => ({ user, scope })) : [{ user, scope: null }],
   ));
+  readonly assignmentGroups = computed<UserAssignmentGroup[]>(() => this.users().map((user) => ({
+    user,
+    scopes: user.scopes ?? [],
+  })));
   readonly assignmentUsers = computed<AssignmentUser[]>(() => {
     const usersBySubject = new Map<string, AssignmentUser>();
     for (const user of this.users()) {
@@ -89,8 +105,34 @@ export class UserAdministrationComponent {
     }
     return Array.from(usersBySubject.values());
   });
-  readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.assignmentRows().length));
-  readonly pagedAssignmentRows = computed(() => paginateItems(this.assignmentRows(), this.currentPage()));
+  readonly filteredAssignmentGroups = computed(() => {
+    const searchTerm = this.searchTerm().trim().toLocaleLowerCase();
+    const role = this.roleFilter();
+    const executingUnitId = this.executingUnitFilter();
+    const state = this.stateFilter();
+    return this.assignmentGroups().flatMap((group) => {
+      if (searchTerm && !`${group.user.fullName ?? ''} ${group.user.email ?? ''} ${group.user.subject ?? ''}`.toLocaleLowerCase().includes(searchTerm)) return [];
+      const scopes = group.scopes.filter((scope) => {
+        if (role !== 'ALL' && scope.role !== role) return false;
+        if (executingUnitId !== 'ALL' && scope.executingUnitId !== executingUnitId) return false;
+        if (state === 'ACTIVE' && !scope.active) return false;
+        if (state === 'INACTIVE' && scope.active !== false) return false;
+        return true;
+      });
+      const hasScopeFilter = role !== 'ALL' || executingUnitId !== 'ALL' || state !== 'ALL';
+      return !hasScopeFilter || scopes.length ? [{ ...group, scopes }] : [];
+    });
+  });
+  readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.filteredAssignmentGroups().length));
+  readonly pagedAssignmentGroups = computed(() => paginateItems(this.filteredAssignmentGroups(), this.currentPage()));
+  readonly visibleExecutingUnits = computed(() => {
+    const units = new Map<number, string>();
+    for (const { scope } of this.assignmentRows()) {
+      if (scope?.executingUnitId !== undefined && scope.executingUnit) units.set(scope.executingUnitId, scope.executingUnit);
+    }
+    return Array.from(units, ([id, name]) => ({ id, name }));
+  });
+  readonly hasActiveFilters = computed(() => this.searchTerm() !== '' || this.roleFilter() !== 'ALL' || this.executingUnitFilter() !== 'ALL' || this.stateFilter() !== 'ALL');
   readonly administrableInstitutions = computed(() => {
     return this.repository.administrableScopes().map((scope) => ({
       id: scope.institutionId,
@@ -117,10 +159,93 @@ export class UserAdministrationComponent {
       institutionId: scope.institutionId,
       executingUnitId: scope.executingUnitId ?? 0,
     });
+    const user = this.users().find((item) => item.scopes?.some((itemScope) => itemScope.id === scope.id));
+    this.dialog.open(EditUserAssignmentDialogComponent, {
+      data: {
+        scope,
+        userName: user?.fullName ?? 'Usuario autorizado',
+        userEmail: user?.email ?? '',
+        administrableScopes: this.repository.administrableScopes(),
+      },
+      autoFocus: 'first-header',
+    }).afterClosed().subscribe((value) => {
+      if (!value || this.editingScope()?.id !== scope.id) {
+        this.editingScope.set(null);
+        return;
+      }
+      this.editForm.setValue(value);
+      this.saveEdit();
+    });
   }
 
-  cancelEdit(): void {
-    if (!this.operationPending()) this.editingScope.set(null);
+  openAssignment(): void {
+    if (this.operationPending()) return;
+    this.dialog.open(NewUserAssignmentDialogComponent, {
+      data: {
+        form: this.assignmentForm,
+        users: this.assignmentUsers(),
+        administrableScopes: this.repository.administrableScopes(),
+      },
+    }).afterClosed().subscribe((shouldAssign) => {
+      if (shouldAssign) this.assign();
+    });
+  }
+
+  setSearchTerm(value: string): void {
+    this.searchTerm.set(value);
+    this.pageIndex.set(0);
+  }
+
+  setRoleFilter(value: string): void {
+    this.roleFilter.set(value === 'ALL' ? 'ALL' : value as Role);
+    this.pageIndex.set(0);
+  }
+
+  setExecutingUnitFilter(value: string): void {
+    this.executingUnitFilter.set(value === 'ALL' ? 'ALL' : Number(value));
+    this.pageIndex.set(0);
+  }
+
+  setStateFilter(value: string): void {
+    this.stateFilter.set(value as 'ALL' | 'ACTIVE' | 'INACTIVE');
+    this.pageIndex.set(0);
+  }
+
+  clearFilters(): void {
+    this.searchTerm.set('');
+    this.roleFilter.set('ALL');
+    this.executingUnitFilter.set('ALL');
+    this.stateFilter.set('ALL');
+    this.pageIndex.set(0);
+  }
+
+  toggleGroup(subject: string | undefined): void {
+    if (!subject) return;
+    const expanded = new Set(this.expandedSubjects());
+    expanded.has(subject) ? expanded.delete(subject) : expanded.add(subject);
+    this.expandedSubjects.set(expanded);
+  }
+
+  isExpanded(subject: string | undefined): boolean {
+    return subject !== undefined && this.expandedSubjects().has(subject);
+  }
+
+  userInitials(user: UserItem): string {
+    const names = (user.fullName ?? user.subject ?? '?').trim().split(/\s+/).filter(Boolean);
+    return names.slice(0, 2).map((name) => name[0]).join('').toUpperCase();
+  }
+
+  scopeLabel(scope: UserScope): string {
+    const role = scope.role === 'ADMINISTRADOR_PIIP' ? 'Administrador PIIP' : 'Consulta externa';
+    return `${role} · ${scope.executingUnit ?? 'Toda la institución'}`;
+  }
+
+  activeAssignments(group: UserAssignmentGroup): number {
+    return group.scopes.filter((scope) => scope.active).length;
+  }
+
+  suspendedAssignments(group: UserAssignmentGroup): number {
+    return group.scopes.filter((scope) => !scope.active).length;
   }
 
   saveEdit(): void {
@@ -152,25 +277,96 @@ export class UserAdministrationComponent {
 
   suspend(scope: UserScope): void {
     if (this.operationPending() || scope.id === undefined || scope.version === undefined || !scope.active) return;
-    if (!window.confirm('¿Deseas suspender esta asignación? El acceso quedará retirado hasta que se reactive.')) return;
-    this.changingScopeId.set(scope.id);
-    this.userAdministration.suspend({ scopeId: scope.id, version: scope.version })
-      .pipe(finalize(() => this.changingScopeId.set(null)))
-      .subscribe({
-        next: () => { this.snackBar.open('Asignación suspendida.', 'Cerrar', { duration: 2600 }); this.load(); },
-        error: (response) => this.showOperationError(response, 'No se pudo suspender la asignación.'),
-      });
+    const user = this.userForScope(scope);
+    this.dialog.open(SuspendUserAssignmentDialogComponent, {
+      data: {
+        scope,
+        userName: user?.fullName ?? 'Usuario autorizado',
+        userEmail: user?.email ?? '',
+      },
+      autoFocus: 'dialog',
+      restoreFocus: true,
+    }).afterClosed().subscribe((confirmed) => {
+      if (confirmed) this.changeAssignmentState(scope, 'SUSPEND');
+    });
   }
 
   reactivate(scope: UserScope): void {
     if (this.operationPending() || scope.id === undefined || scope.version === undefined || scope.active) return;
+    this.changeAssignmentState(scope, 'REACTIVATE');
+  }
+
+  private changeAssignmentState(scope: UserScope, action: 'SUSPEND' | 'REACTIVATE'): void {
+    if (this.operationPending() || scope.id === undefined || scope.version === undefined) return;
+    const affectsCurrentUser = this.scopeBelongsToCurrentUser(scope);
+    const activeExecutingUnitId = this.repository.selectedExecutingUnitId();
     this.changingScopeId.set(scope.id);
-    this.userAdministration.reactivate({ scopeId: scope.id, version: scope.version })
-      .pipe(finalize(() => this.changingScopeId.set(null)))
+    const request: Observable<unknown> = action === 'SUSPEND'
+      ? this.userAdministration.suspend({ scopeId: scope.id, version: scope.version })
+      : this.userAdministration.reactivate({ scopeId: scope.id, version: scope.version });
+    request.pipe(
+      switchMap(() => affectsCurrentUser
+        ? from(Promise.resolve(this.repository.refreshAuthorizationContext())).pipe(
+            map(() => 'REFRESHED' as const),
+            catchError(() => of('FAILED' as const)),
+          )
+        : of('NOT_REQUIRED' as const)),
+      finalize(() => this.changingScopeId.set(null)),
+    )
       .subscribe({
-        next: () => { this.snackBar.open('Asignación reactivada.', 'Cerrar', { duration: 2600 }); this.load(); },
-        error: (response) => this.showOperationError(response, 'No se pudo reactivar la asignación.'),
+        next: (refreshState) => this.finishAssignmentStateChange(action, refreshState, activeExecutingUnitId),
+        error: (response) => this.showOperationError(
+          response,
+          action === 'SUSPEND' ? 'No se pudo suspender la asignación.' : 'No se pudo reactivar la asignación.',
+        ),
       });
+  }
+
+  private finishAssignmentStateChange(
+    action: 'SUSPEND' | 'REACTIVATE',
+    refreshState: 'REFRESHED' | 'FAILED' | 'NOT_REQUIRED',
+    previousActiveExecutingUnitId: number | null,
+  ): void {
+    if (refreshState === 'FAILED') {
+      this.snackBar.open(
+        'La asignación cambió, pero no fue posible actualizar tu acceso. Recarga la página para sincronizarlo.',
+        'Cerrar',
+        { duration: 5200 },
+      );
+      this.load();
+      return;
+    }
+    if (refreshState === 'REFRESHED'
+        && !this.repository.canAdministerExecutingUnit(previousActiveExecutingUnitId)) {
+      this.clearAdministrationView();
+      this.snackBar.open(
+        'Saliste de Administración de usuarios porque la UE activa ya no tiene rol Administrador PIIP.',
+        'Cerrar',
+        { duration: 5200 },
+      );
+      void this.router.navigateByUrl('/inicio');
+      return;
+    }
+    this.snackBar.open(action === 'SUSPEND' ? 'Asignación suspendida.' : 'Asignación reactivada.', 'Cerrar', { duration: 2600 });
+    this.load();
+  }
+
+  private clearAdministrationView(): void {
+    this.users.set([]);
+    this.assignmentCandidates.set([]);
+    this.repository.administrableScopes.set([]);
+    this.expandedSubjects.set(new Set());
+    this.error.set('');
+    this.loading.set(false);
+  }
+
+  private scopeBelongsToCurrentUser(scope: UserScope): boolean {
+    const subject = this.repository.currentUser()?.subject;
+    return subject !== undefined && this.userForScope(scope)?.subject === subject;
+  }
+
+  private userForScope(scope: UserScope): UserItem | undefined {
+    return this.users().find((item) => item.scopes?.some((itemScope) => itemScope.id === scope.id));
   }
 
   assign(): void {
@@ -191,7 +387,7 @@ export class UserAdministrationComponent {
     this.userAdministration.assign({ body: { ...value, executingUnitId: value.executingUnitId || undefined } })
       .pipe(finalize(() => this.assigning.set(false)))
       .subscribe({
-        next: () => { this.assignmentOpen.set(false); this.snackBar.open('Rol asignado.', 'Cerrar', { duration: 2600 }); this.load(); },
+        next: () => { this.snackBar.open('Rol asignado.', 'Cerrar', { duration: 2600 }); this.load(); },
         error: (response) => this.showOperationError(response, 'No se pudo crear la asignación.'),
       });
   }
@@ -206,10 +402,6 @@ export class UserAdministrationComponent {
 
   assignmentExecutingUnits(): AdministrableExecutingUnit[] {
     return this.administrableExecutingUnits(this.assignmentForm.controls.institutionId.value);
-  }
-
-  editExecutingUnits(): AdministrableExecutingUnit[] {
-    return this.administrableExecutingUnits(this.editForm.controls.institutionId.value);
   }
 
   canUseInstitutionWide(institutionId: number): boolean {

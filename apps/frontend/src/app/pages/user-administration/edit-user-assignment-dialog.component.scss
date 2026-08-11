@@ -1,0 +1,15 @@
+.edit-assignment-dialog { width: min(420px, calc(100vw - 32px)); overflow: hidden; background: #fff; }
+header { display: flex; align-items: center; padding: 20px 22px 16px; border-bottom: 1px solid var(--piip-border); }
+header h2 { margin: 0; color: var(--piip-green-950); font-family: var(--piip-display); font-size: 22px; }
+.icon-action { display: grid; width: 36px; height: 36px; margin-left: auto; padding: 0; place-items: center; border: 0; border-radius: 50%; color: var(--piip-muted); background: transparent; cursor: pointer; }
+.icon-action:hover { color: var(--piip-green-800); background: var(--piip-mint); }
+.icon-action:focus-visible { outline: 2px solid var(--piip-green-700); outline-offset: 2px; }
+mat-dialog-content { display: grid; gap: 13px; padding: 20px 22px !important; }
+.assigned-user { display: flex; align-items: center; gap: 12px; padding: 2px 0 6px; }
+.user-avatar { display: grid; flex: 0 0 auto; place-items: center; width: 45px; height: 45px; border-radius: 50%; color: #21543e; background: #e1f0e6; font-size: 13px; font-weight: 700; }
+.assigned-user strong, .assigned-user small { display: block; }
+.assigned-user small { margin-top: 3px; color: var(--piip-muted); font-size: 12px; }
+.access-note { display: flex; align-items: center; gap: 8px; margin: 2px 0 0; color: #49564e; font-size: 12px; }
+.access-note mat-icon { width: 18px; height: 18px; color: var(--piip-muted); font-size: 18px; }
+mat-dialog-actions { padding: 12px 22px 19px; border-top: 1px solid var(--piip-border); }
+@media (max-width: 680px) { header, mat-dialog-content { padding-inline: 18px !important; } mat-dialog-actions { padding-inline: 18px; } }

@@ -1,23 +1,30 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router, provideRouter } from '@angular/router';
+import { NEVER, of } from 'rxjs';
 import { resolveApiUrl } from '../../core/piip-http.repository';
 import { PiipMockRepository } from '../../core/piip-mock.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
+import { NewUserAssignmentDialogComponent } from './new-user-assignment-dialog.component';
+import { SuspendUserAssignmentDialogComponent } from './suspend-user-assignment-dialog.component';
 import { UserAdministrationComponent } from './user-administration.component';
 
 describe('UserAdministrationComponent operations', () => {
   let http: HttpTestingController;
   let snackBar: Pick<MatSnackBar, 'open'>;
+  let dialog: { open: ReturnType<typeof vi.fn> };
   const apiUrl = resolveApiUrl();
 
   beforeEach(async () => {
     snackBar = { open: vi.fn() };
+    dialog = { open: vi.fn(() => ({ afterClosed: () => NEVER })) };
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     await TestBed.configureTestingModule({
       imports: [UserAdministrationComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting(), PiipMockRepository, { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository }],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), PiipMockRepository, { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository }, { provide: MatDialog, useValue: dialog }],
     }).overrideComponent(UserAdministrationComponent, {
       add: { providers: [{ provide: MatSnackBar, useValue: snackBar }] },
     }).compileComponents();
@@ -72,14 +79,29 @@ describe('UserAdministrationComponent operations', () => {
     flushAdministrationLoad(http, apiUrl);
 
     const scope = activeScope();
+    dialog.open.mockReturnValue({ afterClosed: () => of(true) });
     fixture.componentInstance.suspend(scope);
     fixture.componentInstance.suspend(scope);
     expect(fixture.componentInstance.changingScopeId()).toBe(9);
     const suspension = http.expectOne(`${apiUrl}/admin/role-assignments/9?version=2`);
-    expect(window.confirm).toHaveBeenCalledOnce();
+    expect(dialog.open).toHaveBeenCalledWith(SuspendUserAssignmentDialogComponent, expect.objectContaining({
+      data: expect.objectContaining({ scope }),
+    }));
     suspension.flush('');
     expect(fixture.componentInstance.changingScopeId()).toBeNull();
     flushAdministrationLoad(http, apiUrl);
+  });
+
+  it('opens the new assignment dialog with the existing typed form', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl);
+    await fixture.whenStable();
+
+    fixture.componentInstance.openAssignment();
+
+    expect(dialog.open).toHaveBeenCalledWith(NewUserAssignmentDialogComponent, expect.objectContaining({
+      data: expect.objectContaining({ form: fixture.componentInstance.assignmentForm }),
+    }));
   });
 
   it('joins first-assignment candidates by subject and identifies them without changing the table listing', async () => {
@@ -146,6 +168,7 @@ describe('UserAdministrationComponent operations', () => {
     flushAdministrationLoad(http, apiUrl);
     await fixture.whenStable();
 
+    dialog.open.mockReturnValue({ afterClosed: () => of(true) });
     fixture.componentInstance.suspend(activeScope());
     http.expectOne(`${apiUrl}/admin/role-assignments/9?version=2`).flush({}, { status, statusText: 'Error' });
     await fixture.whenStable();
@@ -154,19 +177,106 @@ describe('UserAdministrationComponent operations', () => {
     expect(fixture.componentInstance.changingScopeId()).toBeNull();
   });
 
-  it('does not mutate when the suspension confirmation is declined', () => {
+  it('does not mutate when the suspension dialog is cancelled', () => {
     const fixture = TestBed.createComponent(UserAdministrationComponent);
     flushAdministrationLoad(http, apiUrl);
-    vi.mocked(window.confirm).mockReturnValue(false);
+    dialog.open.mockReturnValue({ afterClosed: () => of(false) });
 
     fixture.componentInstance.suspend(activeScope());
 
+    expect(dialog.open).toHaveBeenCalledWith(SuspendUserAssignmentDialogComponent, expect.any(Object));
     http.expectNone((request) => request.url.includes('/admin/role-assignments/'));
   });
 
-  it('paginates user scopes as identified rows', async () => {
+  it('hydrates the active-user context after suspending and reactivating an own assignment', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([
+      { id: 2, code: 'UE-002', name: 'Unidad administradora 2', institutionId: 1 },
+      { id: 8, code: 'UE-008', name: 'Unidad administradora 8', institutionId: 2 },
+    ]);
+    repository.selectedExecutingUnitId.set(2);
+    const refreshAuthorizationContext = vi.spyOn(repository, 'refreshAuthorizationContext');
+    const scope = { ...activeScope(), executingUnitId: 2, executingUnit: 'UE-002' };
     const fixture = TestBed.createComponent(UserAdministrationComponent);
-    const users = Array.from({ length: 3 }, (_, index) => ({
+    flushAdministrationLoad(http, apiUrl, [{
+      id: 1,
+      subject: 'demo-admin',
+      fullName: 'Administrador PIIP',
+      email: 'admin.piip@midagri.gob.pe',
+      scopes: [scope],
+    }]);
+    await fixture.whenStable();
+    dialog.open.mockReturnValue({ afterClosed: () => of(true) });
+
+    fixture.componentInstance.suspend(scope);
+
+    expect(dialog.open).toHaveBeenCalledWith(SuspendUserAssignmentDialogComponent, expect.objectContaining({
+      data: {
+        scope,
+        userName: 'Administrador PIIP',
+        userEmail: 'admin.piip@midagri.gob.pe',
+      },
+    }));
+    http.expectOne(`${apiUrl}/admin/role-assignments/9?version=2`).flush('');
+    await fixture.whenStable();
+    expect(refreshAuthorizationContext).toHaveBeenCalledOnce();
+    flushAdministrationLoad(http, apiUrl, [{
+      id: 1,
+      subject: 'demo-admin',
+      fullName: 'Administrador PIIP',
+      email: 'admin.piip@midagri.gob.pe',
+      scopes: [{ ...scope, active: false, version: 3 }],
+    }]);
+
+    fixture.componentInstance.reactivate({ ...scope, active: false, version: 3 });
+    http.expectOne(`${apiUrl}/admin/role-assignments/9/reactivation?version=3`).flush(jsonBlob({}));
+    await fixture.whenStable();
+    expect(refreshAuthorizationContext).toHaveBeenCalledTimes(2);
+    flushAdministrationLoad(http, apiUrl);
+  });
+
+  it('redirects when the original active UE disappears even if hydration falls back to another Administrator UE', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([
+      { id: 2, code: 'UE-002', name: 'Unidad administradora 2', institutionId: 1 },
+      { id: 8, code: 'UE-008', name: 'Unidad administradora 8', institutionId: 2 },
+    ]);
+    repository.selectedExecutingUnitId.set(2);
+    const scope = { ...activeScope(), executingUnitId: 2, executingUnit: 'UE-002' };
+    vi.spyOn(repository, 'refreshAuthorizationContext').mockImplementation(() => {
+      repository.currentUser.update((user) => user ? ({
+        ...user,
+        roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 2, executingUnitId: 8 }],
+      }) : null);
+      repository.executingUnits.set([{ id: 8, code: 'UE-008', name: 'Unidad administradora 8', institutionId: 2 }]);
+      repository.selectedExecutingUnitId.set(8);
+    });
+    const router = TestBed.inject(Router);
+    const navigateByUrl = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl, [{
+      id: 1,
+      subject: 'demo-admin',
+      fullName: 'Administrador PIIP',
+      email: 'admin.piip@midagri.gob.pe',
+      scopes: [scope],
+    }]);
+    await fixture.whenStable();
+    dialog.open.mockReturnValue({ afterClosed: () => of(true) });
+
+    fixture.componentInstance.suspend(scope);
+    http.expectOne(`${apiUrl}/admin/role-assignments/9?version=2`).flush('');
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.users()).toEqual([]);
+    expect(repository.administrableScopes()).toEqual([]);
+    expect(repository.selectedExecutingUnitId()).toBe(8);
+    expect(navigateByUrl).toHaveBeenCalledWith('/inicio');
+  });
+
+  it('paginates users as grouped assignments', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    const users = Array.from({ length: 6 }, (_, index) => ({
       id: index + 1, subject: `usuario-${index + 1}`, fullName: `Usuario ${index + 1}`, email: `usuario${index + 1}@midagri.gob.pe`,
       scopes: [1, 2].map((scope) => ({ id: index * 10 + scope, role: 'CONSULTA_EXTERNA' as const, institution: 'MIDAGRI', institutionId: 1, executingUnit: `UE-00${scope}`, active: true, version: 1 })),
     }));
@@ -174,10 +284,11 @@ describe('UserAdministrationComponent operations', () => {
     http.expectOne(`${apiUrl}/admin/users/assignment-candidates`).flush([]);
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.assignmentRows()).toHaveLength(6);
-    expect(fixture.componentInstance.pagedAssignmentRows()).toHaveLength(5);
+    expect(fixture.componentInstance.assignmentRows()).toHaveLength(12);
+    expect(fixture.componentInstance.assignmentGroups()).toHaveLength(6);
+    expect(fixture.componentInstance.pagedAssignmentGroups()).toHaveLength(5);
     fixture.componentInstance.pageIndex.set(1);
-    expect(fixture.componentInstance.pagedAssignmentRows()).toEqual([expect.objectContaining({ user: expect.objectContaining({ fullName: 'Usuario 3' }) })]);
+    expect(fixture.componentInstance.pagedAssignmentGroups()).toEqual([expect.objectContaining({ user: expect.objectContaining({ fullName: 'Usuario 6' }) })]);
   });
 
   it('shows the loading state and accessible empty state after an empty generated listing', async () => {
@@ -273,7 +384,7 @@ describe('UserAdministrationComponent operations', () => {
     expect(fixture.componentInstance.assignmentExecutingUnits().map((item) => item.id)).toEqual([1, 2]);
   });
 
-  it('shows the active Administrator UE while keeping assignments from every administrable scope', async () => {
+  it('summarizes the active Administrator UE while keeping assignments from every administrable scope', async () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.executingUnits.set([
       { id: 2, code: 'UE-002', name: 'Unidad activa', institutionId: 1 },
@@ -291,10 +402,10 @@ describe('UserAdministrationComponent operations', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const context = (fixture.nativeElement as HTMLElement).querySelector('.administration-context');
-    expect(context?.textContent).toContain('Administrando con el rol Administrador PIIP desde UE-002.');
-    expect(context?.textContent).toContain('La bandeja incluye todas las Unidades Ejecutoras de las instituciones que puedes administrar.');
-    expect(context?.textContent).toContain('Unidad activa');
+    const context = (fixture.nativeElement as HTMLElement).querySelector('.administration-summary');
+    expect(context?.textContent).toContain('UE activa');
+    expect(context?.textContent).toContain('UE-002');
+    expect(context?.textContent).toContain('¿Cómo funciona este acceso?');
     expect(fixture.componentInstance.assignmentRows()).toHaveLength(2);
   });
 

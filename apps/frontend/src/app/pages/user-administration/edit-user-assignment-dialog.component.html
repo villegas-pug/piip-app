@@ -1,0 +1,17 @@
+<div class="edit-assignment-dialog">
+  <header>
+    <h2>Editar asignación</h2>
+    <button class="icon-action" type="button" mat-dialog-close aria-label="Cerrar edición"><mat-icon>close</mat-icon></button>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <mat-dialog-content>
+      <div class="assigned-user"><span class="user-avatar">{{ data.userName.slice(0, 2).toUpperCase() }}</span><span><strong>{{ data.userName }}</strong><small>{{ data.userEmail }}</small></span></div>
+      <mat-form-field appearance="outline"><mat-label>Rol</mat-label><mat-select formControlName="role"><mat-option value="ADMINISTRADOR_PIIP">Administrador PIIP</mat-option><mat-option value="CONSULTA_EXTERNA">Consulta externa</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Institución</mat-label><mat-select formControlName="institutionId">@for (item of data.administrableScopes; track item.institutionId) { <mat-option [value]="item.institutionId">{{ item.institutionName }}</mat-option> }</mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Unidad Ejecutora</mat-label><mat-select formControlName="executingUnitId">@if (canUseInstitutionWide()) { <mat-option [value]="0">Toda la institución</mat-option> } @for (item of executingUnits(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
+      <p class="access-note"><mat-icon>info</mat-icon>La UE activa habilita el acceso; no filtra esta bandeja.</p>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end"><button mat-button type="button" mat-dialog-close>Cancelar</button><button mat-flat-button type="submit">Guardar cambios</button></mat-dialog-actions>
+  </form>
+</div>

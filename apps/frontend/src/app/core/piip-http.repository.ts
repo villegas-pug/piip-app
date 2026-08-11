@@ -173,6 +173,13 @@ export class PiipHttpRepository extends PiipRepository {
     ]);
   }
 
+  async refreshAuthorizationContext(): Promise<void> {
+    await Promise.all([this.loadIdentity(), this.loadExecutingUnits()]);
+    await this.reconcileExecutingUnit(this.selectedExecutingUnitId());
+    if (!this.canAdministerExecutingUnit(this.selectedExecutingUnitId())) this.administrableScopes.set([]);
+    await this.refreshAll();
+  }
+
   clearError(): void {
     this.lastError.set(null);
   }
@@ -432,11 +439,24 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   private async restoreExecutingUnit(): Promise<void> {
-    const stored = Number(localStorage.getItem('piip-selected-executing-unit'));
+    const storedValue = localStorage.getItem('piip-selected-executing-unit');
+    const stored = storedValue === null ? null : Number(storedValue);
+    await this.reconcileExecutingUnit(stored !== null && Number.isFinite(stored) ? stored : null);
+  }
+
+  private async reconcileExecutingUnit(preferredExecutingUnitId: number | null): Promise<void> {
     const units = this.executingUnits();
-    const selected = units.some((unit) => unit.id === stored) ? stored : units[0]?.id ?? null;
+    const selected = preferredExecutingUnitId !== null && units.some((unit) => unit.id === preferredExecutingUnitId)
+      ? preferredExecutingUnitId
+      : units[0]?.id ?? null;
     this.selectedExecutingUnitId.set(selected);
-    if (selected !== null) await this.loadOrganizationalUnits(selected);
+    if (selected === null) {
+      this.organizationalUnits.set([]);
+      localStorage.removeItem('piip-selected-executing-unit');
+      return;
+    }
+    localStorage.setItem('piip-selected-executing-unit', String(selected));
+    await this.loadOrganizationalUnits(selected);
   }
 
   private async loadOrganizationalUnits(executingUnitId: number): Promise<void> {

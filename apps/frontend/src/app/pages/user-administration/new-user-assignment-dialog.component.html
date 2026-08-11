@@ -1,0 +1,13 @@
+<div class="new-assignment-dialog">
+  <header><h2>Nueva asignación</h2><button class="icon-action" type="button" mat-dialog-close aria-label="Cerrar nueva asignación"><mat-icon>close</mat-icon></button></header>
+  <form [formGroup]="data.form" (ngSubmit)="assign()">
+    <mat-dialog-content>
+      <mat-form-field appearance="outline"><mat-label>Usuario</mat-label><mat-select formControlName="userSubject">@for (user of data.users; track user.subject) { <mat-option [value]="user.subject" [attr.aria-label]="user.withoutAssignments ? user.fullName + ', ' + user.email + ', sin asignaciones previas' : user.fullName + ', ' + user.email">{{ user.fullName }} · {{ user.email }}@if (user.withoutAssignments) { <span class="candidate-detail"> · Sin asignaciones previas</span> }</mat-option> }</mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Rol</mat-label><mat-select formControlName="role"><mat-option value="ADMINISTRADOR_PIIP">Administrador PIIP</mat-option><mat-option value="CONSULTA_EXTERNA">Consulta externa</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Institución</mat-label><mat-select formControlName="institutionId">@for (item of data.administrableScopes; track item.institutionId) { <mat-option [value]="item.institutionId">{{ item.institutionName }}</mat-option> }</mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Unidad Ejecutora</mat-label><mat-select formControlName="executingUnitId">@if (canUseInstitutionWide()) { <mat-option [value]="0">Toda la institución</mat-option> } @for (item of executingUnits(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
+      @if (isInstitutionWide()) { <p class="institution-wide-notice"><mat-icon>account_balance</mat-icon>El alcance cubrirá todas las Unidades Ejecutoras de {{ selectedScope()?.institutionName }}. Se solicitará una confirmación explícita.</p> }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end"><button mat-button type="button" mat-dialog-close>Cancelar</button><button mat-flat-button type="submit">Asignar rol</button></mat-dialog-actions>
+  </form>
+</div>

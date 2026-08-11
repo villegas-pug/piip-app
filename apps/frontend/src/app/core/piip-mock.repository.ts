@@ -245,6 +245,7 @@ export class PiipMockRepository extends PiipRepository {
 
   initialize(): void {}
   refreshAll(): void {}
+  refreshAuthorizationContext(): void {}
   loadAdministrableScopes(): void {}
   clearError(): void { this.lastError.set(null); }
   canReadExecutingUnit(executingUnitId: number | null | undefined): boolean { return this.hasGrantForExecutingUnit(executingUnitId); }

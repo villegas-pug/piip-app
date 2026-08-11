@@ -13,7 +13,11 @@ describe('PiipHttpRepository', () => {
     repository = TestBed.inject(PiipHttpRepository);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    localStorage.removeItem('piip-selected-executing-unit');
+    vi.restoreAllMocks();
+    http.verify();
+  });
 
   it('starts empty and never exposes mock portfolio data', () => {
     expect(repository.portfolioRecords()).toEqual([]);
@@ -94,5 +98,76 @@ describe('PiipHttpRepository', () => {
       { detail: 'Fin de prueba', status: 403 },
       { status: 403, statusText: 'Forbidden' },
     );
+  });
+
+  it('rehydrates authorization and reconciles an invalid selected executing unit', async () => {
+    const initialization = repository.initialize();
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Sin acceso durante la preparación', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await initialization;
+    repository.selectedExecutingUnitId.set(2);
+    localStorage.setItem('piip-selected-executing-unit', '2');
+    const refreshAll = vi.spyOn(repository, 'refreshAll').mockResolvedValue();
+
+    const refresh = repository.refreshAuthorizationContext();
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush({
+      subject: 'current-user',
+      fullName: 'Usuario actual',
+      email: 'current@example.pe',
+      roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 }],
+      roles: ['ADMINISTRADOR_PIIP'],
+      institutionIds: [1],
+      executingUnitIds: [1],
+      institutionWide: false,
+    });
+    http.expectOne('http://127.0.0.1:4001/api/v1/executing-units').flush([
+      { id: 1, code: 'UE-001', name: 'Unidad Ejecutora 001', institutionId: 1 },
+    ]);
+    http.expectOne((request) => request.url === 'http://127.0.0.1:4001/api/v1/organizational-units'
+      && request.params.get('executingUnitId') === '1').flush([]);
+    await refresh;
+
+    expect(repository.currentUser()?.subject).toBe('current-user');
+    expect(repository.executingUnits().map((unit) => unit.id)).toEqual([1]);
+    expect(repository.selectedExecutingUnitId()).toBe(1);
+    expect(localStorage.getItem('piip-selected-executing-unit')).toBe('1');
+    expect(refreshAll).toHaveBeenCalledOnce();
+  });
+
+  it('preserves a still-authorized selected executing unit while rehydrating the header context', async () => {
+    const initialization = repository.initialize();
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Sin acceso durante la preparación', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await initialization;
+    repository.selectedExecutingUnitId.set(2);
+    localStorage.setItem('piip-selected-executing-unit', '2');
+    vi.spyOn(repository, 'refreshAll').mockResolvedValue();
+
+    const refresh = repository.refreshAuthorizationContext();
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush({
+      subject: 'current-user',
+      fullName: 'Usuario actual',
+      email: 'current@example.pe',
+      roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 2 }],
+      roles: ['ADMINISTRADOR_PIIP'],
+      institutionIds: [1],
+      executingUnitIds: [1, 2],
+      institutionWide: false,
+    });
+    http.expectOne('http://127.0.0.1:4001/api/v1/executing-units').flush([
+      { id: 1, code: 'UE-001', name: 'Unidad Ejecutora 001', institutionId: 1 },
+      { id: 2, code: 'UE-002', name: 'Unidad Ejecutora 002', institutionId: 1 },
+    ]);
+    http.expectOne((request) => request.url === 'http://127.0.0.1:4001/api/v1/organizational-units'
+      && request.params.get('executingUnitId') === '2').flush([]);
+    await refresh;
+
+    expect(repository.selectedExecutingUnitId()).toBe(2);
+    expect(localStorage.getItem('piip-selected-executing-unit')).toBe('2');
+    expect(repository.role()).toBe('Administrador PIIP');
   });
 });

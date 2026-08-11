@@ -1,0 +1,37 @@
+<div class="suspend-assignment-dialog">
+  <header>
+    <div class="title-icon" aria-hidden="true"><mat-icon>pause_circle</mat-icon></div>
+    <div>
+      <p>Acción sobre el acceso</p>
+      <h2>Suspender asignación</h2>
+    </div>
+    <button class="icon-action" type="button" [mat-dialog-close]="false" aria-label="Cerrar confirmación de suspensión">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <mat-dialog-content>
+    <div class="assigned-user">
+      <span class="user-avatar" aria-hidden="true">{{ data.userName.slice(0, 2).toUpperCase() }}</span>
+      <span><strong>{{ data.userName }}</strong><small>{{ data.userEmail }}</small></span>
+    </div>
+
+    <dl class="assignment-context" aria-label="Asignación que se suspenderá">
+      <div><dt>Rol</dt><dd>{{ roleLabel() }}</dd></div>
+      <div><dt>Institución</dt><dd>{{ data.scope.institution }}</dd></div>
+      <div><dt>Unidad Ejecutora</dt><dd>{{ executingUnitLabel() }}</dd></div>
+    </dl>
+
+    <p class="suspension-notice" role="alert">
+      <mat-icon aria-hidden="true">warning_amber</mat-icon>
+      <span>El acceso asociado a esta asignación quedará retirado hasta que sea reactivada.</span>
+    </p>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" [mat-dialog-close]="false">Cancelar</button>
+    <button class="suspend-action" mat-flat-button type="button" [mat-dialog-close]="true" cdkFocusInitial>
+      Suspender asignación
+    </button>
+  </mat-dialog-actions>
+</div>

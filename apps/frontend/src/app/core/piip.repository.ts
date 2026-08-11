@@ -30,6 +30,7 @@ export abstract class PiipRepository {
   abstract readonly lastError: WritableSignal<string | null>;
   abstract initialize(): RepositoryOperation<void>;
   abstract refreshAll(): RepositoryOperation<void>;
+  abstract refreshAuthorizationContext(): RepositoryOperation<void>;
   abstract loadAdministrableScopes(): RepositoryOperation<void>;
   abstract clearError(): void;
   abstract canReadExecutingUnit(executingUnitId: number | null | undefined): boolean;
