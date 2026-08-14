@@ -4,6 +4,7 @@
 
 - `docs/architecture/piip-fields.md` define los 23 campos y seis catálogos; `NA` y `No aplica` tienen significados distintos.
 - No inventes estados, obligatoriedades ni transiciones. La única transición de escritura confirmada es `Presentado -> Iniciativa aprobada`.
+- Ante un cambio que altere flujos, roles, permisos, datos visibles, documentos o reglas de negocio, evaluar el impacto en la guía funcional de `docs/`. Si hay impacto, actualizarla en la misma entrega con evidencia verificable; si no lo hay, declararlo y justificarlo al cierre. La guía funcional no sustituye las especificaciones, el código, la configuración ni las pruebas como autoridad.
 
 ## Arquitectura
 

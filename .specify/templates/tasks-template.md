@@ -152,6 +152,7 @@ Examples of foundational tasks (adjust based on your project):
 **Purpose**: Improvements that affect multiple user stories
 
 - [ ] TXXX [P] Documentation updates in docs/
+- [ ] TXXX Evaluar el impacto en la guía funcional de `docs/`: actualizarla con evidencia verificable si el cambio altera flujos, roles, permisos, datos visibles, documentos o reglas de negocio; de no corresponder, registrar la justificación. No cerrar la implementación sin una de estas dos alternativas.
 - [ ] TXXX Code cleanup and refactoring
 - [ ] TXXX Performance optimization across all stories
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
