@@ -96,6 +96,8 @@ tbody tr:hover { background: #fbfdfb; }
 .empty-state { padding: 45px 20px; color: var(--piip-gray-500); text-align: center; }
 
 .mat-mdc-snack-bar-container { --mat-snack-bar-container-color: #003f2b; --mat-snack-bar-supporting-text-color: #fff; --mat-snack-bar-button-color: #ffd15c; }
+.initiative-review-dialog-panel .mat-mdc-dialog-surface { padding: 0; overflow: hidden; border-radius: 10px; background: transparent; box-shadow: none; }
+.initiative-review-dialog-backdrop { background: rgba(0,38,25,.55); backdrop-filter: blur(3px); }
 
 @keyframes page-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 @keyframes piip-spin { to { transform: rotate(360deg); } }

@@ -1,0 +1,23 @@
+:host { display: block; }
+
+.review-dialog { width: 100%; overflow: hidden; border-radius: 10px; background: #fff; box-shadow: 0 24px 70px rgba(0,34,22,.32); animation: dialog-in .2s ease both; }
+.review-dialog > header { display: flex; align-items: center; gap: 13px; padding: 20px 22px; border-bottom: 1px solid var(--piip-border); }
+.review-dialog > header > span { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; color: var(--piip-green-800); background: var(--piip-mint); }
+.review-dialog header p { margin: 0; color: var(--piip-green-700); font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+.review-dialog header h2 { margin: 1px 0 0; font-family: var(--piip-display); }
+.review-dialog header button { margin-left: auto; }
+.review-summary { padding: 10px 22px; }
+.review-summary p { display: grid; grid-template-columns: 135px 1fr; gap: 15px; margin: 0; padding: 10px 0; border-bottom: 1px solid #edf0ed; }
+.review-summary span { color: #6c7770; }
+.review-info { display: flex; gap: 10px; margin: 5px 22px 18px; padding: 13px; color: #285c46; background: var(--piip-mint-soft); }
+.review-dialog footer { display: flex; justify-content: flex-end; gap: 12px; padding: 16px 22px; background: #f7f9f7; }
+
+@keyframes dialog-in { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 600px) {
+  .review-dialog > header { padding: 18px; }
+  .review-summary { padding: 8px 18px; }
+  .review-summary p { grid-template-columns: 1fr; gap: 3px; }
+  .review-info { margin-inline: 18px; }
+  .review-dialog footer { padding: 14px 18px; }
+}

@@ -1,0 +1,10 @@
+<section class="review-dialog" aria-labelledby="review-title" [attr.aria-busy]="submitting()">
+  <header>
+    <span><mat-icon>fact_check</mat-icon></span>
+    <div><p>REVISIÓN FINAL</p><h2 id="review-title">Registrar iniciativa</h2></div>
+    <button class="icon-action" type="button" mat-dialog-close aria-label="Cerrar revisión" [disabled]="submitting()"><mat-icon>close</mat-icon></button>
+  </header>
+  <div class="review-summary"><p><span>Código</span><strong>{{ data.pendingCode }}</strong></p><p><span>Nombre</span><strong>{{ data.name }}</strong></p><p><span>Responsable</span><strong>{{ data.responsible }}</strong></p><p><span>Estado oficial</span><strong>Presentado</strong></p><p><span>Ficha inicial</span><strong>{{ data.uploadedFilename }}</strong></p></div>
+  <div class="review-info"><mat-icon>info</mat-icon>Al confirmar, el registro dejará la condición local de borrador y se mostrará como Presentado.</div>
+  <footer><button class="secondary-button" type="button" mat-dialog-close [disabled]="submitting()">Volver a editar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="register()">@if (submitting()) {<mat-icon class="button-spinner">progress_activity</mat-icon>Registrando...} @else {<mat-icon>save</mat-icon>Registrar iniciativa}</button></footer>
+</section>

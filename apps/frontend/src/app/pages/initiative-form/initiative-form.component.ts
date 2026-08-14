@@ -1,10 +1,13 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Overlay } from '@angular/cdk/overlay';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { PIIP_CATALOGS, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
+import { InitiativeReviewDialogComponent } from './initiative-review-dialog.component';
 
 @Component({
   selector: 'app-initiative-form',
@@ -20,6 +23,8 @@ export class InitiativeFormComponent {
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
+  private readonly dialog = inject(MatDialog);
+  private readonly overlay = inject(Overlay);
 
   readonly catalogs = PIIP_CATALOGS;
   readonly units = computed(() => this.repository.organizationalUnits().length
@@ -27,7 +32,6 @@ export class InitiativeFormComponent {
     : RESPONSIBLE_UNITS);
   readonly uploadedFilename = signal<string | null>(null);
   readonly uploadedFile = signal<File | null>(null);
-  readonly reviewOpen = signal(false);
   readonly submitting = signal(false);
   readonly canAdministerActiveScope = computed(() => this.repository.canAdministerExecutingUnit(this.repository.selectedExecutingUnitId()));
 
@@ -77,11 +81,27 @@ export class InitiativeFormComponent {
       this.snackBar.open('Completa los campos requeridos y adjunta la ficha inicial.', 'Cerrar', { duration: 4200 });
       return;
     }
-    this.reviewOpen.set(true);
+    this.dialog.open(InitiativeReviewDialogComponent, {
+      width: '620px',
+      maxWidth: 'calc(100vw - 40px)',
+      maxHeight: 'calc(100vh - 40px)',
+      autoFocus: 'first-heading',
+      restoreFocus: true,
+      panelClass: 'initiative-review-dialog-panel',
+      backdropClass: 'initiative-review-dialog-backdrop',
+      scrollStrategy: this.overlay.scrollStrategies.block(),
+      data: {
+        pendingCode: this.pendingCode,
+        name: this.form.controls.name.value,
+        responsible: this.form.controls.responsible.value,
+        uploadedFilename: this.uploadedFilename(),
+        registerInitiative: () => this.registerInitiative(),
+      },
+    });
   }
 
-  async registerInitiative(): Promise<void> {
-    if (this.submitting() || !this.canAdministerActiveScope()) return;
+  async registerInitiative(): Promise<boolean> {
+    if (this.submitting() || !this.canAdministerActiveScope()) return false;
     const value = this.form.getRawValue();
     this.submitting.set(true);
     try {
@@ -94,11 +114,12 @@ export class InitiativeFormComponent {
         initialFilename: this.uploadedFilename() ?? '',
         initialFile: this.uploadedFile() ?? undefined,
       }));
-      this.reviewOpen.set(false);
       this.snackBar.open(`Iniciativa ${record.code} registrada.`, 'Cerrar', { duration: 3200 });
       await this.router.navigate(['/iniciativas', record.code]);
+      return true;
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible registrar la iniciativa.', 'Cerrar', { duration: 4200 });
+      return false;
     } finally {
       this.submitting.set(false);
     }
