@@ -62,8 +62,8 @@
         <article class="panel detail-card">
           <header><span><mat-icon>history</mat-icon></span><div><h3>Línea de tiempo</h3><p>Eventos de auditoría asociados al código del registro.</p></div></header>
           <div class="timeline">
-            @for (event of timeline(); track event.timestamp + event.event) {
-              <section><span><mat-icon>{{ event.icon }}</mat-icon></span><div><strong>{{ event.event }}</strong><p>{{ event.observation }}</p><small>{{ event.timestamp }} · {{ event.user }}</small></div></section>
+            @for (event of timeline(); track event.source.timestamp + event.source.event) {
+              <section><span><mat-icon>{{ event.source.icon }}</mat-icon></span><div><strong>{{ event.eventLabel }}</strong><p>{{ event.observation }}</p><small>{{ event.source.timestamp }} · {{ event.source.user }}</small></div></section>
             } @empty {
               <p class="empty-timeline">No existen eventos asociados a esta iniciativa.</p>
             }

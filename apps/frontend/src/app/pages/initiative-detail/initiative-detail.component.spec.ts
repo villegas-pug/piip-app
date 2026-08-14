@@ -3,7 +3,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { PiipMockRepository } from '../../core/piip-mock.repository';
-import { PiipPortfolioRecord } from '../../core/piip.models';
+import { AuditEvent, PiipPortfolioRecord } from '../../core/piip.models';
 import { PiipRepository } from '../../core/piip.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { InitiativeDetailComponent } from './initiative-detail.component';
@@ -122,5 +122,35 @@ describe('InitiativeDetailComponent', () => {
 
     expect(fixture.componentInstance.canAdministerRecord()).toBe(false);
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Registrar aprobación');
+  });
+
+  it('preserves the received descending events and renders their presented copy chronologically', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const receivedEvents: AuditEvent[] = [
+      {
+        recordCode: 'I-024-2026', timestamp: '20/05/2026\n10:28:19', event: 'DOCUMENTO_CARGADO', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
+        observation: '{"tipo":"INITIATIVE_TECHNICAL_OPINION","version":1}', rawDetail: '{"tipo":"INITIATIVE_TECHNICAL_OPINION","version":1}', icon: 'cloud_upload',
+      },
+      {
+        recordCode: 'I-024-2026', timestamp: '20/05/2026\n09:31:12', event: 'INICIATIVA_REGISTRADA', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
+        observation: '{"estado":"Presentado"}', rawDetail: '{"estado":"Presentado"}', icon: 'add',
+      },
+    ];
+    repository.auditEvents.set(receivedEvents);
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+
+    expect(repository.auditEvents()).toEqual(receivedEvents);
+    expect(fixture.componentInstance.descendingAuditEvents()).toEqual(receivedEvents);
+    expect(fixture.componentInstance.timeline().map((event) => event.source.event)).toEqual([
+      'INICIATIVA_REGISTRADA',
+      'DOCUMENTO_CARGADO',
+    ]);
+    const timeline = fixture.nativeElement.querySelector('.timeline') as HTMLElement;
+    expect(timeline.textContent).toContain('Iniciativa registrada');
+    expect(timeline.textContent).toContain('Estado inicial: Presentado.');
+    expect(timeline.textContent).toContain('Documento cargado');
+    expect(timeline.textContent).toContain('Se cargó Informe de opinión técnica de evaluación de iniciativa, versión 1.');
+    expect(timeline.textContent).not.toContain('INITIATIVE_TECHNICAL_OPINION');
   });
 });

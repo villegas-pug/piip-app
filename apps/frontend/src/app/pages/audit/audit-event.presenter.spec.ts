@@ -17,6 +17,18 @@ describe('presentAuditEvent', () => {
     expect(event.technicalDetail).toContain('"INITIATIVE_TECHNICAL_OPINION"');
   });
 
+  it('presents initiative registration with its functional label and initial status', () => {
+    const event = presentAuditEvent({
+      ...baseEvent,
+      event: 'INICIATIVA_REGISTRADA',
+      observation: '{"estado":"Presentado"}',
+      rawDetail: '{"estado":"Presentado"}',
+    });
+
+    expect(event.eventLabel).toBe('Iniciativa registrada');
+    expect(event.observation).toBe('Estado inicial: Presentado.');
+  });
+
   it('uses a safe fallback for unknown events and invalid technical details', () => {
     const event = presentAuditEvent({ ...baseEvent, event: 'EVENTO_DESCONOCIDO', observation: '{no es json}', rawDetail: '{no es json}' });
 

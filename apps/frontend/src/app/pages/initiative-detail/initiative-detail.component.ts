@@ -6,6 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { DocumentRecord, PiipStatus } from '../../core/piip.models';
+import { presentAuditEvent } from '../audit/audit-event.presenter';
 
 const TECHNICAL_REPORT = 'Informe de opinión técnica de evaluación de iniciativa';
 const FORMAL_DECISION = 'Documento formal de decisión de aprobación';
@@ -38,8 +39,11 @@ export class InitiativeDetailComponent {
   readonly missingApprovalDocuments = computed(() =>
     this.approvalDocuments().filter((document) => document.state !== 'Cargado'),
   );
-  readonly timeline = computed(() =>
+  readonly descendingAuditEvents = computed(() =>
     this.repository.auditEvents().filter((event) => event.recordCode === this.code()),
+  );
+  readonly timeline = computed(() =>
+    [...this.descendingAuditEvents()].reverse().map(presentAuditEvent),
   );
 
   openApproval(): void {
