@@ -1,58 +1,84 @@
 <section class="page dashboard-page" aria-labelledby="inicio-title">
   <div class="dashboard-heading">
-    <div>
+    <div class="dashboard-heading-copy">
       <h2 id="inicio-title">Iniciativas y proyectos registrados</h2>
       <p>Los datos mostrados corresponden únicamente a iniciativas y proyectos registrados por la Unidad Ejecutora seleccionada.</p>
+      @if (repository.executingUnits().length === 1) {
+        @if (activeUnit(); as unit) {
+          <span class="single-unit-chip" [attr.aria-label]="'Unidad Ejecutora activa: ' + unit.code + ', ' + unit.name"><mat-icon aria-hidden="true">account_balance</mat-icon><span><small>Unidad Ejecutora</small><strong>{{ unit.code }} · {{ unit.name }}</strong></span></span>
+        }
+      }
     </div>
-    @if (activeUnit(); as unit) {
-      <div class="active-unit" aria-label="Unidad Ejecutora activa"><mat-icon>account_balance</mat-icon><span><small>Unidad Ejecutora activa</small><strong>{{ unit.code }} · {{ unit.name }}</strong></span></div>
-    }
   </div>
 
   <div class="dashboard-filters" aria-label="Filtros del portafolio">
-    <label class="search-field"><mat-icon>search</mat-icon><span class="visually-hidden">Buscar por código o nombre</span><input #search type="search" [value]="query().q" placeholder="Buscar por código o nombre" (input)="onSearch(search.value)" /></label>
-    <label><span class="visually-hidden">Tipo</span><select [value]="query().type" (change)="changeType($any($event.target).value)"><option value="Todos">Tipo: Todos</option><option value="Iniciativa">Tipo: Iniciativa</option><option value="Proyecto">Tipo: Proyecto</option></select></label>
-    <label><span class="visually-hidden">Estado</span><select [value]="query().status" (change)="changeStatus($any($event.target).value)"><option value="Todos">Estado: Todos</option>@for (status of statusOptions(); track status) {<option [value]="status">{{ status }}</option>}</select></label>
-    @if (query().q || query().type !== 'Todos' || query().status !== 'Todos') {<button class="clear-button" type="button" (click)="resetFilters()">Limpiar filtros</button>}
+    <label class="filter-field search-field">
+      <span class="filter-label">Buscar por código o nombre</span>
+      <span class="filter-control search-control"><mat-icon aria-hidden="true">search</mat-icon><input #search type="search" [value]="query().q" placeholder="Código o nombre" (input)="onSearch(search.value)" />@if (query().q) {<button class="search-clear" type="button" aria-label="Limpiar búsqueda" (click)="clearSearch()"><mat-icon aria-hidden="true">close</mat-icon></button>}</span>
+    </label>
+    <label class="filter-field"><span class="filter-label">Tipo</span><span class="filter-control select-control"><select [value]="query().type" (change)="changeType($any($event.target).value)"><option value="Todos">Todos</option><option value="Iniciativa">Iniciativa</option><option value="Proyecto">Proyecto</option></select></span></label>
+    <label class="filter-field status-filter"><span class="filter-label">Estado</span><span class="filter-control select-control"><select [value]="query().status" (change)="changeStatus($any($event.target).value)"><option value="Todos">Todos</option>@for (status of statusOptions(); track status) {<option [value]="status">{{ status }}</option>}</select></span></label>
+    @if (query().type !== 'Todos' || query().status !== 'Todos') {<button class="clear-button" type="button" (click)="resetFilters()"><mat-icon aria-hidden="true">filter_alt_off</mat-icon>Limpiar filtros</button>}
   </div>
 
-  @if (repository.homePortfolioLoading()) { <div class="state-panel" role="status" aria-live="polite"><mat-icon class="button-spinner">progress_activity</mat-icon><p>Cargando el portafolio de la Unidad Ejecutora activa...</p></div> }
-  @if (repository.homePortfolioError(); as error) { <div class="state-panel error" role="alert"><mat-icon>error_outline</mat-icon><p>{{ error }}</p><button type="button" (click)="retryPortfolio()">Reintentar</button></div> }
+  @if (repository.homePortfolioLoading()) { <div class="state-panel" role="status" aria-live="polite"><mat-icon class="button-spinner" aria-hidden="true">progress_activity</mat-icon><p>Cargando el portafolio de la Unidad Ejecutora activa...</p></div> }
+  @if (repository.homePortfolioError(); as error) { <div class="state-panel error" role="alert"><mat-icon aria-hidden="true">error_outline</mat-icon><p>{{ error }}</p><button type="button" (click)="retryPortfolio()">Reintentar</button></div> }
 
   @if (!repository.homePortfolioLoading() && !repository.homePortfolioError()) {
     @if (repository.homePortfolio().executingUnitTotalElements === 0) {
-      <div class="state-panel empty" role="status"><mat-icon>folder_open</mat-icon><h3>Esta Unidad Ejecutora aún no tiene registros</h3><p>Cuando se registren iniciativas o proyectos, aparecerán aquí.</p></div>
+      <div class="state-panel empty" role="status"><mat-icon aria-hidden="true">folder_open</mat-icon><h3>Esta Unidad Ejecutora aún no tiene registros</h3><p>Cuando se registren iniciativas o proyectos, aparecerán aquí.</p></div>
     } @else if (repository.homePortfolio().totalElements === 0) {
-      <div class="state-panel empty" role="status"><mat-icon>search_off</mat-icon><h3>Sin resultados</h3><p>No hay registros que coincidan con los filtros seleccionados.</p><button type="button" (click)="resetFilters()">Limpiar filtros</button></div>
+      <div class="state-panel empty" role="status"><mat-icon aria-hidden="true">search_off</mat-icon><h3>Sin resultados</h3><p>No hay registros que coincidan con los filtros seleccionados.</p><button type="button" (click)="resetFilters()"><mat-icon aria-hidden="true">filter_alt_off</mat-icon>Limpiar filtros</button></div>
     } @else {
       <div class="portfolio-layout">
         <article class="panel portfolio-list-panel" aria-labelledby="portfolio-list-title" [attr.aria-busy]="repository.homePortfolioLoading()">
           <div class="panel-title"><div><h3 id="portfolio-list-title">Registros de la Unidad Ejecutora activa</h3><p>{{ repository.homePortfolio().totalElements }} registros encontrados</p></div></div>
-          <div class="portfolio-table" role="table" aria-label="Registros del portafolio">
-            <div class="portfolio-row portfolio-head" role="row"><span>Código</span><span>Nombre</span><span>Tipo</span><span>Estado actual</span><span>Unidad Ejecutora</span><span>Acción</span></div>
-            @for (item of repository.homePortfolio().content; track item.code) {
-              <div class="portfolio-row" role="row"><strong class="code">{{ item.code }}</strong><span>{{ item.name }}</span><span><b class="record-type" [class.project]="item.recordType === 'Proyecto'">{{ item.recordType }}</b></span><span><b class="status-tag">{{ item.status }}</b></span><span>{{ item.executingUnit }}</span><a class="secondary-button" [routerLink]="detailRoute(item)">Ver detalle <mat-icon>chevron_right</mat-icon></a></div>
-            }
+          <div class="portfolio-table" role="table" aria-label="Registros del portafolio" aria-colcount="6">
+            <div role="rowgroup">
+              <div class="portfolio-row portfolio-head" role="row"><span role="columnheader">Código</span><span role="columnheader">Nombre</span><span role="columnheader">Tipo</span><span role="columnheader">Estado actual</span><span role="columnheader">Unidad Ejecutora</span><span role="columnheader">Acción</span></div>
+            </div>
+            <div role="rowgroup">
+              @for (item of repository.homePortfolio().content; track item.code) {
+                <div class="portfolio-row" role="row">
+                  <strong class="portfolio-cell cell-code code" role="cell"><span class="mobile-label" aria-hidden="true">Código</span>{{ item.code }}</strong>
+                  <span class="portfolio-cell cell-name" role="cell"><span class="mobile-label" aria-hidden="true">Nombre</span>{{ item.name }}</span>
+                  <span class="portfolio-cell cell-type" role="cell"><span class="mobile-label" aria-hidden="true">Tipo</span><b class="record-type" [class.project]="item.recordType === 'Proyecto'"><mat-icon aria-hidden="true">{{ item.recordType === 'Iniciativa' ? 'lightbulb' : 'business_center' }}</mat-icon>{{ item.recordType }}</b></span>
+                  <span class="portfolio-cell cell-status" role="cell"><span class="mobile-label" aria-hidden="true">Estado actual</span><b class="status-tag" [attr.data-tone]="statusVisual(item.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(item.status).icon }}</mat-icon>{{ item.status }}</b></span>
+                  <span class="portfolio-cell cell-unit" role="cell"><span class="mobile-label" aria-hidden="true">Unidad Ejecutora</span>{{ item.executingUnit }}</span>
+                  <span class="portfolio-cell cell-action" role="cell"><a class="secondary-button" [routerLink]="detailRoute(item)" [attr.aria-label]="'Ver detalle de ' + item.recordType + ' ' + item.code">Ver detalle <mat-icon aria-hidden="true">chevron_right</mat-icon></a></span>
+                </div>
+              }
+            </div>
           </div>
           <app-piip-pagination [totalItems]="repository.homePortfolio().totalElements" [pageIndex]="repository.homePortfolio().page" itemLabel="registros" (pageChange)="changePage($event)" />
         </article>
 
         <aside class="portfolio-summary" aria-label="Resumen del portafolio">
-          <article class="panel summary-panel"><div class="panel-title"><h3>Distribución por estado</h3></div><div class="status-cards">@for (item of statusCounts(); track item.status) {<div class="status-card"><span>{{ item.status }}</span><strong>{{ item.count }}</strong></div>}</div><div class="status-chart" role="img" aria-label="Distribución de registros por estado">@for (item of statusCounts(); track item.status) {<div class="chart-row"><span>{{ item.status }}</span><i><b [style.width.%]="barWidth(item.count)"></b></i><strong>{{ item.count }}</strong></div>}</div><p class="chart-total">Total filtrado: {{ repository.homePortfolio().totalElements }}</p></article>
-          <a class="module-link" routerLink="/iniciativas"><mat-icon>description</mat-icon><span>Ver iniciativas</span><mat-icon>chevron_right</mat-icon></a>
-          <a class="module-link" routerLink="/proyectos"><mat-icon>folder_open</mat-icon><span>Ver proyectos</span><mat-icon>chevron_right</mat-icon></a>
+          <article class="panel summary-panel">
+            <div class="panel-title distribution-title"><h3><mat-icon aria-hidden="true">bar_chart</mat-icon><span>Distribución por estado</span></h3><span class="distribution-actions"><span class="distribution-total" [attr.aria-label]="'Total filtrado: ' + repository.homePortfolio().totalElements + ' registros'"><mat-icon aria-hidden="true">format_list_numbered</mat-icon><span aria-hidden="true"><strong>{{ repository.homePortfolio().totalElements }}</strong><small>registros</small></span></span><button class="distribution-toggle" type="button" aria-controls="status-distribution-content" [attr.aria-expanded]="statusDistributionExpanded()" [attr.aria-label]="statusDistributionExpanded() ? 'Contraer distribución por estado' : 'Expandir distribución por estado'" (click)="toggleStatusDistribution()"><mat-icon aria-hidden="true">{{ statusDistributionExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon></button></span></div>
+            <div class="status-chart" id="status-distribution-content" role="list" aria-label="Distribución de registros por estado" [hidden]="!statusDistributionExpanded()">
+              @for (item of statusCounts(); track item.status) {
+                <div class="chart-row" role="listitem" [attr.aria-label]="item.status + ': ' + item.count + ' registros'">
+                  <div class="chart-row-meta" aria-hidden="true"><span class="chart-status" [attr.data-tone]="statusVisual(item.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(item.status).icon }}</mat-icon>{{ item.status }}</span><strong>{{ item.count }}</strong></div>
+                  <span class="chart-track" aria-hidden="true"><span class="chart-fill" [style.width.%]="barWidth(item.count)"></span></span>
+                </div>
+              }
+            </div>
+          </article>
+          <a class="module-link" routerLink="/iniciativas"><mat-icon aria-hidden="true">description</mat-icon><span>Ver iniciativas</span><mat-icon aria-hidden="true">chevron_right</mat-icon></a>
+          <a class="module-link" routerLink="/proyectos"><mat-icon aria-hidden="true">folder_open</mat-icon><span>Ver proyectos</span><mat-icon aria-hidden="true">chevron_right</mat-icon></a>
         </aside>
       </div>
     }
   }
 
   <section class="panel notification-panel" id="mis-notificaciones" tabindex="-1" aria-labelledby="notifications-title" [attr.aria-busy]="repository.notificationsLoading()">
-    <div class="panel-title notification-heading"><div><h3 id="notifications-title">Mis notificaciones</h3><p>Avisos dirigidos a este usuario</p></div><span class="unread-count">{{ unreadNotifications().length }} no leídas</span></div>
-    <div class="notification-tabs" role="tablist" aria-label="Filtro de notificaciones"><button type="button" role="tab" [attr.aria-selected]="notificationTab() === 'all'" [class.active]="notificationTab() === 'all'" (click)="setNotificationTab('all')">Todas <span>{{ allNotifications().length }}</span></button><button type="button" role="tab" [attr.aria-selected]="notificationTab() === 'unread'" [class.active]="notificationTab() === 'unread'" (click)="setNotificationTab('unread')">No leídas <span>{{ unreadNotifications().length }}</span></button></div>
+    <div class="panel-title notification-heading"><div><h3 id="notifications-title">Mis notificaciones</h3><p>Avisos dirigidos a este usuario</p></div><span class="unread-count" aria-live="polite" aria-atomic="true">{{ unreadNotifications().length }} no leídas</span></div>
+    <div class="notification-tabs" role="group" aria-label="Filtro de notificaciones"><button type="button" [attr.aria-pressed]="notificationTab() === 'all'" [class.active]="notificationTab() === 'all'" (click)="setNotificationTab('all')">Todas <span>{{ allNotifications().length }}</span></button><button type="button" [attr.aria-pressed]="notificationTab() === 'unread'" [class.active]="notificationTab() === 'unread'" (click)="setNotificationTab('unread')">No leídas <span>{{ unreadNotifications().length }}</span></button></div>
     @if (repository.notificationsLoading()) {<div class="notification-state" role="status">Cargando notificaciones...</div>}
     @else if (repository.notificationsError(); as error) {<div class="notification-state error" role="alert">{{ error }} <button type="button" (click)="retryNotifications()">Reintentar</button></div>}
-    @else if (visibleNotifications().length === 0) {<div class="notification-state" role="status"><mat-icon>notifications_none</mat-icon><span>No existen notificaciones para mostrar.</span></div>}
-    @else {<div class="notification-list">@for (item of visibleNotifications(); track item.id) {<article class="notification-row" [class.unread]="!item.read"><span class="notification-icon"><mat-icon>{{ item.read ? 'drafts' : 'notifications_none' }}</mat-icon></span><div class="notification-copy"><strong>{{ item.type }}</strong><p>{{ item.message }}</p><small>{{ item.createdAt | date:'short' }} · {{ item.read ? 'Leída' : 'No leída' }}</small></div>@if (!item.read) {<button class="read-button" type="button" (click)="markAsRead(item.id)">Marcar como leída</button>}</article>}</div>}
-    @if (allNotifications().length > 3) {<button class="all-notifications" type="button" [attr.aria-expanded]="notificationsExpanded()" (click)="toggleNotifications()">{{ notificationsExpanded() ? 'Mostrar resumen' : 'Ver todas' }} <mat-icon>{{ notificationsExpanded() ? 'expand_less' : 'chevron_right' }}</mat-icon></button>}
+    @else if (visibleNotifications().length === 0) {<div class="notification-state" role="status"><mat-icon aria-hidden="true">notifications_none</mat-icon><span>No existen notificaciones para mostrar.</span></div>}
+    @else {<div class="notification-list">@for (item of visibleNotifications(); track item.id) {<article class="notification-row" [class.unread]="!item.read"><span class="notification-icon"><mat-icon aria-hidden="true">{{ item.read ? 'drafts' : 'notifications_none' }}</mat-icon></span><div class="notification-copy"><strong>{{ notificationTypeLabel(item.type) }}</strong><p>{{ item.message }}</p><small>{{ formatNotificationDate(item.createdAt) }} · {{ item.read ? 'Leída' : 'No leída' }}</small></div>@if (!item.read) {<button class="read-button" type="button" (click)="markAsRead(item.id)"><mat-icon aria-hidden="true">mark_email_read</mat-icon>Marcar como leída</button>}</article>}</div>}
+    @if (allNotifications().length > 3) {<button class="all-notifications" type="button" [attr.aria-expanded]="notificationsExpanded()" (click)="toggleNotifications()">{{ notificationsExpanded() ? 'Mostrar resumen' : 'Ver todas' }} <mat-icon aria-hidden="true">{{ notificationsExpanded() ? 'expand_less' : 'chevron_right' }}</mat-icon></button>}
   </section>
 </section>

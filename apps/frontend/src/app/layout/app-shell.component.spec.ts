@@ -82,6 +82,48 @@ describe('AppShellComponent loading state', () => {
     expect(menuText).toContain('Unidad activa');
   });
 
+  it('muestra el selector de Unidad Ejecutora solo cuando existe más de una opción', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.executing-unit-trigger')).toBeNull();
+
+    repository.executingUnits.update((units) => [...units, { id: 2, code: 'UE-002', name: 'Unidad adicional', institutionId: 1 }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.executing-unit-trigger')).not.toBeNull();
+  });
+
+  it('ofrece nombres accesibles en la navegación lateral colapsable', () => {
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+
+    const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>('nav a'));
+    expect(links.length).toBeGreaterThan(0);
+    links.forEach((link) => {
+      const visibleLabel = link.querySelector('span')?.textContent?.trim();
+      expect(link.getAttribute('aria-label')).toBe(visibleLabel);
+      expect(link.getAttribute('title')).toBe(visibleLabel);
+    });
+  });
+
+  it('presenta PIIP como título móvil de Inicio y conserva el título contextual accesible', () => {
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.componentInstance.currentUrl.set('/inicio');
+    fixture.detectChanges();
+
+    const heading = (fixture.nativeElement as HTMLElement).querySelector<HTMLHeadingElement>('.topbar h1')!;
+    expect(heading.getAttribute('aria-label')).toBe('Gestión de Iniciativas y Proyectos');
+    expect(heading.querySelector('.topbar-title-compact')?.textContent).toBe('PIIP');
+    expect(heading.querySelector('.topbar-title-context')?.classList.contains('home-route')).toBe(true);
+
+    fixture.componentInstance.currentUrl.set('/proyectos');
+    fixture.detectChanges();
+    expect(heading.getAttribute('aria-label')).toBe('Proyectos');
+    expect(heading.querySelector('.topbar-title-compact')).toBeNull();
+    expect(heading.querySelector('.topbar-title-context')?.textContent).toBe('Proyectos');
+  });
+
   it('shows the authenticated user name above the effective role in the profile control', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.currentUser.set({

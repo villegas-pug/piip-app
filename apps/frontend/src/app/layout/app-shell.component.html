@@ -9,8 +9,8 @@
     <nav aria-label="Navegación principal">
       @for (item of navigation; track item.route) {
         @if (!item.adminOnly || repository.hasAnyAdministratorScope()) {
-          <a [routerLink]="item.route" [class.active]="isNavigationActive(item)" [attr.aria-current]="isNavigationActive(item) ? 'page' : null">
-            <mat-icon>{{ item.icon }}</mat-icon>
+          <a [routerLink]="item.route" [class.active]="isNavigationActive(item)" [attr.aria-current]="isNavigationActive(item) ? 'page' : null" [attr.aria-label]="item.label" [attr.title]="item.label">
+            <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
             <span>{{ item.label }}</span>
           </a>
         }
@@ -28,7 +28,7 @@
 
   <div class="workspace">
     <header class="topbar">
-      <h1>{{ pageTitle() }}</h1>
+      <h1 [attr.aria-label]="pageTitle()"><span class="topbar-title-context" [class.home-route]="isHomeRoute()" aria-hidden="true">{{ pageTitle() }}</span>@if (isHomeRoute()) {<span class="topbar-title-compact" aria-hidden="true">PIIP</span>}</h1>
       <div class="profile-actions">
         @if (repository.executingUnits().length > 1) {
           @if (activeExecutingUnit(); as unit) {

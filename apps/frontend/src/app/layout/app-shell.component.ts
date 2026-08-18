@@ -31,6 +31,7 @@ export class AppShellComponent {
   readonly auth = inject(PiipAuthService);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly currentUrl = signal(this.router.url);
+  readonly isHomeRoute = computed(() => this.currentUrl().split(/[?#]/, 1)[0] === '/inicio');
   readonly notificationPending = signal(false);
   readonly unreadNotificationCount = computed(() => this.repository.notifications().filter((item) => !item.read).length);
   readonly hasUnreadNotifications = computed(() => this.unreadNotificationCount() > 0);

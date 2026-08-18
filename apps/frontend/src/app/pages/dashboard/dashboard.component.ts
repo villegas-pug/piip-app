@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
@@ -7,9 +6,32 @@ import { HomePortfolioQuery, PiipRecordType, PiipStatus } from '../../core/piip.
 import { INITIATIVE_STATUSES, PIIP_CATALOGS, PROJECT_STATUSES } from '../../core/piip.catalogs';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 
+type StatusTone = 'pending' | 'success' | 'progress' | 'neutral' | 'warning' | 'danger';
+
+interface StatusVisual {
+  readonly icon: string;
+  readonly tone: StatusTone;
+}
+
+const STATUS_VISUALS: Readonly<Record<string, StatusVisual>> = {
+  Presentado: { icon: 'schedule', tone: 'pending' },
+  'Iniciativa aprobada': { icon: 'check_circle', tone: 'success' },
+  'Producto aprobado': { icon: 'check_circle', tone: 'success' },
+  Finalizado: { icon: 'check_circle', tone: 'success' },
+  'Proyecto en ejecución': { icon: 'play_circle', tone: 'progress' },
+  'Iniciativa archivada': { icon: 'archive', tone: 'neutral' },
+  'No Aplicable': { icon: 'remove_circle_outline', tone: 'neutral' },
+  Suspendido: { icon: 'pause_circle', tone: 'warning' },
+  'Producto no aprobado': { icon: 'cancel', tone: 'danger' },
+  'No Admisible': { icon: 'cancel', tone: 'danger' },
+  Cancelado: { icon: 'cancel', tone: 'danger' },
+};
+
+const FALLBACK_STATUS_VISUAL: StatusVisual = { icon: 'circle', tone: 'neutral' };
+
 @Component({
   selector: 'app-dashboard',
-  imports: [DatePipe, MatIconModule, RouterLink, PiipPaginationComponent],
+  imports: [MatIconModule, RouterLink, PiipPaginationComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,6 +42,7 @@ export class DashboardComponent implements OnDestroy {
   readonly query = signal<HomePortfolioQuery>({ executingUnitId: 0, q: '', type: 'Todos', status: 'Todos', page: 0, size: this.pageSize });
   readonly notificationTab = signal<'all' | 'unread'>('all');
   readonly notificationsExpanded = signal(false);
+  readonly statusDistributionExpanded = signal(true);
   readonly activeUnit = computed(() => this.repository.executingUnits().find((unit) => unit.id === this.repository.selectedExecutingUnitId()));
   readonly statusOptions = computed<readonly PiipStatus[]>(() => {
     const type = this.query().type;
@@ -35,6 +58,7 @@ export class DashboardComponent implements OnDestroy {
   });
   readonly statusCounts = computed(() => this.repository.homePortfolio().statusCounts);
   readonly maximumStatusCount = computed(() => Math.max(...this.statusCounts().map((item) => item.count), 1));
+  private readonly notificationDateFormatter = new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
   private searchTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
@@ -54,6 +78,8 @@ export class DashboardComponent implements OnDestroy {
     this.searchTimer = setTimeout(() => { void this.loadPortfolio(); }, 300);
   }
 
+  clearSearch(): void { this.onSearch(''); }
+
   changeType(value: string): void {
     const type = value as PiipRecordType | 'Todos';
     const currentStatus = this.query().status;
@@ -68,6 +94,7 @@ export class DashboardComponent implements OnDestroy {
   changeStatus(value: string): void { this.query.update((current) => ({ ...current, status: value as PiipStatus | 'Todos', page: 0 })); void this.loadPortfolio(); }
   changePage(page: number): void { this.query.update((current) => ({ ...current, page })); void this.loadPortfolio(); }
   resetFilters(): void { this.query.update((current) => ({ ...current, q: '', type: 'Todos', status: 'Todos', page: 0 })); void this.loadPortfolio(); }
+  toggleStatusDistribution(): void { this.statusDistributionExpanded.update((expanded) => !expanded); }
   toggleNotifications(): void { this.notificationsExpanded.update((expanded) => !expanded); }
   setNotificationTab(tab: 'all' | 'unread'): void { this.notificationTab.set(tab); this.notificationsExpanded.set(false); }
 
@@ -78,6 +105,16 @@ export class DashboardComponent implements OnDestroy {
 
   retryNotifications(): void { void Promise.resolve(this.repository.refreshNotifications()); }
   retryPortfolio(): void { void this.loadPortfolio(); }
+  notificationTypeLabel(type: string): string {
+    if (!/^[A-Z0-9_]+$/.test(type)) return type;
+    const normalized = type.toLocaleLowerCase('es-PE').replaceAll('_', ' ');
+    return normalized.charAt(0).toLocaleUpperCase('es-PE') + normalized.slice(1);
+  }
+  formatNotificationDate(value: string): string {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : this.notificationDateFormatter.format(date);
+  }
+  statusVisual(status: string): StatusVisual { return STATUS_VISUALS[status] ?? FALLBACK_STATUS_VISUAL; }
   statusCount(status: PiipStatus): number { return this.statusCounts().find((item) => item.status === status)?.count ?? 0; }
   barWidth(value: number): number { return value ? Math.max(8, Math.round((value / this.maximumStatusCount()) * 100)) : 0; }
   detailRoute(item: { recordType: PiipRecordType; code: string }): string[] { return [item.recordType === 'Iniciativa' ? '/iniciativas' : '/proyectos', item.code]; }
