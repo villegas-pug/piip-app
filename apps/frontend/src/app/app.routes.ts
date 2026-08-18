@@ -96,6 +96,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'proyectos/:code',
+        title: 'PIIP | Detalle de proyecto',
+        loadComponent: () =>
+          import('./pages/project-detail/project-detail.component').then(
+            (module) => module.ProjectDetailComponent,
+          ),
+      },
+      {
         path: 'proyectos',
         title: 'PIIP | Proyectos',
         loadComponent: () =>

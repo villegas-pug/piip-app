@@ -37,4 +37,20 @@ describe('presentAuditEvent', () => {
     expect(event.technicalDetail).toBe('{no es json}');
     expect(event.detailFields).toEqual([]);
   });
+
+  it('presents portfolio status transitions with both states and the observation', () => {
+    const event = presentAuditEvent({
+      ...baseEvent,
+      event: 'ESTADO_PROYECTO_CAMBIADO',
+      observation: '{"estadoAnterior":"Proyecto en ejecución","estadoNuevo":"Finalizado","observacion":"Cierre validado"}',
+      rawDetail: '{"estadoAnterior":"Proyecto en ejecución","estadoNuevo":"Finalizado","observacion":"Cierre validado"}',
+    });
+
+    expect(event.eventLabel).toBe('Estado de proyecto cambiado');
+    expect(event.observation).toBe('El proyecto cambió de Proyecto en ejecución a Finalizado. Observación: Cierre validado');
+    expect(event.detailFields).toEqual(expect.arrayContaining([
+      { label: 'Estado anterior', value: 'Proyecto en ejecución' },
+      { label: 'Estado nuevo', value: 'Finalizado' },
+    ]));
+  });
 });

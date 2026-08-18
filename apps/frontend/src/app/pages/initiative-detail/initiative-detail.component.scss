@@ -56,6 +56,8 @@
 
 .transition { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 20px 22px 10px; padding: 14px; border-radius: 7px; background: var(--piip-mint-soft); }
 .transition strong { color: var(--piip-green-800); }
+.linked-project-lock { display: flex; align-items: flex-start; gap: 7px; margin: 14px 0 0; color: var(--piip-green-900); font-size: 13px; line-height: 1.45; }
+.linked-project-lock mat-icon { flex: 0 0 auto; font-size: 18px; width: 18px; height: 18px; }
 .nonblocking-warning { display: flex; gap: 11px; margin: 12px 22px; padding: 13px; border: 1px solid #efd59b; border-radius: 6px; color: #805a00; background: #fff8e8; }
 .nonblocking-warning p { margin: 3px 0 0; font-size: 13px; }
 .approval-form { padding: 5px 22px 18px; }

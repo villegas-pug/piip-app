@@ -27,4 +27,16 @@ describe('InitiativesComponent pagination', () => {
     expect(component.currentPage()).toBe(0);
     expect(component.pagedInitiatives()).toHaveLength(1);
   });
+
+  it('shows only initiative states in the status filter and keeps the list consultive', () => {
+    const fixture = TestBed.createComponent(InitiativesComponent);
+    fixture.detectChanges();
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    const options = Array.from(nativeElement.querySelectorAll('select[formcontrolname="status"] option'))
+      .map((option) => option.textContent?.trim());
+
+    expect(options).toEqual(expect.arrayContaining(['Presentado', 'Iniciativa aprobada', 'Iniciativa archivada', 'No Admisible']));
+    expect(options).not.toEqual(expect.arrayContaining(['Proyecto en ejecución', 'Producto aprobado', 'Suspendido', 'Finalizado', 'No Aplicable']));
+    expect(nativeElement.textContent).not.toContain('Cambiar estado');
+  });
 });

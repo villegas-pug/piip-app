@@ -26,10 +26,16 @@ class OpenApiGenerationTest {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body())
             .contains("/initiatives", "/projects/derived", "/portfolio-records/{recordCode}/documents",
-                "/admin/users/administrable-scopes")
+                "/admin/users/administrable-scopes", "/initiatives/{code}/status-transitions",
+                "/projects/{code}/status-transitions", "InitiativeStatusTransitionRequest",
+                "ProjectStatusTransitionRequest")
+            .contains("\"400\"", "\"403\"", "\"404\"", "\"409\"", "\"422\"")
             .contains("roleScopes", "RoleScopeResponse", "executingUnitId", "AdministrableScopeResponse",
                 "AdministrableExecutingUnitResponse", "institutionWideAllowed")
             .doesNotContain("/admin/users/{userId}/status");
+        assertThat(response.body())
+            .contains("InitiativeStatusTransitionRequest", "ProjectStatusTransitionRequest")
+            .contains("\"/initiatives/{code}/status-transitions\"", "\"/projects/{code}/status-transitions\"");
         Path output = Path.of("target", "piip-openapi.json");
         Files.createDirectories(output.getParent());
         Files.writeString(output, response.body(), StandardCharsets.UTF_8);

@@ -1,0 +1,78 @@
+<section class="page detail-page">
+  @if (detail(); as detail) {
+    <nav class="breadcrumbs" aria-label="Ruta de navegación"><a routerLink="/proyectos">Proyectos</a><mat-icon>chevron_right</mat-icon><span>{{ detail.project.code }}</span></nav>
+
+    <header class="detail-hero panel">
+      <div class="hero-main">
+        <span class="record-kicker">PROYECTO · {{ detail.project.code }}</span>
+        <h2>{{ detail.project.name }}</h2>
+        <p>{{ detail.portfolioRecord.description }}</p>
+        <span class="status" [class]="statusClass(detail.project.status)">{{ detail.project.status }}</span>
+      </div>
+      <div class="hero-actions">
+        <a class="secondary-button" [routerLink]="['/proyectos', detail.project.code, 'documentos']"><mat-icon>description</mat-icon>Ver documentos</a>
+        @if (repository.hasAnyAdministratorScope()) {<a class="secondary-button" routerLink="/auditoria" [queryParams]="{ record: detail.project.code }"><mat-icon>history</mat-icon>Auditoría</a>}
+      </div>
+    </header>
+
+    <div class="detail-grid">
+      <main>
+        <article class="panel detail-card">
+          <header><span><mat-icon>assignment</mat-icon></span><div><h3>Datos generales</h3><p>Información registrada del proyecto.</p></div></header>
+          <dl class="data-grid">
+            <div><dt>Tipo de registro</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div>
+            <div><dt>Origen</dt><dd>{{ detail.project.originMode === 'DERIVED_FROM_INITIATIVE' ? 'Proyecto derivado' : 'Proyecto preexistente' }}</dd></div>
+            <div><dt>Iniciativa de origen</dt><dd>@if (detail.originInitiative) {<a [routerLink]="['/iniciativas', detail.originInitiative.code]">{{ detail.originInitiative.code }}</a>} @else {NA}</dd></div>
+            <div><dt>Fecha de inicio</dt><dd>{{ detail.portfolioRecord.startDate }}</dd></div>
+            <div><dt>Tipo de solución</dt><dd>{{ detail.portfolioRecord.solutionType }}</dd></div>
+            <div><dt>Componente digital</dt><dd>{{ detail.portfolioRecord.digitalComponent }}</dd></div>
+            <div class="wide"><dt>Descripción</dt><dd>{{ detail.portfolioRecord.description }}</dd></div>
+            <div class="wide"><dt>Nota</dt><dd>{{ detail.portfolioRecord.note || 'Sin nota registrada' }}</dd></div>
+          </dl>
+        </article>
+
+        <article class="panel detail-card">
+          <header><span><mat-icon>groups</mat-icon></span><div><h3>Responsable y cierre</h3><p>Seguimiento operativo del proyecto.</p></div></header>
+          <dl class="data-grid">
+            <div><dt>Responsable</dt><dd>{{ detail.portfolioRecord.responsible }}</dd></div>
+            <div><dt>Unidad Ejecutora</dt><dd>{{ detail.portfolioRecord.executingUnitId ?? detail.project.unit }}</dd></div>
+            <div class="wide"><dt>Resultados clave</dt><dd>{{ detail.portfolioRecord.keyResults || 'Sin información registrada' }}</dd></div>
+            <div><dt>Fecha de cierre</dt><dd>{{ detail.portfolioRecord.closingDate || 'Sin fecha registrada' }}</dd></div>
+          </dl>
+        </article>
+
+        <article class="panel detail-card">
+          <header><span><mat-icon>history</mat-icon></span><div><h3>Línea de tiempo</h3><p>Eventos de auditoría asociados al proyecto.</p></div></header>
+          <div class="timeline">
+            @for (event of timeline(); track event.source.timestamp + event.source.event) {
+              <section><span><mat-icon>{{ event.source.icon }}</mat-icon></span><div><strong>{{ event.eventLabel }}</strong><p>{{ event.observation }}</p><small>{{ event.source.timestamp }} · {{ event.source.user }}</small></div></section>
+            } @empty {<p class="empty-timeline">No existen eventos asociados a este proyecto.</p>}
+          </div>
+        </article>
+      </main>
+
+      <aside>
+        <article class="panel transition-card">
+          <span class="record-kicker">CICLO DEL PROYECTO</span>
+          <h3>Actualizar estado</h3>
+          <p>Las transiciones se realizan únicamente desde este detalle y no mezclan estados de iniciativa.</p>
+          @if (canAdministerRecord() && transitionOptions().length) {
+            <div class="transition-options">@for (target of transitionOptions(); track target) {<button class="secondary-button" type="button" (click)="openStatusTransition(target)">{{ target }}<mat-icon>arrow_forward</mat-icon></button>}</div>
+          } @else {<p class="terminal-message">Este estado no tiene destinos disponibles.</p>}
+        </article>
+      </aside>
+    </div>
+
+    @if (transitionTarget(); as target) {
+      <div class="review-backdrop" (click)="closeStatusTransition()">
+        <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="project-transition-title" (click)="$event.stopPropagation()">
+          <header><span><mat-icon>swap_horiz</mat-icon></span><div><p>CAMBIO DE ESTADO</p><h2 id="project-transition-title">{{ detail.project.status }} → {{ target }}</h2></div><button class="icon-action" type="button" aria-label="Cerrar" [disabled]="submitting()" (click)="closeStatusTransition()"><mat-icon>close</mat-icon></button></header>
+          <form [formGroup]="transitionForm" class="approval-form"><label class="field"><span>Observación para auditoría</span><textarea formControlName="observation" maxlength="1000" placeholder="Comentario opcional"></textarea></label></form>
+          <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="closeStatusTransition()">Cancelar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="transitionStatus()"><mat-icon>{{ submitting() ? 'progress_activity' : 'check' }}</mat-icon>{{ submitting() ? 'Guardando...' : 'Confirmar cambio' }}</button></footer>
+        </section>
+      </div>
+    }
+  } @else {
+    <article class="panel missing-detail"><mat-icon>search_off</mat-icon><h2>Proyecto no encontrado</h2><p>No existe información para el código <strong>{{ code() || 'solicitado' }}</strong>.</p><a class="primary-button" routerLink="/proyectos"><mat-icon>arrow_back</mat-icon>Volver a proyectos</a></article>
+  }
+</section>

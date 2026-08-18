@@ -4,14 +4,16 @@ import { Observable, firstValueFrom } from 'rxjs';
 import {
   AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
   DocumentDossierSummary, DocumentRecord, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail,
-  InitiativeInput, InitiativeRecord, NotificationItem, OrganizationalUnit, PiipPortfolioRecord, PiipRecordType,
-  PreexistingProjectInput, ProjectRecord, UserRole, UserRoleCode, WorkItem,
+  InitiativeInput, InitiativeRecord, InitiativeStatusTransitionInput, NotificationItem, OrganizationalUnit,
+  PiipPortfolioRecord, PiipRecordType, PreexistingProjectInput, ProjectDetail, ProjectRecord,
+  ProjectStatusTransitionInput, UserRole, UserRoleCode, WorkItem,
 } from './piip.models';
-import { CurrentUserResponse, EventResponse, UserAdministrationControllerService } from '../api/generated';
+import { CurrentUserResponse, EventResponse, PortfolioControllerService, UserAdministrationControllerService } from '../api/generated';
 import { PiipRepository } from './piip.repository';
 import { resolveApiUrl as runtimeApiUrl } from './piip-runtime-config';
 import {
-  ApprovalRequest, DerivedProjectRequest, InitiativeCreateRequest, PreexistingProjectRequest, ResponsibleUnitInput,
+  ApprovalRequest, DerivedProjectRequest, InitiativeCreateRequest, InitiativeStatusTransitionRequest,
+  PreexistingProjectRequest, ProjectStatusTransitionRequest, ResponsibleUnitInput,
 } from '../api/generated/models';
 
 interface ApiPortfolioRecord {
@@ -116,6 +118,7 @@ export class PiipHttpRepository extends PiipRepository {
 
   private readonly http = inject(HttpClient);
   private readonly userAdministration = inject(UserAdministrationControllerService);
+  private readonly portfolio = inject(PortfolioControllerService);
   private readonly apiUrl = runtimeApiUrl();
   private readonly recordVersions = new Map<string, number>();
   private readonly eligibleInitiatives = signal<InitiativeRecord[]>([]);
@@ -125,6 +128,7 @@ export class PiipHttpRepository extends PiipRepository {
   constructor() {
     super();
     this.userAdministration.rootUrl = this.apiUrl;
+    this.portfolio.rootUrl = this.apiUrl;
     void this.initialize();
   }
 
@@ -264,6 +268,21 @@ export class PiipHttpRepository extends PiipRepository {
     };
   }
 
+  getProjectDetail(code: string): ProjectDetail | undefined {
+    const project = this.projects().find((item) => item.code === code);
+    const portfolioRecord = this.portfolioRecords().find((item) => item.recordType === 'Proyecto' && item.code === code);
+    if (!project || !portfolioRecord) {
+      void this.loadPortfolioRecord('Proyecto', code).catch((error) => this.captureError(error));
+      return undefined;
+    }
+    return {
+      project,
+      portfolioRecord,
+      dossier: this.getDocumentDossier('Proyecto', code),
+      originInitiative: project.originMode === 'DERIVED_FROM_INITIATIVE' ? this.initiatives().find((item) => item.code === project.originCode) : undefined,
+    };
+  }
+
   getProjectByOrigin(initiativeCode: string): ProjectRecord | undefined {
     return this.projects().find((project) => project.originMode === 'DERIVED_FROM_INITIATIVE' && project.originCode === initiativeCode);
   }
@@ -326,6 +345,36 @@ export class PiipHttpRepository extends PiipRepository {
     const record = await this.request(this.http.post<ApiPortfolioRecord>(`${this.apiUrl}/initiatives/${input.initiativeCode}/approval`, request));
     await this.refreshAll();
     await this.loadDocuments('Iniciativa', input.initiativeCode);
+    return toPortfolioRecord(record);
+  }
+
+  async transitionInitiativeStatus(input: InitiativeStatusTransitionInput): Promise<PiipPortfolioRecord> {
+    this.requireAdministratorForExecutingUnit(this.executingUnitIdForRecord(input.initiativeCode));
+    const version = this.recordVersions.get(input.initiativeCode);
+    if (version === undefined) throw new PiipApiError(409, 'No se encontró la versión vigente de la iniciativa. Recarga el expediente.');
+    const request: InitiativeStatusTransitionRequest = {
+      version,
+      targetStatus: portfolioStatusCode(input.targetStatus) as InitiativeStatusTransitionRequest['targetStatus'],
+      observation: input.observation,
+    };
+    const record = await this.request(this.portfolio.transitionInitiative({ code: input.initiativeCode, body: request })) as unknown as ApiPortfolioRecord;
+    this.recordVersions.set(record.code, record.version);
+    await this.refreshAll();
+    return toPortfolioRecord(record);
+  }
+
+  async transitionProjectStatus(input: ProjectStatusTransitionInput): Promise<PiipPortfolioRecord> {
+    this.requireAdministratorForExecutingUnit(this.executingUnitIdForRecord(input.projectCode));
+    const version = this.recordVersions.get(input.projectCode);
+    if (version === undefined) throw new PiipApiError(409, 'No se encontró la versión vigente del proyecto. Recarga el expediente.');
+    const request: ProjectStatusTransitionRequest = {
+      version,
+      targetStatus: portfolioStatusCode(input.targetStatus) as ProjectStatusTransitionRequest['targetStatus'],
+      observation: input.observation,
+    };
+    const record = await this.request(this.portfolio.transitionProject({ code: input.projectCode, body: request })) as unknown as ApiPortfolioRecord;
+    this.recordVersions.set(record.code, record.version);
+    await this.refreshAll();
     return toPortfolioRecord(record);
   }
 
@@ -634,6 +683,15 @@ export class PiipHttpRepository extends PiipRepository {
 
 export function resolveApiUrl(): string {
   return runtimeApiUrl();
+}
+
+function portfolioStatusCode(status: PiipPortfolioRecord['status']): string {
+  const codes: Record<string, string> = {
+    'Presentado': 'PRESENTED', 'Iniciativa aprobada': 'INITIATIVE_APPROVED', 'Iniciativa archivada': 'INITIATIVE_ARCHIVED',
+    'Proyecto en ejecución': 'PROJECT_IN_PROGRESS', 'Producto aprobado': 'PRODUCT_APPROVED', 'Producto no aprobado': 'PRODUCT_NOT_APPROVED',
+    Suspendido: 'SUSPENDED', Cancelado: 'CANCELLED', Finalizado: 'FINISHED', 'No Aplicable': 'NOT_APPLICABLE', 'No Admisible': 'NOT_ADMISSIBLE',
+  };
+  return codes[status] ?? status;
 }
 
 function toPortfolioRecord(value: ApiPortfolioRecord): PiipPortfolioRecord {

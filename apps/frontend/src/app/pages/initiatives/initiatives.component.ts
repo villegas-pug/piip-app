@@ -4,7 +4,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
-import { PIIP_CATALOGS, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
+import { INITIATIVE_STATUSES, PIIP_CATALOGS, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PiipStatus } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
@@ -22,6 +22,7 @@ export class InitiativesComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly catalogs = PIIP_CATALOGS;
+  readonly initiativeStatuses = INITIATIVE_STATUSES;
   readonly units = RESPONSIBLE_UNITS;
   readonly filters = this.formBuilder.nonNullable.group({ search: '', status: 'Todos', source: 'Todos', unit: 'Todas', date: '' });
   private readonly filterValue = toSignal(this.filters.valueChanges, { initialValue: this.filters.getRawValue() });

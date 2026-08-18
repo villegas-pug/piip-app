@@ -10,7 +10,7 @@
     <article class="panel filter-table-panel">
       <form class="filters" [formGroup]="filters">
         <label class="field search"><span>Buscar</span><span class="input-icon"><input formControlName="search" placeholder="Buscar por código o iniciativa" /><mat-icon>search</mat-icon></span></label>
-        <label class="field"><span>Estado</span><select formControlName="status"><option>Todos</option>@for (status of catalogs.statuses; track status) {<option [value]="status">{{ status }}</option>}</select></label>
+        <label class="field"><span>Estado</span><select formControlName="status"><option>Todos</option>@for (status of initiativeStatuses; track status) {<option [value]="status">{{ status }}</option>}</select></label>
         <label class="field"><span>Fuente u origen</span><select formControlName="source"><option>Todos</option>@for (source of catalogs.sources; track source) {<option [value]="source">{{ source }}</option>}</select></label>
         <label class="field"><span>Unidad responsable</span><select formControlName="unit"><option>Todas</option>@for (unit of units; track unit) {<option [value]="unit">{{ unit }}</option>}</select></label>
         <label class="field"><span>Fecha</span><input type="date" formControlName="date" /></label>

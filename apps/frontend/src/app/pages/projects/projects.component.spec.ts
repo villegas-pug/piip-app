@@ -86,4 +86,23 @@ describe('ProjectsComponent', () => {
     component.filters.patchValue({ search: 'P-100-2026' });
     expect(component.currentPage()).toBe(0);
   });
+
+  it('shows only project states in the status filter and keeps the list consultive', () => {
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.detectChanges();
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    const options = Array.from(nativeElement.querySelectorAll('select[formcontrolname="status"] option'))
+      .map((option) => option.textContent?.trim());
+
+    expect(options).toEqual(expect.arrayContaining(['Proyecto en ejecución', 'Producto aprobado', 'Producto no aprobado', 'Suspendido', 'Cancelado', 'Finalizado']));
+    expect(options).not.toEqual(expect.arrayContaining(['Presentado', 'Iniciativa aprobada', 'Iniciativa archivada', 'No Admisible', 'No Aplicable']));
+    expect(nativeElement.textContent).not.toContain('Cambiar estado');
+  });
+
+  it('opens the general project detail and keeps documents as a separate menu option', () => {
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.detectChanges();
+    const openLink = fixture.nativeElement.querySelector('tbody tr a.secondary-button') as HTMLAnchorElement;
+    expect(openLink.getAttribute('href')).toBe('/proyectos/P-003-2026');
+  });
 });

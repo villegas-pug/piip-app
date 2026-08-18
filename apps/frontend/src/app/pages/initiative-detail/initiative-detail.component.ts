@@ -6,6 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { DocumentRecord, PiipStatus } from '../../core/piip.models';
+import { INITIATIVE_STATUS_TRANSITIONS } from '../../core/piip.catalogs';
 import { presentAuditEvent } from '../audit/audit-event.presenter';
 
 const TECHNICAL_REPORT = 'Informe de opinión técnica de evaluación de iniciativa';
@@ -29,8 +30,14 @@ export class InitiativeDetailComponent {
   readonly detail = computed(() => this.repository.getInitiativeDetail(this.code()));
   readonly canAdministerRecord = computed(() => this.repository.canAdministerExecutingUnit(this.detail()?.initiative.executingUnitId));
   readonly decisionOpen = signal(this.route.snapshot.queryParamMap.get('action') === 'approve');
+  readonly transitionTarget = signal<'Iniciativa archivada' | 'No Admisible' | null>(null);
   readonly approvalComplete = signal(false);
   readonly submitting = signal(false);
+  readonly initiativeTransitionOptions = computed(() => {
+    const current = this.detail()?.initiative.status;
+    if (!current || this.detail()?.derivedProject) return [] as readonly string[];
+    return INITIATIVE_STATUS_TRANSITIONS[current as keyof typeof INITIATIVE_STATUS_TRANSITIONS] ?? [];
+  });
   readonly decisionForm = this.formBuilder.nonNullable.group({ observation: [''] });
   readonly approvalDocuments = computed(() => [
     this.findDocument(TECHNICAL_REPORT),
@@ -66,6 +73,29 @@ export class InitiativeDetailComponent {
       this.snackBar.open('Iniciativa aprobada. El proyecto aún no ha sido creado.', 'Cerrar', { duration: 3800 });
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible aprobar la iniciativa.', 'Cerrar', { duration: 4200 });
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  openStatusTransition(target: string): void {
+    if (target !== 'Iniciativa archivada' && target !== 'No Admisible') return;
+    if (!this.canAdministerRecord() || !this.initiativeTransitionOptions().includes(target)) return;
+    this.transitionTarget.set(target);
+  }
+
+  async transitionStatus(): Promise<void> {
+    const target = this.transitionTarget();
+    if (!target || this.submitting()) return;
+    this.submitting.set(true);
+    try {
+      await Promise.resolve(this.repository.transitionInitiativeStatus({
+        initiativeCode: this.code(), targetStatus: target, observation: this.decisionForm.controls.observation.value,
+      }));
+      this.transitionTarget.set(null);
+      this.snackBar.open(`Iniciativa actualizada a ${target}.`, 'Cerrar', { duration: 3800 });
+    } catch (error) {
+      this.snackBar.open(error instanceof Error ? error.message : 'No fue posible cambiar el estado.', 'Cerrar', { duration: 4200 });
     } finally {
       this.submitting.set(false);
     }

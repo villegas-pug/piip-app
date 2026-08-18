@@ -30,11 +30,42 @@ import { project } from '../fn/portfolio-controller/project';
 import { Project$Params } from '../fn/portfolio-controller/project';
 import { projects } from '../fn/portfolio-controller/projects';
 import { Projects$Params } from '../fn/portfolio-controller/projects';
+import { transitionInitiative } from '../fn/portfolio-controller/transition-initiative';
+import { TransitionInitiative$Params } from '../fn/portfolio-controller/transition-initiative';
+import { transitionProject } from '../fn/portfolio-controller/transition-project';
+import { TransitionProject$Params } from '../fn/portfolio-controller/transition-project';
 
 @Injectable({ providedIn: 'root' })
 export class PortfolioControllerService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `transitionProject()` */
+  static readonly TransitionProjectPath = '/projects/{code}/status-transitions';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `transitionProject()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  transitionProject$Response(params: TransitionProject$Params, context?: HttpContext): Observable<StrictHttpResponse<PortfolioRecordResponse>> {
+    const obs = transitionProject(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `transitionProject$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  transitionProject(params: TransitionProject$Params, context?: HttpContext): Observable<PortfolioRecordResponse> {
+    const resp = this.transitionProject$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<PortfolioRecordResponse>): PortfolioRecordResponse => r.body)
+    );
   }
 
   /** Path part for operation `preexisting()` */
@@ -140,6 +171,33 @@ export class PortfolioControllerService extends BaseService {
    */
   createInitiative(params: CreateInitiative$Params, context?: HttpContext): Observable<PortfolioRecordResponse> {
     const resp = this.createInitiative$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<PortfolioRecordResponse>): PortfolioRecordResponse => r.body)
+    );
+  }
+
+  /** Path part for operation `transitionInitiative()` */
+  static readonly TransitionInitiativePath = '/initiatives/{code}/status-transitions';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `transitionInitiative()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  transitionInitiative$Response(params: TransitionInitiative$Params, context?: HttpContext): Observable<StrictHttpResponse<PortfolioRecordResponse>> {
+    const obs = transitionInitiative(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `transitionInitiative$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  transitionInitiative(params: TransitionInitiative$Params, context?: HttpContext): Observable<PortfolioRecordResponse> {
+    const resp = this.transitionInitiative$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<PortfolioRecordResponse>): PortfolioRecordResponse => r.body)
     );

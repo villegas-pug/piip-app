@@ -91,11 +91,11 @@ La iniciativa tiene un expediente propio. La vista de detalle separa la disponib
 
 La tarea creada al registrar la iniciativa se puede consultar, completar o reasignar dentro del ámbito autorizado. Los avisos se conservan por destinatario y pueden marcarse como leídos. Estos mecanismos hacen visible trabajo pendiente; no introducen estados nuevos del portafolio.
 
-La aprobación es una acción separada: un `Administrador PIIP` del ámbito de la iniciativa confirma la decisión, con observación opcional para auditoría. La transición de escritura confirmada por las fuentes es:
+La aprobación es una acción separada: un `Administrador PIIP` del ámbito de la iniciativa confirma la decisión, con observación opcional para auditoría. Mientras no exista proyecto vinculado, el detalle de la iniciativa también ofrece las decisiones `No Admisible` e `Iniciativa archivada` según la matriz vigente. La aprobación conserva la ruta y operación existentes:
 
 `Presentado` → `Iniciativa aprobada`
 
-Al aprobar, la tarea de decisión pendiente se completa y se crea una nueva tarea que indica que la iniciativa puede originar un proyecto. La aprobación no crea automáticamente el proyecto ni fusiona sus expedientes.
+Al aprobar, la tarea de decisión pendiente se completa y se crea una nueva tarea que indica que la iniciativa puede originar un proyecto. La aprobación no crea automáticamente el proyecto ni fusiona sus expedientes. `No Admisible` e `Iniciativa archivada` son estados terminales en esta versión.
 
 ### 3. Crear un proyecto derivado
 
@@ -103,9 +103,19 @@ Un proyecto derivado se crea explícitamente desde una iniciativa aprobada. El s
 
 El nuevo proyecto es un segundo registro vinculado, con código propio y código de origen no editable. La interfaz precarga y permite revisar o editar antes de registrar estos datos comunes de la iniciativa: nombre, tipo de solución, fuente u origen, responsable, unidades de organización responsables, objetivo PEI, actividad POI, descripción y componente digital.
 
-El proyecto empieza con datos propios que no se copian automáticamente: fecha de inicio efectiva, resultados clave y nota. Su estado inicial mostrado es `Proyecto en ejecución`; esta guía lo describe como dato de creación representado por las fuentes, no como una transición adicional confirmada.
+El proyecto empieza con datos propios que no se copian automáticamente: fecha de inicio efectiva, resultados clave y nota. Su estado inicial es `Proyecto en ejecución`. Desde el detalle general, el selector solo ofrece estados propios del proyecto: `Producto aprobado`, `Producto no aprobado`, `Suspendido` y `Cancelado`; `Suspendido` y `Producto no aprobado` pueden volver a `Proyecto en ejecución` o cancelarse, y `Producto aprobado` puede pasar a `Finalizado`.
 
 La iniciativa conserva su registro y su expediente. El proyecto inicia otro expediente, con posiciones documentales propias pendientes, y ofrece un enlace hacia la iniciativa de origen. Los documentos de evaluación y decisión permanecen en el expediente de la iniciativa; no se duplican al proyecto.
+
+Desde que existe el proyecto vinculado, la iniciativa conserva `Iniciativa aprobada` y sus acciones de cambio de estado quedan bloqueadas. La relación `proyecto derivado` identifica el vínculo entre ambos registros; no es un estado adicional.
+
+### 4. Cambiar estados desde los detalles
+
+Las transiciones se inician y confirman desde el detalle contextual, no desde los listados. La iniciativa y el proyecto usan rutas, requests y opciones separadas para impedir mezclar sus estados. `No Aplicable` queda fuera de los destinos de transición de esta versión.
+
+La observación de la persona usuaria acompaña la operación y la auditoría registra registro afectado, estado anterior, estado nuevo, actor, rol, Unidad Ejecutora, fecha, observación y resultado. La versión existente del registro se reutiliza para detectar conflictos; no se crea un segundo versionado.
+
+Al pasar un proyecto a `Finalizado`, `closingDate` se establece con la fecha local de `America/Lima`. Las demás transiciones no crean, borran ni reemplazan esa fecha. Los documentos pendientes se muestran como información y no bloquean las transiciones de esta primera versión.
 
 ### 4. Incorporar un proyecto preexistente
 
@@ -166,7 +176,7 @@ PIIP no crea cuentas institucionales, no cambia contraseñas, no habilita ni inh
 
 Esta guía no afirma resultados de ejecución. No se ejecutaron aquí compilaciones, pruebas, servidores, contenedores ni integraciones con Oracle o Keycloak. Por ello, la presencia de una pantalla, endpoint, validación o texto no equivale a una validación operativa.
 
-La única transición de escritura que se debe afirmar como confirmada por las fuentes es `Presentado` → `Iniciativa aprobada`. Otros estados visibles, condiciones documentales, obligatoriedades y transiciones deben tratarse como información de interfaz o requerimientos estáticos y no como reglas confirmadas si no cuentan con evidencia adicional. Ante contradicción o ausencia de definición funcional, registrar **NEEDS CLARIFICATION** en lugar de ampliar el alcance por inferencia.
+La constitución 1.1.0 y la feature 009 ratifican, además del flujo base `Presentado` → `Iniciativa aprobada`, las matrices contextuales de iniciativa y proyecto descritas en esta guía. La evidencia presentada es estática y no acredita ejecución institucional; las reglas futuras sobre documentos que podrían bloquear transiciones permanecen **NEEDS CLARIFICATION** y no bloquean esta primera versión.
 
 ## Fuentes canónicas consultadas
 

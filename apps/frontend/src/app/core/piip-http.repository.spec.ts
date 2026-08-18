@@ -125,8 +125,8 @@ describe('PiipHttpRepository', () => {
     http.expectOne('http://127.0.0.1:4001/api/v1/executing-units').flush([
       { id: 1, code: 'UE-001', name: 'Unidad Ejecutora 001', institutionId: 1 },
     ]);
-    http.expectOne((request) => request.url === 'http://127.0.0.1:4001/api/v1/organizational-units'
-      && request.params.get('executingUnitId') === '1').flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.match((request) => request.url.includes('/organizational-units'))[0].flush([]);
     await refresh;
 
     expect(repository.currentUser()?.subject).toBe('current-user');
@@ -162,12 +162,68 @@ describe('PiipHttpRepository', () => {
       { id: 1, code: 'UE-001', name: 'Unidad Ejecutora 001', institutionId: 1 },
       { id: 2, code: 'UE-002', name: 'Unidad Ejecutora 002', institutionId: 1 },
     ]);
-    http.expectOne((request) => request.url === 'http://127.0.0.1:4001/api/v1/organizational-units'
-      && request.params.get('executingUnitId') === '2').flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    http.match((request) => request.url.includes('/organizational-units'))[0].flush([]);
     await refresh;
 
     expect(repository.selectedExecutingUnitId()).toBe(2);
     expect(localStorage.getItem('piip-selected-executing-unit')).toBe('2');
     expect(repository.role()).toBe('Administrador PIIP');
+  });
+
+  it('sends the contextual project transition with the cached version and refreshes the visible version', async () => {
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Fin de prueba', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await repository.initialize();
+    repository.executingUnits.set([{ id: 1, code: 'UE-001', name: 'UE-001', institutionId: 1 }]);
+    repository.currentUser.set({
+      subject: 'admin', fullName: 'Administrador', email: 'admin@example.pe',
+      roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 }],
+      roles: ['ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1], institutionWide: false,
+    });
+    const record = { recordType: 'Proyecto', code: 'P-001-2026', originCode: 'NA', name: 'Proyecto', solutionType: 'No aplica', source: 'Otros', startDate: '2026-08-18', responsible: 'Responsable', peiObjective: '', poiActivity: '', responsibleUnits: '', description: 'Descripción', keyResults: '', note: '', status: 'Proyecto en ejecución', finalProductType: 'NA', digitalComponent: 'No', closingDate: '', technicalOpinionReport: '', formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '', executingUnitId: 1 } as const;
+    repository.portfolioRecords.set([record]);
+    (repository as unknown as { recordVersions: Map<string, number> }).recordVersions.set(record.code, 3);
+    vi.spyOn(repository, 'refreshAll').mockResolvedValue();
+
+    const operation = repository.transitionProjectStatus({ projectCode: record.code, targetStatus: 'Producto aprobado', observation: 'Producto revisado' });
+    const request = http.expectOne('http://127.0.0.1:4001/api/v1/projects/P-001-2026/status-transitions');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ version: 3, targetStatus: 'PRODUCT_APPROVED', observation: 'Producto revisado' });
+    request.flush({ ...record, responsibleUnits: ['Responsable'], status: 'Producto aprobado', version: 4, updatedAt: '2026-08-18T12:00:00Z' });
+    await operation;
+
+    expect((repository as unknown as { recordVersions: Map<string, number> }).recordVersions.get(record.code)).toBe(4);
+  });
+
+  it('keeps the loaded project visible and surfaces a reload message after HTTP 409', async () => {
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Fin de prueba', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await repository.initialize();
+    repository.executingUnits.set([{ id: 1, code: 'UE-001', name: 'UE-001', institutionId: 1 }]);
+    repository.currentUser.set({
+      subject: 'admin', fullName: 'Administrador', email: 'admin@example.pe',
+      roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 }],
+      roles: ['ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1], institutionWide: false,
+    });
+    const record = { recordType: 'Proyecto', code: 'P-002-2026', originCode: 'NA', name: 'Proyecto', solutionType: 'No aplica', source: 'Otros', startDate: '2026-08-18', responsible: 'Responsable', peiObjective: '', poiActivity: '', responsibleUnits: '', description: 'Descripción', keyResults: '', note: '', status: 'Proyecto en ejecución', finalProductType: 'NA', digitalComponent: 'No', closingDate: '', technicalOpinionReport: '', formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '', executingUnitId: 1 } as const;
+    repository.portfolioRecords.set([record]);
+    (repository as unknown as { recordVersions: Map<string, number> }).recordVersions.set(record.code, 1);
+    const refresh = vi.spyOn(repository, 'refreshAll').mockResolvedValue();
+
+    const operation = repository.transitionProjectStatus({ projectCode: record.code, targetStatus: 'Producto aprobado', observation: '' });
+    http.expectOne('http://127.0.0.1:4001/api/v1/projects/P-002-2026/status-transitions').flush(
+      { title: 'Conflicto de versión', detail: 'Recarga el expediente', status: 409 },
+      { status: 409, statusText: 'Conflict' },
+    );
+    await expect(operation).rejects.toMatchObject({ status: 409, message: 'Recarga el expediente' });
+
+    expect(repository.portfolioRecords()[0].status).toBe('Proyecto en ejecución');
+    expect(refresh).not.toHaveBeenCalled();
+    expect(repository.lastError()).not.toBe('Fin de prueba');
   });
 });

@@ -2,8 +2,8 @@ import { Signal, WritableSignal } from '@angular/core';
 import {
   AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
   DocumentDossierSummary, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput,
-  InitiativeRecord, NotificationItem, OrganizationalUnit, PiipPortfolioRecord, PreexistingProjectInput, ProjectRecord,
-  PiipRecordType, UserRole, WorkItem,
+  InitiativeRecord, InitiativeStatusTransitionInput, NotificationItem, OrganizationalUnit, PiipPortfolioRecord,
+  PreexistingProjectInput, ProjectDetail, ProjectRecord, ProjectStatusTransitionInput, PiipRecordType, UserRole, WorkItem,
 } from './piip.models';
 
 export type RepositoryOperation<T> = T | Promise<T>;
@@ -42,6 +42,7 @@ export abstract class PiipRepository {
   abstract getDocumentDossier(recordType: PiipRecordType, code: string): DocumentDossier | undefined;
   abstract getDocumentDossierSummaries(): DocumentDossierSummary[];
   abstract getInitiativeDetail(code: string): InitiativeDetail | undefined;
+  abstract getProjectDetail(code: string): ProjectDetail | undefined;
   abstract getProjectByOrigin(initiativeCode: string): ProjectRecord | undefined;
   abstract getInitiativesEligibleForProject(): InitiativeRecord[];
   abstract getNextProjectCode(initiativeCode: string): string;
@@ -50,6 +51,8 @@ export abstract class PiipRepository {
   abstract saveDerivedProjectDraft(value: unknown): void;
   abstract registerInitiative(input: InitiativeInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract approveInitiative(input: InitiativeDecisionInput): RepositoryOperation<PiipPortfolioRecord>;
+  abstract transitionInitiativeStatus(input: InitiativeStatusTransitionInput): RepositoryOperation<PiipPortfolioRecord>;
+  abstract transitionProjectStatus(input: ProjectStatusTransitionInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract registerDerivedProject(input: DerivedProjectInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract registerPreexistingProject(input: PreexistingProjectInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract uploadDocument(code: string, type: DocumentType, file: File): RepositoryOperation<void>;

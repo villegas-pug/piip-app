@@ -19,6 +19,7 @@ import pe.gob.midagri.piip.work.domain.*;
 import pe.gob.midagri.piip.work.persistence.*;
 import java.time.*;
 import java.util.*;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class PortfolioService {
@@ -33,14 +34,24 @@ public class PortfolioService {
     private final CodeGeneratorService codes;
     private final LocalAuthorizationService authorization;
     private final AuditService audit;
+    private final Clock clock;
+
+    @Autowired
+    public PortfolioService(PortfolioRecordRepository records, ResponsibleUnitRepository responsibleUnits,
+            ExecutingUnitRepository executingUnits, OrganizationalUnitRepository organizationalUnits,
+            UserRepository users, WorkTaskRepository tasks, NotificationRepository notifications, DocumentRepository documents,
+            CodeGeneratorService codes, LocalAuthorizationService authorization, AuditService audit, Clock clock) {
+        this.records = records; this.responsibleUnits = responsibleUnits; this.executingUnits = executingUnits;
+        this.organizationalUnits = organizationalUnits; this.users = users; this.tasks = tasks; this.notifications = notifications; this.documents = documents;
+        this.codes = codes; this.authorization = authorization; this.audit = audit; this.clock = clock;
+    }
 
     public PortfolioService(PortfolioRecordRepository records, ResponsibleUnitRepository responsibleUnits,
             ExecutingUnitRepository executingUnits, OrganizationalUnitRepository organizationalUnits,
             UserRepository users, WorkTaskRepository tasks, NotificationRepository notifications, DocumentRepository documents,
             CodeGeneratorService codes, LocalAuthorizationService authorization, AuditService audit) {
-        this.records = records; this.responsibleUnits = responsibleUnits; this.executingUnits = executingUnits;
-        this.organizationalUnits = organizationalUnits; this.users = users; this.tasks = tasks; this.notifications = notifications; this.documents = documents;
-        this.codes = codes; this.authorization = authorization; this.audit = audit;
+        this(records, responsibleUnits, executingUnits, organizationalUnits, users, tasks, notifications, documents,
+            codes, authorization, audit, Clock.systemUTC());
     }
 
     @Transactional(readOnly = true)
@@ -102,6 +113,30 @@ public class PortfolioService {
         return toResponse(record);
     }
 
+    @Transactional
+    public PortfolioRecordResponse transitionInitiativeStatus(String code, InitiativeStatusTransitionRequest request) {
+        PortfolioRecordEntity initiative = records.findByCodeIgnoreCaseForUpdate(code)
+            .orElseThrow(() -> new NotFoundException("Iniciativa inexistente"));
+        LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, initiative.getExecutingUnit().getId());
+        if (initiative.getVersion() != request.version()) throw new StaleVersionException();
+        if (records.existsByOriginRecordId(initiative.getId())) {
+            throw new BusinessRuleException("La iniciativa tiene un proyecto vinculado y no admite cambios de estado");
+        }
+        if (request.targetStatus() == PortfolioStatus.INITIATIVE_APPROVED) {
+            throw new BusinessRuleException("La aprobación debe realizarse mediante la operación existente");
+        }
+        PortfolioStatus previous = initiative.getStatus();
+        try {
+            initiative.transitionInitiativeTo(request.targetStatus(), clock.instant());
+        } catch (IllegalStateException exception) {
+            throw new BusinessRuleException(exception.getMessage());
+        }
+        audit.event("ESTADO_INICIATIVA_CAMBIADO", "REGISTRO_PORTAFOLIO", initiative.getCode(),
+            transitionAuditDetail(previous, initiative.getStatus(), initiative, request.observation()), actor.subject());
+        records.flush();
+        return toResponse(initiative);
+    }
+
     @Transactional(readOnly = true)
     public List<PortfolioRecordResponse> eligibleInitiatives() {
         LocalAccessContext actor = authorization.require(RoleCode.ADMINISTRADOR_PIIP);
@@ -113,7 +148,7 @@ public class PortfolioService {
 
     @Transactional
     public PortfolioRecordResponse createDerived(DerivedProjectRequest request) {
-        PortfolioRecordEntity initiative = records.findByCodeIgnoreCase(request.initiativeCode()).orElseThrow(() -> new NotFoundException("Iniciativa inexistente"));
+        PortfolioRecordEntity initiative = records.findByCodeIgnoreCaseForUpdate(request.initiativeCode()).orElseThrow(() -> new NotFoundException("Iniciativa inexistente"));
         LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, initiative.getExecutingUnit().getId());
         if (initiative.getStatus() != PortfolioStatus.INITIATIVE_APPROVED) throw new BusinessRuleException("La iniciativa debe estar aprobada");
         if (records.existsByOriginRecordId(initiative.getId())) throw new BusinessRuleException("La iniciativa ya tiene un proyecto derivado");
@@ -126,6 +161,25 @@ public class PortfolioService {
             audit.event("TAREA_COMPLETADA", "TAREA_TRABAJO", task.getId().toString(), Map.of("registro", initiative.getCode()), actor.subject());
         });
         audit.event("PROYECTO_DERIVADO_REGISTRADO", "REGISTRO_PORTAFOLIO", code, Map.of("iniciativaOrigen", initiative.getCode()), actor.subject());
+        return toResponse(project);
+    }
+
+    @Transactional
+    public PortfolioRecordResponse transitionProjectStatus(String code, ProjectStatusTransitionRequest request) {
+        PortfolioRecordEntity project = records.findByCodeIgnoreCase(code)
+            .orElseThrow(() -> new NotFoundException("Proyecto inexistente"));
+        LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, project.getExecutingUnit().getId());
+        if (project.getVersion() != request.version()) throw new StaleVersionException();
+        PortfolioStatus previous = project.getStatus();
+        Instant transitionAt = clock.instant();
+        try {
+            project.transitionProjectTo(request.targetStatus(), transitionAt, LocalDate.now(clock));
+        } catch (IllegalStateException exception) {
+            throw new BusinessRuleException(exception.getMessage());
+        }
+        audit.event("ESTADO_PROYECTO_CAMBIADO", "REGISTRO_PORTAFOLIO", project.getCode(),
+            transitionAuditDetail(previous, project.getStatus(), project, request.observation()), actor.subject());
+        records.flush();
         return toResponse(project);
     }
 
@@ -173,6 +227,18 @@ public class PortfolioService {
     }
 
     private void createDocumentSlots(PortfolioRecordEntity record) { for (DocumentType type : DocumentType.values()) documents.save(new DocumentEntity(record, type)); }
+
+    private Map<String, ?> transitionAuditDetail(PortfolioStatus previous, PortfolioStatus current,
+            PortfolioRecordEntity record, String observation) {
+        return Map.of(
+            "estadoAnterior", previous.label(),
+            "estadoNuevo", current.label(),
+            "rol", RoleCode.ADMINISTRADOR_PIIP.name(),
+            "unidadEjecutoraId", record.getExecutingUnit().getId(),
+            "unidadEjecutora", record.getExecutingUnit().getName(),
+            "observacion", observation == null ? "" : observation,
+            "resultado", "EXITOSO");
+    }
 
     private PortfolioRecordResponse toResponse(PortfolioRecordEntity record) {
         List<String> units = responsibleUnits.findByRecordIdOrderByDisplayOrder(record.getId()).stream().map(ResponsibleUnitEntity::getOriginalDesignation).toList();

@@ -3,7 +3,7 @@
 ## Fuente funcional
 
 - `docs/architecture/piip-fields.md` define los 23 campos y seis catálogos; `NA` y `No aplica` tienen significados distintos.
-- No inventes estados, obligatoriedades ni transiciones. La única transición de escritura confirmada es `Presentado -> Iniciativa aprobada`.
+- No inventes estados, obligatoriedades ni transiciones. El flujo base conserva `Presentado -> Iniciativa aprobada`; las únicas transiciones adicionales autorizadas son las matrices de la feature 009 ratificadas por la constitución 1.1.0. La presencia de un estado en el catálogo no autoriza otras transiciones.
 - Ante un cambio que altere flujos, roles, permisos, datos visibles, documentos o reglas de negocio, evaluar el impacto en la guía funcional de `docs/`. Si hay impacto, actualizarla en la misma entrega con evidencia verificable; si no lo hay, declararlo y justificarlo al cierre. La guía funcional no sustituye las especificaciones, el código, la configuración ni las pruebas como autoridad.
 
 ## Arquitectura
@@ -55,5 +55,5 @@
 - Ningún especialista ejecuta pruebas, builds, generación OpenAPI, integración Oracle ni acciones destructivas sin autorización explícita del usuario en el turno actual.
 
 <!-- SPECKIT START -->
-Para la feature activa, leer `specs/008-administrar-usuarios/plan.md` antes de planificar o implementar.
+Para la feature activa, leer `specs/009-ciclo-vida-portafolio/plan.md` antes de planificar o implementar.
 <!-- SPECKIT END -->

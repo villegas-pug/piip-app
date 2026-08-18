@@ -125,6 +125,18 @@ export interface InitiativeDecisionInput {
   observation: string;
 }
 
+export interface InitiativeStatusTransitionInput {
+  initiativeCode: string;
+  targetStatus: Extract<PiipStatus, 'Iniciativa archivada' | 'No Admisible'>;
+  observation: string;
+}
+
+export interface ProjectStatusTransitionInput {
+  projectCode: string;
+  targetStatus: Extract<PiipStatus, 'Proyecto en ejecución' | 'Producto aprobado' | 'Producto no aprobado' | 'Suspendido' | 'Cancelado' | 'Finalizado'>;
+  observation: string;
+}
+
 export interface DerivedProjectInput {
   initiativeCode: string;
   code: string;
@@ -147,6 +159,13 @@ export interface InitiativeDetail {
   portfolioRecord: PiipPortfolioRecord;
   dossier?: DocumentDossier;
   derivedProject?: ProjectRecord;
+}
+
+export interface ProjectDetail {
+  project: ProjectRecord;
+  portfolioRecord: PiipPortfolioRecord;
+  dossier?: DocumentDossier;
+  originInitiative?: InitiativeRecord;
 }
 
 export interface DocumentRecord {

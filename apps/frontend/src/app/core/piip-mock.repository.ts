@@ -10,12 +10,15 @@ import {
   DocumentRecord,
   InitiativeDecisionInput,
   InitiativeDetail,
+  InitiativeStatusTransitionInput,
   InitiativeInput,
   InitiativeRecord,
   PiipPortfolioRecord,
   PreexistingProjectInput,
   ProjectOrigin,
   ProjectRecord,
+  ProjectDetail,
+  ProjectStatusTransitionInput,
   PiipRecordType,
   UserRole,
   WorkItem,
@@ -283,6 +286,20 @@ export class PiipMockRepository extends PiipRepository {
     };
   }
 
+  getProjectDetail(code: string): ProjectDetail | undefined {
+    const project = this.projects().find((record) => record.code === code);
+    const portfolioRecord = this.portfolioRecords().find((record) => record.recordType === 'Proyecto' && record.code === code);
+    if (!project || !portfolioRecord) return undefined;
+    return {
+      project,
+      portfolioRecord,
+      dossier: this.getDocumentDossier('Proyecto', code),
+      originInitiative: project.originMode === 'DERIVED_FROM_INITIATIVE'
+        ? this.initiatives().find((initiative) => initiative.code === project.originCode)
+        : undefined,
+    };
+  }
+
   getProjectByOrigin(initiativeCode: string): ProjectRecord | undefined {
     return this.projects().find(
       (project) => project.originMode === 'DERIVED_FROM_INITIATIVE' && project.originCode === initiativeCode,
@@ -372,6 +389,35 @@ export class PiipMockRepository extends PiipRepository {
       responsible: input.responsible, role: '', unit: input.responsibleUnits, status: 'Presentado',
       updatedAt: formatDateTime(new Date()) }, ...items]);
     return record;
+  }
+
+  transitionInitiativeStatus(input: InitiativeStatusTransitionInput): PiipPortfolioRecord {
+    this.assertAdministrator('El perfil Consulta externa no puede cambiar estados.');
+    const detail = this.getInitiativeDetail(input.initiativeCode);
+    if (!detail) throw new Error('La iniciativa indicada no existe.');
+    if (detail.derivedProject) throw new Error('La iniciativa tiene un proyecto vinculado y está bloqueada.');
+    const allowed: Record<string, string[]> = { Presentado: ['Iniciativa archivada', 'No Admisible'], 'Iniciativa aprobada': ['Iniciativa archivada'] };
+    if (!allowed[detail.initiative.status]?.includes(input.targetStatus)) throw new Error('La transición de iniciativa no está permitida.');
+    const now = formatDateTime(new Date());
+    this.initiatives.update((items) => items.map((item) => item.code === input.initiativeCode ? { ...item, status: input.targetStatus, updatedAt: now } : item));
+    this.portfolioRecords.update((items) => items.map((item) => item.code === input.initiativeCode ? { ...item, status: input.targetStatus } : item));
+    this.documentDossiers.update((items) => items.map((item) => item.code === input.initiativeCode ? { ...item, status: input.targetStatus, lastActivity: now } : item));
+    this.auditEvents.update((items) => [{ recordCode: input.initiativeCode, timestamp: formatAuditTimestamp(new Date()), event: 'ESTADO_INICIATIVA_CAMBIADO', user: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', observation: JSON.stringify({ estadoAnterior: detail.initiative.status, estadoNuevo: input.targetStatus, observacion: input.observation.trim() }), icon: 'swap_horiz' }, ...items]);
+    return this.portfolioRecords().find((record) => record.code === input.initiativeCode)!;
+  }
+
+  transitionProjectStatus(input: ProjectStatusTransitionInput): PiipPortfolioRecord {
+    this.assertAdministrator('El perfil Consulta externa no puede cambiar estados.');
+    const detail = this.getProjectDetail(input.projectCode);
+    if (!detail) throw new Error('El proyecto indicado no existe.');
+    const allowed: Record<string, string[]> = { 'Proyecto en ejecución': ['Producto aprobado', 'Producto no aprobado', 'Suspendido', 'Cancelado'], Suspendido: ['Proyecto en ejecución', 'Cancelado'], 'Producto no aprobado': ['Proyecto en ejecución', 'Cancelado'], 'Producto aprobado': ['Finalizado'] };
+    if (!allowed[detail.project.status]?.includes(input.targetStatus)) throw new Error('La transición de proyecto no está permitida.');
+    const now = formatDateTime(new Date());
+    this.projects.update((items) => items.map((item) => item.code === input.projectCode ? { ...item, status: input.targetStatus } : item));
+    this.portfolioRecords.update((items) => items.map((item) => item.code === input.projectCode ? { ...item, status: input.targetStatus, closingDate: input.targetStatus === 'Finalizado' ? now : item.closingDate } : item));
+    this.documentDossiers.update((items) => items.map((item) => item.code === input.projectCode ? { ...item, status: input.targetStatus, lastActivity: now } : item));
+    this.auditEvents.update((items) => [{ recordCode: input.projectCode, timestamp: formatAuditTimestamp(new Date()), event: 'ESTADO_PROYECTO_CAMBIADO', user: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', observation: JSON.stringify({ estadoAnterior: detail.project.status, estadoNuevo: input.targetStatus, observacion: input.observation.trim() }), icon: 'swap_horiz' }, ...items]);
+    return this.portfolioRecords().find((record) => record.code === input.projectCode)!;
   }
 
   registerDerivedProject(input: DerivedProjectInput): PiipPortfolioRecord {

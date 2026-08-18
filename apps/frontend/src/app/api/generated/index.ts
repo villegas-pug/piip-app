@@ -18,6 +18,7 @@ export type { DossierSummary } from './models/dossier-summary';
 export type { EventResponse } from './models/event-response';
 export type { ExecutingUnitResponse } from './models/executing-unit-response';
 export type { InitiativeCreateRequest } from './models/initiative-create-request';
+export type { InitiativeStatusTransitionRequest } from './models/initiative-status-transition-request';
 export type { InstitutionResponse } from './models/institution-response';
 export type { NotApplicableRequest } from './models/not-applicable-request';
 export type { NotificationResponse } from './models/notification-response';
@@ -25,6 +26,7 @@ export type { OrganizationalUnitResponse } from './models/organizational-unit-re
 export type { PageResponsePortfolioRecordResponse } from './models/page-response-portfolio-record-response';
 export type { PortfolioRecordResponse } from './models/portfolio-record-response';
 export type { PreexistingProjectRequest } from './models/preexisting-project-request';
+export type { ProjectStatusTransitionRequest } from './models/project-status-transition-request';
 export type { ReassignRequest } from './models/reassign-request';
 export type { ResponsibleUnitInput } from './models/responsible-unit-input';
 export type { RoleAssignmentRequest } from './models/role-assignment-request';
@@ -82,6 +84,8 @@ export type { AssignmentCandidates$Params as AssignmentCandidates$Params } from 
 export { assignmentCandidates as assignmentCandidates } from './fn/user-administration-controller/assignment-candidates';
 export type { AdministrableScopes$Params as AdministrableScopes$Params } from './fn/user-administration-controller/administrable-scopes';
 export { administrableScopes as administrableScopes } from './fn/user-administration-controller/administrable-scopes';
+export type { TransitionProject$Params as TransitionProject$Params } from './fn/portfolio-controller/transition-project';
+export { transitionProject as transitionProject } from './fn/portfolio-controller/transition-project';
 export type { Preexisting$Params as Preexisting$Params } from './fn/portfolio-controller/preexisting';
 export { preexisting as preexisting } from './fn/portfolio-controller/preexisting';
 export type { Derived$Params as Derived$Params } from './fn/portfolio-controller/derived';
@@ -90,6 +94,8 @@ export type { Initiatives$Params as Initiatives$Params } from './fn/portfolio-co
 export { initiatives as initiatives } from './fn/portfolio-controller/initiatives';
 export type { CreateInitiative$Params as CreateInitiative$Params } from './fn/portfolio-controller/create-initiative';
 export { createInitiative as createInitiative } from './fn/portfolio-controller/create-initiative';
+export type { TransitionInitiative$Params as TransitionInitiative$Params } from './fn/portfolio-controller/transition-initiative';
+export { transitionInitiative as transitionInitiative } from './fn/portfolio-controller/transition-initiative';
 export type { Approve$Params as Approve$Params } from './fn/portfolio-controller/approve';
 export { approve as approve } from './fn/portfolio-controller/approve';
 export type { Projects$Params as Projects$Params } from './fn/portfolio-controller/projects';

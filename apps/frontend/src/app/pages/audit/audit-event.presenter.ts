@@ -20,6 +20,8 @@ const EVENT_LABELS: Record<string, string> = {
   DOCUMENTO_RETIRADO: 'Publicación retirada',
   INICIATIVA_REGISTRADA: 'Iniciativa registrada',
   INICIATIVA_APROBADA: 'Iniciativa aprobada',
+  ESTADO_INICIATIVA_CAMBIADO: 'Estado de iniciativa cambiado',
+  ESTADO_PROYECTO_CAMBIADO: 'Estado de proyecto cambiado',
   PROYECTO_DERIVADO_REGISTRADO: 'Proyecto derivado registrado',
   PROYECTO_PREEXISTENTE_REGISTRADO: 'Proyecto preexistente registrado',
   TAREA_CREADA: 'Tarea creada',
@@ -30,9 +32,9 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 const DETAIL_LABELS: Record<string, string> = {
-  tipo: 'Tipo documental', version: 'Versión', versionId: 'Versión', estado: 'Estado', observacion: 'Observación',
+  tipo: 'Tipo documental', version: 'Versión', versionId: 'Versión', estado: 'Estado', estadoAnterior: 'Estado anterior', estadoNuevo: 'Estado nuevo', observacion: 'Observación',
   registro: 'Expediente', motivo: 'Motivo', iniciativaOrigen: 'Iniciativa de origen', origen: 'Origen',
-  asignadoA: 'Asignado a', rol: 'Rol', institucion: 'Institución', unidadEjecutora: 'Unidad Ejecutora',
+  asignadoA: 'Asignado a', rol: 'Rol', institucion: 'Institución', unidadEjecutora: 'Unidad Ejecutora', unidadEjecutoraId: 'Unidad Ejecutora', resultado: 'Resultado',
 };
 
 const DOCUMENT_LABELS: Record<DocumentType, string> = {
@@ -69,6 +71,8 @@ function summarize(event: string, detail: AuditDetail): string {
     case 'DOCUMENTO_RETIRADO': return `Se retiró la publicación del documento${version == null ? '' : `, versión ${version}`}.`;
     case 'INICIATIVA_REGISTRADA': return detail['estado'] ? `Estado inicial: ${detail['estado']}.` : 'Se registró la iniciativa.';
     case 'INICIATIVA_APROBADA': return detail['observacion'] ? `Observación: ${detail['observacion']}` : 'La iniciativa fue aprobada.';
+    case 'ESTADO_INICIATIVA_CAMBIADO': return statusChangeSummary('La iniciativa', detail);
+    case 'ESTADO_PROYECTO_CAMBIADO': return statusChangeSummary('El proyecto', detail);
     case 'PROYECTO_DERIVADO_REGISTRADO': return detail['iniciativaOrigen'] ? `Iniciativa de origen: ${detail['iniciativaOrigen']}.` : 'Se registró el proyecto derivado.';
     case 'PROYECTO_PREEXISTENTE_REGISTRADO': return detail['origen'] ? `Origen: ${detail['origen']}.` : 'Se registró el proyecto preexistente.';
     case 'TAREA_CREADA': return record ? `Se creó una tarea para el expediente ${record}.` : 'Se creó una tarea.';
@@ -78,6 +82,13 @@ function summarize(event: string, detail: AuditDetail): string {
     case 'ROL_SUSPENDIDO': return `Rol ${detail['rol'] ?? 'registrado'} suspendido.`;
     default: return 'Evento registrado.';
   }
+}
+
+function statusChangeSummary(subject: string, detail: AuditDetail): string {
+  const previous = presentValue('estadoAnterior', detail['estadoAnterior']);
+  const current = presentValue('estadoNuevo', detail['estadoNuevo']);
+  const observation = detail['observacion'] ? ` Observación: ${detail['observacion']}` : '';
+  return `${subject} cambió de ${previous} a ${current}.${observation}`;
 }
 
 function parseDetail(value: string): AuditDetail {

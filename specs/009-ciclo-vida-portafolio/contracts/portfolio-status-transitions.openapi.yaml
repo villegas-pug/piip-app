@@ -1,0 +1,147 @@
+openapi: 3.1.0
+info:
+  title: PIIP - Transiciones contextuales del portafolio
+  version: 0.1.0
+  description: Contrato de diseño; no reemplaza POST /api/v1/initiatives/{code}/approval.
+paths:
+  /api/v1/initiatives/{code}/status-transitions:
+    post:
+      operationId: transitionInitiativeStatus
+      summary: Cambia el estado de una iniciativa sin proyecto vinculado
+      parameters:
+        - $ref: '#/components/parameters/RecordCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InitiativeStatusTransitionRequest' }
+      responses:
+        '200':
+          description: Iniciativa actualizada y auditada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioRecordResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /api/v1/projects/{code}/status-transitions:
+    post:
+      operationId: transitionProjectStatus
+      summary: Cambia el estado de un proyecto según su matriz
+      parameters:
+        - $ref: '#/components/parameters/RecordCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProjectStatusTransitionRequest' }
+      responses:
+        '200':
+          description: Proyecto actualizado y auditado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioRecordResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+components:
+  parameters:
+    RecordCode:
+      name: code
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  schemas:
+    InitiativeStatusTransitionRequest:
+      type: object
+      additionalProperties: false
+      required: [version, targetStatus]
+      properties:
+        version: { type: integer, format: int64, minimum: 0 }
+        targetStatus:
+          type: string
+          enum: [INITIATIVE_ARCHIVED, NOT_ADMISSIBLE]
+        observation: { type: [string, 'null'], maxLength: 1000 }
+    ProjectStatusTransitionRequest:
+      type: object
+      additionalProperties: false
+      required: [version, targetStatus]
+      properties:
+        version: { type: integer, format: int64, minimum: 0 }
+        targetStatus:
+          type: string
+          enum: [PROJECT_IN_PROGRESS, PRODUCT_APPROVED, PRODUCT_NOT_APPROVED, SUSPENDED, CANCELLED, FINISHED]
+        observation: { type: [string, 'null'], maxLength: 1000 }
+    PortfolioRecordResponse:
+      type: object
+      description: DTO existente; la respuesta presenta etiquetas funcionales.
+      required: [recordType, code, status, executingUnitId, executingUnit, updatedAt, version]
+      properties:
+        recordType: { type: string }
+        code: { type: string }
+        originCode: { type: [string, 'null'] }
+        name: { type: string }
+        solutionType: { type: [string, 'null'] }
+        source: { type: [string, 'null'] }
+        startDate: { type: string, format: date }
+        responsible: { type: [string, 'null'] }
+        peiObjective: { type: [string, 'null'] }
+        poiActivity: { type: [string, 'null'] }
+        responsibleUnits:
+          type: array
+          items: { type: string }
+        description: { type: [string, 'null'] }
+        keyResults: { type: [string, 'null'] }
+        note: { type: [string, 'null'] }
+        status: { type: string, description: Etiqueta funcional del estado. }
+        finalProductType: { type: [string, 'null'] }
+        digitalComponent: { type: [string, 'null'] }
+        closingDate: { type: [string, 'null'], format: date }
+        technicalOpinionReport: { type: [string, 'null'] }
+        formalApprovalDecision: { type: [string, 'null'] }
+        finalProductApprovalDocument: { type: [string, 'null'] }
+        projectManagementDocumentation: { type: [string, 'null'] }
+        finalClosureReport: { type: [string, 'null'] }
+        executingUnitId: { type: integer, format: int64 }
+        executingUnit: { type: string }
+        updatedAt: { type: string, format: date-time }
+        version: { type: integer, format: int64 }
+    ProblemDetail:
+      type: object
+      additionalProperties: true
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri-reference }
+  responses:
+    BadRequest:
+      description: Request inválido
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    Forbidden:
+      description: Rol o ámbito insuficiente
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    NotFound:
+      description: Registro inexistente en el contexto solicitado
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    Conflict:
+      description: Versión obsoleta; el cliente debe recargar
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    UnprocessableEntity:
+      description: Transición, tipo, estado o vínculo no permitido
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }

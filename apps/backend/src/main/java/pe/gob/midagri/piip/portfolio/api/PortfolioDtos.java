@@ -27,6 +27,16 @@ public final class PortfolioDtos {
 
     public record ApprovalRequest(@NotNull Long version, @Size(max = 1000) String observation) {}
 
+    public record InitiativeStatusTransitionRequest(
+        @NotNull Long version,
+        @NotNull PortfolioStatus targetStatus,
+        @Size(max = 1000) String observation) {}
+
+    public record ProjectStatusTransitionRequest(
+        @NotNull Long version,
+        @NotNull PortfolioStatus targetStatus,
+        @Size(max = 1000) String observation) {}
+
     public record DerivedProjectRequest(
         @NotBlank String initiativeCode,
         @NotNull LocalDate startDate,

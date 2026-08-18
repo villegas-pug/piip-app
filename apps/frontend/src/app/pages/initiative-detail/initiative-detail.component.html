@@ -11,8 +11,13 @@
       </div>
       <div class="hero-actions">
         <a class="secondary-button" [routerLink]="['/iniciativas', detail.initiative.code, 'documentos']"><mat-icon>description</mat-icon>{{ canAdministerRecord() ? 'Gestionar documentos' : 'Ver documentos' }}</a>
-        @if (canAdministerRecord() && detail.initiative.status === 'Presentado') {
+        @if (canAdministerRecord() && detail.initiative.status === 'Presentado' && !detail.derivedProject) {
           <button class="primary-button" type="button" (click)="openApproval()"><mat-icon>verified</mat-icon>Registrar aprobación</button>
+        }
+        @if (canAdministerRecord() && initiativeTransitionOptions().length && !detail.derivedProject) {
+          @for (target of initiativeTransitionOptions(); track target) {
+            <button class="secondary-button" type="button" (click)="openStatusTransition(target)"><mat-icon>{{ target === 'No Admisible' ? 'block' : 'archive' }}</mat-icon>{{ target }}</button>
+          }
         }
         @if (canAdministerRecord() && detail.initiative.status === 'Iniciativa aprobada') {
           @if (detail.derivedProject; as project) {
@@ -87,6 +92,7 @@
           <h3>Proyecto derivado</h3>
           @if (detail.derivedProject; as project) {
             <strong>{{ project.code }}</strong><p>{{ project.name }}</p><span class="status running">{{ project.status }}</span>
+            <p class="linked-project-lock" role="status"><mat-icon>lock</mat-icon>La iniciativa conserva <strong>Iniciativa aprobada</strong> y sus acciones de cambio de estado están bloqueadas porque ya existe un proyecto vinculado.</p>
           } @else if (detail.initiative.status === 'Iniciativa aprobada') {
             <mat-icon>account_tree</mat-icon><p>La iniciativa está habilitada para originar un proyecto.</p>
           } @else {
@@ -111,6 +117,17 @@
           <div class="review-summary"><p><span>Código</span><strong>{{ detail.initiative.code }}</strong></p><p><span>Nombre</span><strong>{{ detail.initiative.name }}</strong></p></div>
           <form [formGroup]="decisionForm" class="approval-form"><label class="field"><span>Observación para auditoría</span><textarea formControlName="observation" maxlength="600" placeholder="Comentario opcional sobre la aprobación"></textarea><small>Esta observación no modifica el campo Nota del Excel.</small></label></form>
           <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="decisionOpen.set(false)">Cancelar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="approve()"><mat-icon [class.button-spinner]="submitting()">{{ submitting() ? 'progress_activity' : 'verified' }}</mat-icon>{{ submitting() ? 'Registrando...' : 'Confirmar aprobación' }}</button></footer>
+        </section>
+      </div>
+    }
+
+    @if (transitionTarget(); as target) {
+      <div class="review-backdrop" (click)="submitting() ? null : transitionTarget.set(null)">
+        <section class="review-dialog approval-dialog" role="dialog" aria-modal="true" aria-labelledby="status-transition-title" [attr.aria-busy]="submitting()" (click)="$event.stopPropagation()">
+          <header><span><mat-icon>{{ target === 'No Admisible' ? 'block' : 'archive' }}</mat-icon></span><div><p>CAMBIAR ESTADO</p><h2 id="status-transition-title">{{ target }}</h2></div><button class="icon-action" type="button" aria-label="Cerrar" [disabled]="submitting()" (click)="transitionTarget.set(null)"><mat-icon>close</mat-icon></button></header>
+          <div class="transition"><span>{{ detail.initiative.status }}</span><mat-icon>arrow_forward</mat-icon><strong>{{ target }}</strong></div>
+          <form [formGroup]="decisionForm" class="approval-form"><label class="field"><span>Observación para auditoría</span><textarea formControlName="observation" maxlength="1000" placeholder="Comentario opcional sobre el cambio"></textarea></label></form>
+          <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="transitionTarget.set(null)">Cancelar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="transitionStatus()">Confirmar cambio</button></footer>
         </section>
       </div>
     }

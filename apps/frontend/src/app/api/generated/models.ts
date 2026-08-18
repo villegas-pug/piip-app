@@ -13,6 +13,7 @@ export type { DossierSummary } from './models/dossier-summary';
 export type { EventResponse } from './models/event-response';
 export type { ExecutingUnitResponse } from './models/executing-unit-response';
 export type { InitiativeCreateRequest } from './models/initiative-create-request';
+export type { InitiativeStatusTransitionRequest } from './models/initiative-status-transition-request';
 export type { InstitutionResponse } from './models/institution-response';
 export type { NotApplicableRequest } from './models/not-applicable-request';
 export type { NotificationResponse } from './models/notification-response';
@@ -20,6 +21,7 @@ export type { OrganizationalUnitResponse } from './models/organizational-unit-re
 export type { PageResponsePortfolioRecordResponse } from './models/page-response-portfolio-record-response';
 export type { PortfolioRecordResponse } from './models/portfolio-record-response';
 export type { PreexistingProjectRequest } from './models/preexisting-project-request';
+export type { ProjectStatusTransitionRequest } from './models/project-status-transition-request';
 export type { ReassignRequest } from './models/reassign-request';
 export type { ResponsibleUnitInput } from './models/responsible-unit-input';
 export type { RoleAssignmentRequest } from './models/role-assignment-request';

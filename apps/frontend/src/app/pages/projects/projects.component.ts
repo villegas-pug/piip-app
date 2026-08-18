@@ -5,7 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
-import { PIIP_CATALOGS, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
+import { PIIP_CATALOGS, PROJECT_STATUSES, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PiipStatus } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
@@ -30,6 +30,7 @@ export class ProjectsComponent {
   private readonly router = inject(Router);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly catalogs = PIIP_CATALOGS;
+  readonly projectStatuses = PROJECT_STATUSES;
   readonly units = RESPONSIBLE_UNITS;
   readonly filters = this.formBuilder.nonNullable.group({ search: '', status: 'Todos', unit: 'Todas', digital: 'Todos' });
   private readonly filterValue = toSignal(this.filters.valueChanges, { initialValue: this.filters.getRawValue() });

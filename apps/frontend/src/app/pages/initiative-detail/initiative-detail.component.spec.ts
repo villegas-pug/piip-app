@@ -51,6 +51,16 @@ describe('InitiativeDetailComponent', () => {
     expect(nativeElement.querySelector('[role="dialog"]')).toBeNull();
   });
 
+  it('conserves the approval action and the real initiative status before derivation', () => {
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+    const nativeElement = fixture.nativeElement as HTMLElement;
+
+    expect(nativeElement.textContent).toContain('Presentado');
+    expect(nativeElement.textContent).toContain('Registrar aprobación');
+    expect(nativeElement.textContent).not.toContain('Crear proyecto');
+  });
+
   it('opens the approval dialog when action=approve is present in the URL', () => {
     approvalAction = true;
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
@@ -124,6 +134,22 @@ describe('InitiativeDetailComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Registrar aprobación');
   });
 
+  it('hides status controls and explains the lock when a derived project is linked', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.projects.update((projects) => [
+      { ...projects[0], originCode: 'I-024-2026', originMode: 'DERIVED_FROM_INITIATIVE' },
+      ...projects.slice(1),
+    ]);
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+    const nativeElement = fixture.nativeElement as HTMLElement;
+
+    expect(nativeElement.textContent).toContain('Iniciativa aprobada');
+    expect(nativeElement.textContent).toContain('acciones de cambio de estado están bloqueadas');
+    expect(nativeElement.querySelector('.hero-actions button')).toBeNull();
+    expect(nativeElement.textContent).not.toContain('Registrar aprobación');
+  });
+
   it('preserves the received descending events and renders their presented copy chronologically', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const receivedEvents: AuditEvent[] = [
@@ -152,5 +178,31 @@ describe('InitiativeDetailComponent', () => {
     expect(timeline.textContent).toContain('Documento cargado');
     expect(timeline.textContent).toContain('Se cargó Informe de opinión técnica de evaluación de iniciativa, versión 1.');
     expect(timeline.textContent).not.toContain('INITIATIVE_TECHNICAL_OPINION');
+  });
+
+  it('offers only archive and inadmissible actions for an unlinked presented initiative', () => {
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual(['Iniciativa archivada', 'No Admisible']);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Iniciativa archivada');
+    expect(text).toContain('No Admisible');
+    expect(text).not.toContain('Producto aprobado');
+    expect(text).not.toContain('No Aplicable');
+  });
+
+  it('allows archiving an approved unlinked initiative but no terminal action afterwards', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
+    repository.portfolioRecords.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual(['Iniciativa archivada']);
+    await fixture.componentInstance.transitionStatus();
+    expect(repository.getInitiativeDetail('I-024-2026')?.initiative.status).toBe('Iniciativa aprobada');
+    fixture.componentInstance.openStatusTransition('Iniciativa archivada');
+    await fixture.componentInstance.transitionStatus();
+    expect(repository.getInitiativeDetail('I-024-2026')?.initiative.status).toBe('Iniciativa archivada');
+    expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual([]);
   });
 });

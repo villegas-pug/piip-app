@@ -86,6 +86,49 @@ public class PortfolioRecordEntity {
         updatedAt = Instant.now();
     }
 
+    public void transitionInitiativeTo(PortfolioStatus targetStatus, Instant transitionAt) {
+        if (recordType != RecordType.INITIATIVE) {
+            throw new IllegalStateException("El registro no es una iniciativa");
+        }
+        boolean allowed = (status == PortfolioStatus.PRESENTED &&
+                (targetStatus == PortfolioStatus.INITIATIVE_APPROVED
+                    || targetStatus == PortfolioStatus.INITIATIVE_ARCHIVED
+                    || targetStatus == PortfolioStatus.NOT_ADMISSIBLE))
+            || (status == PortfolioStatus.INITIATIVE_APPROVED
+                && targetStatus == PortfolioStatus.INITIATIVE_ARCHIVED);
+        if (!allowed) {
+            throw new IllegalStateException("La transición de iniciativa no está permitida");
+        }
+        status = targetStatus;
+        updatedAt = transitionAt;
+    }
+
+    public void transitionProjectTo(PortfolioStatus targetStatus, Instant transitionAt, LocalDate closingDateAtTransition) {
+        if (recordType != RecordType.PROJECT) {
+            throw new IllegalStateException("El registro no es un proyecto");
+        }
+        boolean allowed = switch (status) {
+            case PROJECT_IN_PROGRESS -> targetStatus == PortfolioStatus.PRODUCT_APPROVED
+                || targetStatus == PortfolioStatus.PRODUCT_NOT_APPROVED
+                || targetStatus == PortfolioStatus.SUSPENDED
+                || targetStatus == PortfolioStatus.CANCELLED;
+            case SUSPENDED -> targetStatus == PortfolioStatus.PROJECT_IN_PROGRESS
+                || targetStatus == PortfolioStatus.CANCELLED;
+            case PRODUCT_NOT_APPROVED -> targetStatus == PortfolioStatus.PROJECT_IN_PROGRESS
+                || targetStatus == PortfolioStatus.CANCELLED;
+            case PRODUCT_APPROVED -> targetStatus == PortfolioStatus.FINISHED;
+            default -> false;
+        };
+        if (!allowed) {
+            throw new IllegalStateException("La transición de proyecto no está permitida");
+        }
+        status = targetStatus;
+        if (targetStatus == PortfolioStatus.FINISHED) {
+            closingDate = closingDateAtTransition;
+        }
+        updatedAt = transitionAt;
+    }
+
     public Long getId() { return id; }
     public RecordType getRecordType() { return recordType; }
     public String getCode() { return code; }
