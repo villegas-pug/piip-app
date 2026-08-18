@@ -37,37 +37,33 @@ flowchart TD
     H -->|No| G
 ```
 
-## Inicio: tablero de trabajo pendiente
+## Inicio: portafolio de la Unidad Ejecutora activa
 
-La ruta **Inicio** presenta el tablero de trabajo de la persona usuaria. La información descrita a continuación proviene de evidencia estática: orienta sobre el funcionamiento representado, pero no acredita por sí sola su ejecución operativa.
+La ruta **Inicio** muestra el portafolio consultable de la Unidad Ejecutora activa. El encabezado identifica la UE y declara que los datos corresponden únicamente a esa unidad y al alcance autorizado. Las tareas, prioridades, vencimientos, alertas y métricas operativas no forman parte de este resumen; el contrato legado `/dashboard` se conserva para compatibilidad técnica, pero no es la fuente visual de Inicio.
 
-### Estados del portafolio y acciones pendientes
+### Consultar el portafolio
 
-**Cómo funciona.** El indicador **Acciones pendientes** cuenta las tareas `WorkTask` con estado `PENDING` asignadas a la persona actual dentro de su ámbito de `Administrador PIIP`. Un pendiente pertenece a una tarea; no es el estado de la iniciativa ni del proyecto. En cambio, `Presentado`, `Iniciativa aprobada` y `Proyecto en ejecución` son estados del portafolio. Así, un registro puede conservar su estado y, a la vez, tener una tarea pendiente asociada.
+Al abrir Inicio, la pantalla solicita una página global de iniciativas y proyectos con la UE activa. Cada fila muestra código, nombre, tipo, estado actual, Unidad Ejecutora y **Ver detalle**. La acción de detalle deriva de manera real del tipo: una iniciativa abre su módulo de iniciativas y un proyecto abre su módulo de proyectos.
 
-En el flujo confirmado por las fuentes estáticas, al registrar una iniciativa se crea `REGISTER_DECISION`. Al aprobarla, esta tarea se completa y surge `CREATE_DERIVED_PROJECT`. Al crear el proyecto derivado, se completa la segunda tarea. Este recorrido no cambia la distinción entre una tarea pendiente y el estado del registro.
+La consulta permite buscar por código o nombre y filtrar por `Todos`, `Iniciativa`, `Proyecto` y estados canónicos. Cada página presenta hasta cinco registros. Cuando se combinan iniciativas y proyectos, la secuencia es única y se ordena por fecha de actualización descendente; un desempate técnico por identificador mantiene estable la paginación.
 
-**Limitación funcional identificada.** El tablero no enlaza visiblemente la tarea pendiente con la acción concreta, el registro relacionado ni su etapa.
+Los indicadores y la distribución por estado proceden del mismo conjunto filtrado que el listado. Solo se muestran estados con conteo positivo y la suma de sus conteos coincide con el total filtrado. Si se cambia el tipo y el estado seleccionado deja de ser válido, el filtro vuelve a **Estado: Todos** y la página se reinicia.
 
-**Mejora propuesta.** Mostrar para cada pendiente la acción requerida, el código o nombre del registro, la etapa y la fecha límite. Esta es una propuesta de mejora, no un comportamiento actual confirmado.
+### Vacío, sin resultados y error
 
-### Alertas
+- Si la UE activa no tiene registros, Inicio muestra el estado vacío del portafolio.
+- Si existen registros en la UE, pero los filtros no encuentran coincidencias, muestra **Sin resultados** y permite limpiar filtros.
+- Si falla una consulta, muestra un error recuperable con **Reintentar**; el error no se presenta como ausencia de datos.
 
-**Cómo funciona.** Las alertas son el cálculo de tareas abiertas de administradores cuya fecha de vencimiento está próxima o ya venció. Sirven para llamar la atención sobre trabajo que requiere seguimiento; no son estados del portafolio ni notificaciones.
+### Mis notificaciones
 
-**Limitación funcional identificada.** Una alerta sin contexto no permite saber rápidamente qué hacer ni sobre qué iniciativa o proyecto actuar.
+El bloque **Mis notificaciones** consulta únicamente los avisos del usuario autenticado y muestra tipo, mensaje, fecha y estado de lectura. El resumen compacto presenta las tres notificaciones más recientes. Las pestañas **Todas** y **No leídas** filtran la misma lista; **Ver todas** expande dentro del bloque la lista completa de la pestaña activa.
 
-**Mejora propuesta.** Mostrar la acción requerida, el registro, la etapa, la fecha límite y un acceso directo. Esta es una propuesta de mejora, no un comportamiento actual confirmado.
+Renderizar, abrir la campana, cambiar de pestaña o expandir la lista no cambia ninguna lectura. Cada aviso no leído tiene su propio botón **Marcar como leída**; la operación vigente `PUT /notifications/{id}/read` cambia solo ese aviso y actualiza el contador numérico de la campana. No se crean enlaces a iniciativas o proyectos porque el contrato de notificaciones no entrega una referencia contextual confiable.
 
-### Notificaciones
+La campana superior lleva a Inicio y enfoca este bloque desde cualquier pantalla autenticada. No abre un panel separado ni marca automáticamente el último aviso.
 
-**Cómo funciona.** Las notificaciones son avisos persistentes para la persona usuaria sobre eventos. Informan el tipo, el mensaje, la fecha y si están leídas o no leídas. Marcarlas como leídas no completa ni elimina una tarea: el aviso permanece, pero deja de contar como no leído.
-
-En el flujo representado por la evidencia estática, crear una iniciativa genera la tarea `REGISTER_DECISION` y un aviso. Aprobarla completa esa tarea, crea `CREATE_DERIVED_PROJECT` y genera otro aviso. Crear el proyecto derivado completa esa segunda tarea; la revisión estática no halló un aviso adicional para este último paso.
-
-**Limitación funcional identificada.** El aviso por sí mismo no orienta suficientemente sobre la acción, el registro o la etapa a la que se refiere.
-
-**Mejora propuesta.** Incorporar un vínculo directo a la tarea o al registro, la identificación del registro, la etapa, la prioridad y la fecha cuando corresponda. Esta es una propuesta de mejora, no un comportamiento actual confirmado.
+**Evidencia y límite de validación.** Esta sección describe el comportamiento implementado en los artefactos de la feature 010. La ejecución de pruebas, build, generación OpenAPI y validaciones de integración permanece pendiente de autorización explícita.
 
 ## Recorrido principal: de iniciativa a proyecto
 

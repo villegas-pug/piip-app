@@ -34,6 +34,12 @@ class OpenApiGenerationTest {
                 "AdministrableExecutingUnitResponse", "institutionWideAllowed")
             .doesNotContain("/admin/users/{userId}/status");
         assertThat(response.body())
+            .contains("/dashboard/portfolio", "HomePortfolioResponse", "HomePortfolioItemResponse",
+                "PortfolioStatusCountResponse", "executingUnitTotalElements", "statusCounts",
+                "\"name\":\"executingUnitId\"", "\"name\":\"q\"", "\"name\":\"type\"", "\"name\":\"status\"",
+                "\"name\":\"page\"", "\"name\":\"size\"", "\"default\":5", "\"maximum\":100")
+            .contains("\"400\"", "\"401\"", "\"403\"");
+        assertThat(response.body())
             .contains("InitiativeStatusTransitionRequest", "ProjectStatusTransitionRequest")
             .contains("\"/initiatives/{code}/status-transitions\"", "\"/projects/{code}/status-transitions\"");
         Path output = Path.of("target", "piip-openapi.json");

@@ -4,6 +4,7 @@ import {
   DocumentDossierSummary, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput,
   InitiativeRecord, InitiativeStatusTransitionInput, NotificationItem, OrganizationalUnit, PiipPortfolioRecord,
   PreexistingProjectInput, ProjectDetail, ProjectRecord, ProjectStatusTransitionInput, PiipRecordType, UserRole, WorkItem,
+  HomePortfolioQuery, HomePortfolioResult,
 } from './piip.models';
 
 export type RepositoryOperation<T> = T | Promise<T>;
@@ -20,6 +21,11 @@ export abstract class PiipRepository {
   abstract readonly auditAccesses: WritableSignal<AuditAccess[]>;
   abstract readonly workItems: WritableSignal<WorkItem[]>;
   abstract readonly notifications: WritableSignal<NotificationItem[]>;
+  abstract readonly homePortfolio: WritableSignal<HomePortfolioResult>;
+  abstract readonly homePortfolioLoading: WritableSignal<boolean>;
+  abstract readonly homePortfolioError: WritableSignal<string | null>;
+  abstract readonly notificationsLoading: WritableSignal<boolean>;
+  abstract readonly notificationsError: WritableSignal<string | null>;
   abstract readonly dashboardSummary: WritableSignal<DashboardSummary>;
   abstract readonly currentUser: WritableSignal<CurrentUser | null>;
   abstract readonly executingUnits: WritableSignal<ExecutingUnit[]>;
@@ -60,4 +66,6 @@ export abstract class PiipRepository {
   abstract downloadDocument(code: string, versionId: number, filename: string): RepositoryOperation<void>;
   abstract setDocumentPublication(code: string, versionId: number, published: boolean, version: number): RepositoryOperation<void>;
   abstract markNotificationRead(id: number): RepositoryOperation<void>;
+  abstract loadHomePortfolio(query: HomePortfolioQuery): RepositoryOperation<void>;
+  abstract refreshNotifications(): RepositoryOperation<void>;
 }

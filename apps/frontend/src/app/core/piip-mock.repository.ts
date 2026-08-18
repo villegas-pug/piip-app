@@ -22,8 +22,13 @@ import {
   PiipRecordType,
   UserRole,
   WorkItem,
+  HomePortfolioQuery, HomePortfolioResult, HomePortfolioItem, HomePortfolioStatusCount, NotificationItem, PiipStatus,
 } from './piip.models';
 import { PiipRepository } from './piip.repository';
+
+function emptyHomePortfolio(): HomePortfolioResult {
+  return { content: [], page: 0, size: 5, totalElements: 0, totalPages: 0, executingUnitTotalElements: 0, statusCounts: [] };
+}
 
 @Injectable({ providedIn: 'root' })
 export class PiipMockRepository extends PiipRepository {
@@ -44,8 +49,18 @@ export class PiipMockRepository extends PiipRepository {
   readonly lastError = signal<string | null>(null);
   readonly documentDossierSummaries = signal<DocumentDossierSummary[]>([]);
   readonly auditAccesses = signal<AuditAccess[]>([]);
-  readonly notifications = signal([{ id: 1, type: 'DEMO', message: 'Notificacion de demostracion', read: false, createdAt: new Date().toISOString() }]);
+  readonly notifications = signal<NotificationItem[]>([
+    { id: 1, type: 'Nueva iniciativa registrada', message: 'Se ha registrado una iniciativa para revisión.', read: false, createdAt: new Date().toISOString() },
+    { id: 2, type: 'Proyecto actualizado', message: 'El proyecto de demostración cambió de estado.', read: false, createdAt: new Date(Date.now() - 3600000).toISOString() },
+    { id: 3, type: 'Iniciativa archivada', message: 'Una iniciativa fue archivada.', read: true, createdAt: new Date(Date.now() - 7200000).toISOString() },
+    { id: 4, type: 'Recordatorio', message: 'Tienes un aviso pendiente de revisión.', read: false, createdAt: new Date(Date.now() - 10800000).toISOString() },
+  ]);
   readonly dashboardSummary = signal({ initiatives: 3, projects: 8, alerts: 2, pendingTasks: 2, notifications: 1, portfolioByStatus: {} });
+  readonly homePortfolio = signal<HomePortfolioResult>(emptyHomePortfolio());
+  readonly homePortfolioLoading = signal(false);
+  readonly homePortfolioError = signal<string | null>(null);
+  readonly notificationsLoading = signal(false);
+  readonly notificationsError = signal<string | null>(null);
 
   readonly portfolioRecords = signal<PiipPortfolioRecord[]>([
     {
@@ -58,6 +73,7 @@ export class PiipMockRepository extends PiipRepository {
       status: 'Presentado', finalProductType: 'NA', digitalComponent: 'No', closingDate: '',
       technicalOpinionReport: 'Informe_Opinion_I-024-2026.pdf', formalApprovalDecision: '',
       finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '',
+      executingUnitId: 1,
     },
     {
       recordType: 'Iniciativa', code: 'I-019-2026', originCode: 'NA',
@@ -70,6 +86,7 @@ export class PiipMockRepository extends PiipRepository {
       closingDate: '', technicalOpinionReport: 'Informe_Opinion_I-019-2026.pdf',
       formalApprovalDecision: 'Decision_I-019-2026.pdf', finalProductApprovalDocument: '',
       projectManagementDocumentation: '', finalClosureReport: '',
+      executingUnitId: 1,
     },
     {
       recordType: 'Iniciativa', code: 'I-014-2026', originCode: 'NA',
@@ -82,6 +99,7 @@ export class PiipMockRepository extends PiipRepository {
       finalProductType: 'NA', digitalComponent: 'No', closingDate: '', technicalOpinionReport: '',
       formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '',
       finalClosureReport: '',
+      executingUnitId: 1,
     },
     {
       recordType: 'Proyecto', code: 'P-005-2026', originCode: 'NA',
@@ -92,6 +110,7 @@ export class PiipMockRepository extends PiipRepository {
       note: 'Proyecto preexistente de demostración.', status: 'Proyecto en ejecución', finalProductType: 'NA',
       digitalComponent: 'Si', closingDate: '', technicalOpinionReport: 'No Aplica', formalApprovalDecision: 'No Aplica',
       finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '',
+      executingUnitId: 1,
     },
   ]);
 
@@ -261,6 +280,51 @@ export class PiipMockRepository extends PiipRepository {
   selectExecutingUnit(executingUnitId: number): void {
     this.selectedExecutingUnitId.set(executingUnitId);
     if (!this.canAdministerExecutingUnit(executingUnitId)) this.administrableScopes.set([]);
+  }
+
+  loadHomePortfolio(query: HomePortfolioQuery): void {
+    this.homePortfolioLoading.set(true);
+    this.homePortfolioError.set(null);
+    try {
+      const unit = this.executingUnits().find((candidate) => candidate.id === query.executingUnitId);
+      const records = this.portfolioRecords()
+        .filter((record) => record.executingUnitId === query.executingUnitId)
+        .filter((record) => query.type === 'Todos' || record.recordType === query.type)
+        .filter((record) => query.status === 'Todos' || record.status === query.status)
+        .filter((record) => !query.q || `${record.code} ${record.name}`.toLocaleLowerCase().includes(query.q.toLocaleLowerCase()))
+        .sort((a, b) => mockUpdatedAt(b, this.initiatives(), this.documentDossiers()).localeCompare(mockUpdatedAt(a, this.initiatives(), this.documentDossiers())) || b.code.localeCompare(a.code));
+      const statusCounts = new Map<PiipStatus, number>();
+      records.forEach((record) => statusCounts.set(record.status, (statusCounts.get(record.status) ?? 0) + 1));
+      const totalPages = Math.ceil(records.length / query.size);
+      const page = totalPages > 0 && query.page >= totalPages ? 0 : query.page;
+      const content = records.slice(page * query.size, (page + 1) * query.size).map((record): HomePortfolioItem => ({
+        recordType: record.recordType,
+        code: record.code,
+        name: record.name,
+        status: record.status,
+        executingUnitId: record.executingUnitId ?? query.executingUnitId,
+        executingUnit: unit?.name ?? 'Unidad Ejecutora activa',
+        updatedAt: mockUpdatedAt(record, this.initiatives(), this.documentDossiers()),
+      }));
+      this.homePortfolio.set({
+        content,
+        page,
+        size: query.size,
+        totalElements: records.length,
+        totalPages,
+        executingUnitTotalElements: this.portfolioRecords().filter((record) => record.executingUnitId === query.executingUnitId).length,
+        statusCounts: [...statusCounts.entries()].map(([status, count]): HomePortfolioStatusCount => ({ status, count })),
+      });
+    } catch (error) {
+      this.homePortfolioError.set(error instanceof Error ? error.message : 'No fue posible cargar el portafolio.');
+    } finally {
+      this.homePortfolioLoading.set(false);
+    }
+  }
+
+  refreshNotifications(): void {
+    this.notificationsLoading.set(false);
+    this.notificationsError.set(null);
   }
 
   getDocumentDossier(recordType: PiipRecordType, code: string): DocumentDossier | undefined {
@@ -626,6 +690,17 @@ function formatDateTime(date: Date): string {
 
 function formatAuditTimestamp(date: Date): string {
   return new Intl.DateTimeFormat('es-PE', { dateStyle: 'short', timeStyle: 'medium' }).format(date).replace(', ', '\n');
+}
+
+function mockUpdatedAt(record: PiipPortfolioRecord, initiatives: InitiativeRecord[], dossiers: DocumentDossier[]): string {
+  const source = record.recordType === 'Iniciativa'
+    ? initiatives.find((item) => item.code === record.code)?.updatedAt
+    : dossiers.find((item) => item.code === record.code)?.lastActivity;
+  if (!source) return '';
+  const match = source.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if (!match) return source;
+  const [, day, month, year, hour = '00', minute = '00'] = match;
+  return `${year}-${month}-${day}T${hour}:${minute}:00-05:00`;
 }
 
 export function resolveProjectOriginCode(origin: ProjectOrigin): string {

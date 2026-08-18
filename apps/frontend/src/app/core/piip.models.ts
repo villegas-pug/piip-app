@@ -303,6 +303,40 @@ export interface DashboardSummary {
   portfolioByStatus: Record<string, number>;
 }
 
+export interface HomePortfolioQuery {
+  executingUnitId: number;
+  q: string;
+  type: PiipRecordType | 'Todos';
+  status: PiipStatus | 'Todos';
+  page: number;
+  size: number;
+}
+
+export interface HomePortfolioItem {
+  recordType: PiipRecordType;
+  code: string;
+  name: string;
+  status: PiipStatus;
+  executingUnitId: number;
+  executingUnit: string;
+  updatedAt: string;
+}
+
+export interface HomePortfolioStatusCount {
+  status: PiipStatus;
+  count: number;
+}
+
+export interface HomePortfolioResult {
+  content: HomePortfolioItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  executingUnitTotalElements: number;
+  statusCounts: HomePortfolioStatusCount[];
+}
+
 export interface NotificationItem {
   id: number;
   type: string;

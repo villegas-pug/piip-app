@@ -51,8 +51,8 @@
             </div>
           }
         }
-        <button class="notification-button" type="button" aria-label="Abrir notificaciones" [disabled]="notificationPending()" [attr.aria-busy]="notificationPending()" (click)="showNotifications()">
-          <mat-icon [class.button-spinner]="notificationPending()">{{ notificationPending() ? 'progress_activity' : 'notifications_none' }}</mat-icon>@if (hasUnreadNotifications()) {<span></span>}
+        <button class="notification-button" type="button" [attr.aria-label]="'Ir a Mis notificaciones. ' + unreadNotificationCount() + ' no leídas'" [disabled]="notificationPending()" [attr.aria-busy]="notificationPending()" (click)="showNotifications()">
+          <mat-icon [class.button-spinner]="notificationPending()">{{ notificationPending() ? 'progress_activity' : 'notifications_none' }}</mat-icon>@if (hasUnreadNotifications()) {<span class="notification-badge">{{ unreadNotificationCount() }}</span>}
         </button>
         <i class="divider"></i>
         <button class="profile-button" type="button" [matMenuTriggerFor]="profileMenu" [attr.aria-label]="'Abrir menú de perfil de ' + (repository.currentUser()?.fullName ?? 'usuario PIIP')">

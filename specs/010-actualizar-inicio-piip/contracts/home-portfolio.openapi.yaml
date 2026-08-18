@@ -1,0 +1,192 @@
+openapi: 3.1.0
+info:
+  title: PIIP Inicio - Contrato de portafolio
+  version: 0.1.0
+  description: Contrato de diseño aditivo para el portafolio de Inicio; no es el OpenAPI generado del backend.
+servers:
+  - url: /api/v1
+paths:
+  /dashboard/portfolio:
+    get:
+      operationId: getHomePortfolio
+      summary: Consulta el portafolio de la Unidad Ejecutora activa para Inicio
+      parameters:
+        - name: executingUnitId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: q
+          in: query
+          required: false
+          description: Búsqueda por código o nombre.
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          description: Ausente representa Todos.
+          schema:
+            $ref: '#/components/schemas/RecordType'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PortfolioStatus'
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 5
+      responses:
+        '200':
+          description: Página global y conteos reconciliados del portafolio.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomePortfolioResponse'
+        '400':
+          description: Parámetros inválidos.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          description: Usuario no autenticado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: La Unidad Ejecutora no pertenece al alcance legible del usuario.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+components:
+  schemas:
+    RecordType:
+      type: string
+      enum: [INITIATIVE, PROJECT]
+    PortfolioStatus:
+      type: string
+      description: Código canónico de un estado vigente; su presencia no autoriza transiciones.
+      enum:
+        - PRESENTED
+        - INITIATIVE_APPROVED
+        - INITIATIVE_ARCHIVED
+        - PROJECT_IN_PROGRESS
+        - PRODUCT_APPROVED
+        - PRODUCT_NOT_APPROVED
+        - SUSPENDED
+        - CANCELLED
+        - FINISHED
+        - NOT_APPLICABLE
+        - NOT_ADMISSIBLE
+    HomePortfolioResponse:
+      type: object
+      required:
+        - content
+        - page
+        - size
+        - totalElements
+        - totalPages
+        - executingUnitTotalElements
+        - statusCounts
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/HomePortfolioItemResponse'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Igual a la suma de statusCounts.
+        totalPages:
+          type: integer
+          minimum: 0
+        executingUnitTotalElements:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Total de la UE antes de q, type y status.
+        statusCounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortfolioStatusCountResponse'
+    HomePortfolioItemResponse:
+      type: object
+      required:
+        - recordType
+        - code
+        - name
+        - status
+        - executingUnitId
+        - executingUnit
+        - updatedAt
+      properties:
+        recordType:
+          type: string
+          enum: [Iniciativa, Proyecto]
+        code:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          description: Etiqueta canónica del estado.
+        executingUnitId:
+          type: integer
+          format: int64
+        executingUnit:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    PortfolioStatusCountResponse:
+      type: object
+      required: [status, count]
+      properties:
+        status:
+          type: string
+          description: Etiqueta canónica del estado.
+        count:
+          type: integer
+          format: int64
+          minimum: 1
+    ProblemDetail:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference

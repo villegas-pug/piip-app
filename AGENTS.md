@@ -55,5 +55,5 @@
 - Ningún especialista ejecuta pruebas, builds, generación OpenAPI, integración Oracle ni acciones destructivas sin autorización explícita del usuario en el turno actual.
 
 <!-- SPECKIT START -->
-Para la feature activa, leer `specs/009-ciclo-vida-portafolio/plan.md` antes de planificar o implementar.
+Para la feature activa, leer `specs/010-actualizar-inicio-piip/plan.md` antes de planificar o implementar.
 <!-- SPECKIT END -->

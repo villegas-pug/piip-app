@@ -6,9 +6,10 @@ import {
   DocumentDossierSummary, DocumentRecord, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail,
   InitiativeInput, InitiativeRecord, InitiativeStatusTransitionInput, NotificationItem, OrganizationalUnit,
   PiipPortfolioRecord, PiipRecordType, PreexistingProjectInput, ProjectDetail, ProjectRecord,
-  ProjectStatusTransitionInput, UserRole, UserRoleCode, WorkItem,
+  ProjectStatusTransitionInput, UserRole, UserRoleCode, WorkItem, HomePortfolioQuery, HomePortfolioResult,
+  HomePortfolioItem, HomePortfolioStatusCount, PiipStatus,
 } from './piip.models';
-import { CurrentUserResponse, EventResponse, PortfolioControllerService, UserAdministrationControllerService } from '../api/generated';
+import { CurrentUserResponse, DashboardControllerService, EventResponse, PortfolioControllerService, UserAdministrationControllerService } from '../api/generated';
 import { PiipRepository } from './piip.repository';
 import { resolveApiUrl as runtimeApiUrl } from './piip-runtime-config';
 import {
@@ -108,6 +109,11 @@ export class PiipHttpRepository extends PiipRepository {
   readonly auditAccesses = signal<AuditAccess[]>([]);
   readonly workItems = signal<WorkItem[]>([]);
   readonly notifications = signal<NotificationItem[]>([]);
+  readonly homePortfolio = signal<HomePortfolioResult>(emptyHomePortfolio());
+  readonly homePortfolioLoading = signal(false);
+  readonly homePortfolioError = signal<string | null>(null);
+  readonly notificationsLoading = signal(false);
+  readonly notificationsError = signal<string | null>(null);
   readonly dashboardSummary = signal<DashboardSummary>(emptyDashboard());
   readonly executingUnits = signal<ExecutingUnit[]>([]);
   readonly organizationalUnits = signal<OrganizationalUnit[]>([]);
@@ -119,16 +125,19 @@ export class PiipHttpRepository extends PiipRepository {
   private readonly http = inject(HttpClient);
   private readonly userAdministration = inject(UserAdministrationControllerService);
   private readonly portfolio = inject(PortfolioControllerService);
+  private readonly dashboard = inject(DashboardControllerService);
   private readonly apiUrl = runtimeApiUrl();
   private readonly recordVersions = new Map<string, number>();
   private readonly eligibleInitiatives = signal<InitiativeRecord[]>([]);
   private readonly loadingRecordCodes = new Set<string>();
+  private homePortfolioRequestId = 0;
   private initialization?: Promise<void>;
 
   constructor() {
     super();
     this.userAdministration.rootUrl = this.apiUrl;
     this.portfolio.rootUrl = this.apiUrl;
+    this.dashboard.rootUrl = this.apiUrl;
     void this.initialize();
   }
 
@@ -462,7 +471,58 @@ export class PiipHttpRepository extends PiipRepository {
   async markNotificationRead(id: number): Promise<void> {
     await this.request(this.http.put(`${this.apiUrl}/notifications/${id}/read`, null));
     this.notifications.update((items) => items.map((item) => item.id === id ? { ...item, read: true } : item));
-    await this.loadDashboard();
+  }
+
+  async refreshNotifications(): Promise<void> {
+    this.notificationsLoading.set(true);
+    this.notificationsError.set(null);
+    try {
+      this.notifications.set(await this.request(this.http.get<NotificationItem[]>(`${this.apiUrl}/notifications`)));
+    } catch (error) {
+      this.notificationsError.set(error instanceof Error ? error.message : 'No fue posible cargar las notificaciones.');
+    } finally {
+      this.notificationsLoading.set(false);
+    }
+  }
+
+  async loadHomePortfolio(query: HomePortfolioQuery): Promise<void> {
+    const requestId = ++this.homePortfolioRequestId;
+    this.homePortfolioLoading.set(true);
+    this.homePortfolioError.set(null);
+    const params: Parameters<DashboardControllerService['portfolio']>[0] = {
+      executingUnitId: query.executingUnitId,
+      q: query.q.trim() || undefined,
+      type: query.type === 'Todos' ? undefined : query.type === 'Iniciativa' ? 'INITIATIVE' : 'PROJECT',
+      status: query.status === 'Todos' ? undefined : portfolioStatusCode(query.status) as NonNullable<Parameters<DashboardControllerService['portfolio']>[0]>['status'],
+      page: query.page,
+      size: query.size,
+    };
+    try {
+      const response = await this.request(this.dashboard.portfolio(params));
+      const result: HomePortfolioResult = {
+        content: (response.content ?? []).flatMap((item): HomePortfolioItem[] => {
+          const recordType = item.recordType === 'Iniciativa' || item.recordType === 'Proyecto' ? item.recordType : null;
+          const status = item.status as PiipStatus | undefined;
+          return recordType && status && item.code && item.name
+            ? [{ recordType, code: item.code, name: item.name, status, executingUnitId: item.executingUnitId ?? query.executingUnitId, executingUnit: item.executingUnit ?? '', updatedAt: item.updatedAt ?? '' }]
+            : [];
+        }),
+        page: response.page ?? 0,
+        size: response.size ?? query.size,
+        totalElements: response.totalElements ?? 0,
+        totalPages: response.totalPages ?? 0,
+        executingUnitTotalElements: response.executingUnitTotalElements ?? 0,
+        statusCounts: (response.statusCounts ?? []).flatMap((item): HomePortfolioStatusCount[] =>
+          item.status && item.count !== undefined ? [{ status: item.status as PiipStatus, count: item.count }] : []),
+      };
+      if (requestId === this.homePortfolioRequestId) this.homePortfolio.set(result);
+    } catch (error) {
+      if (requestId === this.homePortfolioRequestId) {
+        this.homePortfolioError.set(error instanceof Error ? error.message : 'No fue posible cargar el portafolio.');
+      }
+    } finally {
+      if (requestId === this.homePortfolioRequestId) this.homePortfolioLoading.set(false);
+    }
   }
 
   private async loadIdentity(): Promise<void> {
@@ -619,11 +679,11 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   private async loadNotifications(): Promise<void> {
-    this.notifications.set(await this.request(this.http.get<NotificationItem[]>(`${this.apiUrl}/notifications`)));
+    await this.refreshNotifications();
   }
 
   private async loadDashboard(): Promise<void> {
-    const summary = await this.request(this.http.get<DashboardSummary>(`${this.apiUrl}/dashboard`));
+    const summary = await this.request(this.dashboard.summary());
     this.dashboardSummary.set({ ...emptyDashboard(), ...summary });
   }
 
@@ -802,6 +862,10 @@ function formatDateOnly(value: string): string {
 
 function emptyDashboard(): DashboardSummary {
   return { initiatives: 0, projects: 0, alerts: 0, pendingTasks: 0, notifications: 0, portfolioByStatus: {} };
+}
+
+function emptyHomePortfolio(): HomePortfolioResult {
+  return { content: [], page: 0, size: 5, totalElements: 0, totalPages: 0, executingUnitTotalElements: 0, statusCounts: [] };
 }
 
 function httpStatusMessage(status: number): string {

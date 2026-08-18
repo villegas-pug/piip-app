@@ -32,7 +32,8 @@ export class AppShellComponent {
   readonly repository = inject(PIIP_REPOSITORY);
   readonly currentUrl = signal(this.router.url);
   readonly notificationPending = signal(false);
-  readonly hasUnreadNotifications = computed(() => this.repository.notifications().some((item) => !item.read));
+  readonly unreadNotificationCount = computed(() => this.repository.notifications().filter((item) => !item.read).length);
+  readonly hasUnreadNotifications = computed(() => this.unreadNotificationCount() > 0);
   readonly activeExecutingUnit = computed(() =>
     this.repository.executingUnits().find((unit) => unit.id === this.repository.selectedExecutingUnitId()),
   );
@@ -80,15 +81,14 @@ export class AppShellComponent {
 
   async showNotifications(): Promise<void> {
     if (this.notificationPending()) return;
-    const unread = this.repository.notifications().filter((item) => !item.read);
-    const latest = unread[0] ?? this.repository.notifications()[0];
-    this.snackBar.open(latest?.message ?? 'No tienes notificaciones pendientes.', 'Cerrar', { duration: 4200 });
-    if (!latest || latest.read) return;
     this.notificationPending.set(true);
     try {
-      await Promise.resolve(this.repository.markNotificationRead(latest.id));
-    } catch (error) {
-      this.snackBar.open(error instanceof Error ? error.message : 'No fue posible actualizar la notificación.', 'Cerrar', { duration: 3800 });
+      await this.router.navigateByUrl('/inicio');
+      window.setTimeout(() => {
+        const target = document.getElementById('mis-notificaciones');
+        target?.focus();
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
     } finally {
       this.notificationPending.set(false);
     }
@@ -104,19 +104,22 @@ export class AppShellComponent {
 
   async selectExecutingUnit(executingUnitId: number): Promise<void> {
     if (this.activity.isBlocking() || executingUnitId === this.repository.selectedExecutingUnitId()) return;
+    const routeBeforeSelection = this.currentUrl();
     try {
       await this.activity.runBlocking(
         'Actualizando información de la Unidad Ejecutora...',
         () => Promise.resolve(this.repository.selectExecutingUnit(executingUnitId)),
       );
-      if (!this.repository.canAdministerExecutingUnit(executingUnitId) && isActiveScopeAdministratorRoute(this.currentUrl())) {
-        if (this.currentUrl().startsWith('/administracion/usuarios')) {
-          this.snackBar.open(
-            'Saliste de Administración de usuarios porque la UE activa no tiene rol Administrador PIIP.',
-            'Cerrar',
-            { duration: 5200 },
-          );
-        }
+      const lostAdministratorScope = !this.repository.canAdministerExecutingUnit(executingUnitId);
+      const routePath = routeBeforeSelection.split(/[?#]/, 1)[0];
+      if (lostAdministratorScope && routePath === '/administracion/usuarios') {
+        this.snackBar.open(
+          'Saliste de Administración de usuarios porque la UE activa no tiene rol Administrador PIIP.',
+          'Cerrar',
+          { duration: 5200 },
+        );
+      }
+      if (lostAdministratorScope && isActiveScopeAdministratorRoute(routeBeforeSelection)) {
         await this.router.navigateByUrl('/inicio');
       }
     } catch (error) {

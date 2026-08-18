@@ -11,6 +11,9 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { DashboardResponse } from '../models/dashboard-response';
+import { HomePortfolioResponse } from '../models/home-portfolio-response';
+import { portfolio } from '../fn/dashboard-controller/portfolio';
+import { Portfolio$Params } from '../fn/dashboard-controller/portfolio';
 import { summary } from '../fn/dashboard-controller/summary';
 import { Summary$Params } from '../fn/dashboard-controller/summary';
 
@@ -44,6 +47,33 @@ export class DashboardControllerService extends BaseService {
     const resp = this.summary$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<DashboardResponse>): DashboardResponse => r.body)
+    );
+  }
+
+  /** Path part for operation `portfolio()` */
+  static readonly PortfolioPath = '/dashboard/portfolio';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `portfolio()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  portfolio$Response(params: Portfolio$Params, context?: HttpContext): Observable<StrictHttpResponse<HomePortfolioResponse>> {
+    const obs = portfolio(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `portfolio$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  portfolio(params: Portfolio$Params, context?: HttpContext): Observable<HomePortfolioResponse> {
+    const resp = this.portfolio$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<HomePortfolioResponse>): HomePortfolioResponse => r.body)
     );
   }
 

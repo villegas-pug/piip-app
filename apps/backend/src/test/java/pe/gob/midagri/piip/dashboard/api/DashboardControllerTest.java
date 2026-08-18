@@ -1,6 +1,7 @@
 package pe.gob.midagri.piip.dashboard.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
@@ -12,14 +13,20 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.security.access.AccessDeniedException;
 import pe.gob.midagri.piip.identity.application.LocalAccessContext;
 import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
+import pe.gob.midagri.piip.dashboard.application.DashboardPortfolioService;
+import pe.gob.midagri.piip.dashboard.api.DashboardDtos.HomePortfolioResponse;
 import pe.gob.midagri.piip.identity.application.RoleScopeGrant;
 import pe.gob.midagri.piip.identity.domain.RoleCode;
 import pe.gob.midagri.piip.identity.persistence.UserEntity;
 import pe.gob.midagri.piip.organization.persistence.ExecutingUnitEntity;
 import pe.gob.midagri.piip.organization.persistence.InstitutionEntity;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.RecordType;
 import pe.gob.midagri.piip.portfolio.domain.SolutionType;
 import pe.gob.midagri.piip.portfolio.domain.SourceOrigin;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
@@ -37,6 +44,7 @@ class DashboardControllerTest {
     @Mock WorkTaskRepository tasks;
     @Mock NotificationRepository notifications;
     @Mock LocalAuthorizationService authorization;
+    @Mock DashboardPortfolioService portfolioService;
     @InjectMocks DashboardController controller;
 
     @Test
@@ -57,6 +65,46 @@ class DashboardControllerTest {
 
         assertThat(response.initiatives()).isEqualTo(2L);
         assertThat(response.pendingTasks()).isEqualTo(1L);
+    }
+
+    @Test
+    void portfolioEndpointDelegatesAllPublicFiltersToTheApplicationService() {
+        HomePortfolioResponse expected = new HomePortfolioResponse(List.of(), 0, 5, 0, 0, 0, List.of());
+        when(portfolioService.portfolio(10L, "q", RecordType.INITIATIVE, PortfolioStatus.PRESENTED, 2, 5))
+            .thenReturn(expected);
+
+        DashboardDtos.HomePortfolioResponse response = controller.portfolio(10L, "q", RecordType.INITIATIVE,
+            PortfolioStatus.PRESENTED, 2, 5);
+
+        assertThat(response).isSameAs(expected);
+    }
+
+    @Test
+    void portfolioEndpointDeclaresRequiredDefaultsAndPassesOptionalFilters() throws NoSuchMethodException {
+        var method = DashboardController.class.getDeclaredMethod("portfolio", Long.class, String.class,
+            RecordType.class, PortfolioStatus.class, int.class, int.class);
+        var parameters = method.getParameters();
+        assertThat(parameters[0].getAnnotation(RequestParam.class).value()).isEqualTo("executingUnitId");
+        assertThat(parameters[1].getAnnotation(RequestParam.class).value()).isEqualTo("q");
+        assertThat(parameters[2].getAnnotation(RequestParam.class).value()).isEqualTo("type");
+        assertThat(parameters[3].getAnnotation(RequestParam.class).value()).isEqualTo("status");
+        assertThat(parameters[1].getAnnotation(RequestParam.class).required()).isFalse();
+        assertThat(parameters[4].getAnnotation(RequestParam.class).defaultValue()).isEqualTo("0");
+        assertThat(parameters[5].getAnnotation(RequestParam.class).defaultValue()).isEqualTo("5");
+
+        HomePortfolioResponse expected = new HomePortfolioResponse(List.of(), 0, 1, 0, 0, 0, List.of());
+        when(portfolioService.portfolio(10L, null, null, null, -2, 101)).thenReturn(expected);
+
+        assertThat(controller.portfolio(10L, null, null, null, -2, 101)).isSameAs(expected);
+    }
+
+    @Test
+    void portfolioEndpointPropagatesUnauthorizedUnitAccess() {
+        when(portfolioService.portfolio(99L, null, null, null, 0, 5))
+            .thenThrow(new AccessDeniedException("fuera del ámbito autorizado"));
+
+        assertThatThrownBy(() -> controller.portfolio(99L, null, null, null, 0, 5))
+            .isInstanceOf(AccessDeniedException.class);
     }
 
     private WorkTaskEntity task(Long id, UserEntity assigned, String code, Long institutionId, Long unitId) {

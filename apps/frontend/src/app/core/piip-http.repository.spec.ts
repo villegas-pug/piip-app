@@ -226,4 +226,68 @@ describe('PiipHttpRepository', () => {
     expect(refresh).not.toHaveBeenCalled();
     expect(repository.lastError()).not.toBe('Fin de prueba');
   });
+
+  it('loads the unified home portfolio with UE, filters and five-row pagination', async () => {
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Fin de prueba', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await repository.initialize();
+    repository.selectedExecutingUnitId.set(10);
+
+    const operation = repository.loadHomePortfolio({
+      executingUnitId: 10,
+      q: 'riego',
+      type: 'Todos',
+      status: 'Todos',
+      page: 1,
+      size: 5,
+    });
+    const request = http.expectOne((candidate) => candidate.url.endsWith('/dashboard/portfolio'));
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.get('executingUnitId')).toBe('10');
+    expect(request.request.params.get('q')).toBe('riego');
+    expect(request.request.params.get('page')).toBe('1');
+    expect(request.request.params.get('size')).toBe('5');
+    request.flush({
+      content: [{ recordType: 'Iniciativa', code: 'I-001-2026', name: 'Riego', status: 'Presentado', executingUnitId: 10, executingUnit: 'UE-010', updatedAt: '2026-08-18T12:00:00Z' }],
+      page: 1, size: 5, totalElements: 6, totalPages: 2, executingUnitTotalElements: 8,
+      statusCounts: [{ status: 'Presentado', count: 4 }, { status: 'Iniciativa aprobada', count: 2 }],
+    });
+    await operation;
+
+    expect(repository.homePortfolio().content[0].code).toBe('I-001-2026');
+    expect(repository.homePortfolio().totalElements).toBe(6);
+    expect(repository.homePortfolio().statusCounts.reduce((total, item) => total + item.count, 0)).toBe(6);
+  });
+
+  it('loads personal notifications, preserves failures and marks only the requested row', async () => {
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Fin de prueba', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await repository.initialize();
+    const loading = repository.refreshNotifications();
+    http.expectOne('http://127.0.0.1:4001/api/v1/notifications').flush([
+      { id: 7, type: 'Nueva iniciativa', message: 'Aviso', read: false, createdAt: '2026-08-18T12:00:00Z' },
+      { id: 8, type: 'Proyecto actualizado', message: 'Otro aviso', read: true, createdAt: '2026-08-18T11:00:00Z' },
+    ]);
+    await loading;
+    expect(repository.notifications().filter((item) => !item.read)).toHaveLength(1);
+
+    const mark = repository.markNotificationRead(7);
+    const request = http.expectOne('http://127.0.0.1:4001/api/v1/notifications/7/read');
+    expect(request.request.method).toBe('PUT');
+    request.flush(null);
+    await mark;
+    expect(repository.notifications().find((item) => item.id === 7)?.read).toBe(true);
+
+    const failed = repository.refreshNotifications();
+    http.expectOne('http://127.0.0.1:4001/api/v1/notifications').flush(
+      { detail: 'Notificaciones no disponibles', status: 503 },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+    await failed;
+    expect(repository.notificationsError()).toBe('Notificaciones no disponibles');
+  });
 });

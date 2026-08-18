@@ -98,6 +98,42 @@ describe('AppShellComponent loading state', () => {
     expect(profile.getAttribute('aria-label')).toContain('Cristopher Guevara Villegas');
   });
 
+  it('muestra el contador numérico y no marca avisos al activar la campana', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const router = TestBed.inject(Router);
+    const navigateByUrl = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const fixture = TestBed.createComponent(AppShellComponent);
+    fixture.detectChanges();
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.notification-button')!;
+    expect(button.textContent).toContain('3');
+    await fixture.componentInstance.showNotifications();
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/inicio');
+    expect(repository.notifications().filter((item) => !item.read)).toHaveLength(3);
+  });
+
+  it('lleva el foco a Mis notificaciones sin lectura automática', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    const target = document.createElement('section');
+    target.id = 'mis-notificaciones';
+    target.tabIndex = -1;
+    target.scrollIntoView = vi.fn();
+    document.body.appendChild(target);
+    try {
+      const fixture = TestBed.createComponent(AppShellComponent);
+      fixture.detectChanges();
+      await fixture.componentInstance.showNotifications();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(document.activeElement).toBe(target);
+      expect(repository.notifications().filter((item) => !item.read)).toHaveLength(3);
+    } finally {
+      target.remove();
+    }
+  });
+
   it('recalculates the visible role from the active UE without combining grants', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.executingUnits.set([
@@ -159,19 +195,30 @@ describe('AppShellComponent loading state', () => {
     const fixture = TestBed.createComponent(AppShellComponent);
     const router = TestBed.inject(Router);
     const navigateByUrl = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
-    const snackBar = TestBed.inject(MatSnackBar);
-    const open = vi.spyOn(snackBar, 'open');
+    const open = vi.spyOn(MatSnackBar.prototype, 'open');
+    const activity = TestBed.inject(PiipActivityService);
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.componentInstance.currentUrl.set('/administracion/usuarios');
 
-    await fixture.componentInstance.selectExecutingUnit(1);
+    expect(repository.canAdministerExecutingUnit(1)).toBe(false);
+    expect(fixture.componentInstance.currentUrl()).toBe('/administracion/usuarios');
+    expect(activity.isBlocking()).toBe(false);
 
-    expect(navigateByUrl).toHaveBeenCalledWith('/inicio');
-    expect(open).toHaveBeenCalledWith(
-      'Saliste de Administración de usuarios porque la UE activa no tiene rol Administrador PIIP.',
-      'Cerrar',
-      { duration: 5200 },
-    );
-    expect(repository.administrableScopes()).toEqual([]);
+    try {
+      await fixture.componentInstance.selectExecutingUnit(1);
+
+      expect(repository.canAdministerExecutingUnit(1)).toBe(false);
+      expect(navigateByUrl).toHaveBeenCalledWith('/inicio');
+      expect(open).toHaveBeenCalledWith(
+        'Saliste de Administración de usuarios porque la UE activa no tiene rol Administrador PIIP.',
+        'Cerrar',
+        { duration: 5200 },
+      );
+      expect(repository.administrableScopes()).toEqual([]);
+    } finally {
+      open.mockRestore();
+    }
   });
 
   function configureMixedScopes(): PiipMockRepository {

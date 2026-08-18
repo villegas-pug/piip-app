@@ -69,6 +69,8 @@ export type { List2$Params as List2$Params } from './fn/document-inbox-controlle
 export { list2 as list2 } from './fn/document-inbox-controller/list-2';
 export type { Summary$Params as Summary$Params } from './fn/dashboard-controller/summary';
 export { summary as summary } from './fn/dashboard-controller/summary';
+export type { Portfolio$Params as Portfolio$Params } from './fn/dashboard-controller/portfolio';
+export { portfolio as portfolio } from './fn/dashboard-controller/portfolio';
 export type { Catalogs$Params as Catalogs$Params } from './fn/catalog-controller/catalogs';
 export { catalogs as catalogs } from './fn/catalog-controller/catalogs';
 export type { Events$Params as Events$Params } from './fn/audit-controller/events';
