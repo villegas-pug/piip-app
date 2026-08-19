@@ -144,9 +144,10 @@ describe('DashboardComponent', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(fixture.nativeElement.querySelector('.status-chart')).not.toBeNull();
     expect(total.getAttribute('aria-label')).toBe(`Total filtrado: ${repository.homePortfolio().totalElements} registros`);
-    expect(total.querySelector('mat-icon')?.textContent?.trim()).toBe('format_list_numbered');
-    expect(total.querySelector('strong')?.textContent).toContain(`${repository.homePortfolio().totalElements}`);
-    expect(total.querySelector('small')?.textContent).toContain('registros');
+    expect(total.querySelector('.distribution-total-icon mat-icon')?.textContent?.trim()).toBe('analytics');
+    expect(total.querySelector('.distribution-total-label')?.textContent).toContain('Total filtrado');
+    expect(total.querySelector('.distribution-total-number')?.textContent).toContain(`${repository.homePortfolio().totalElements}`);
+    expect(total.querySelector('.distribution-total-unit')?.textContent).toContain('registros');
 
     toggle.click();
     fixture.detectChanges();

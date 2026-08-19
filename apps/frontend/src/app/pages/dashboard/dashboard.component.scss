@@ -55,15 +55,18 @@
 .portfolio-list-panel app-piip-pagination { display: block; padding: 4px 18px; }
 
 .portfolio-summary { display: grid; gap: 14px; }
-.distribution-title h3 { display: inline-flex; align-items: center; gap: 8px; }
+.distribution-title h3 { display: inline-flex; min-width: 0; align-items: center; gap: 8px; }
 .distribution-title h3 mat-icon { width: 22px; height: 22px; color: var(--piip-green-700); font-size: 22px; }
-.distribution-actions { display: flex; align-items: center; gap: 10px; }
-.distribution-total { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; flex: 0 0 auto; padding: 5px 11px; border: 1px solid #d4e5da; border-radius: 999px; color: var(--piip-green-800); background: var(--piip-mint-soft); }
-.distribution-total > mat-icon { width: 20px; height: 20px; font-size: 20px; }
-.distribution-total > span { display: grid; justify-items: end; }
-.distribution-total strong { font-family: var(--piip-display); font-size: 22px; line-height: .9; }
-.distribution-total small { color: #65736b; font-size: 11px; line-height: 1.1; }
-.distribution-toggle { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--piip-border); border-radius: 50%; color: var(--piip-green-800); background: #fff; cursor: pointer; }
+.distribution-actions { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.distribution-total { display: inline-grid; grid-template-columns: 36px minmax(96px, 1fr); min-width: 176px; min-height: 54px; align-items: center; gap: 10px; flex: 0 0 auto; padding: 7px 13px 7px 8px; border: 1px solid #d4e5da; border-radius: 10px; color: var(--piip-green-800); background: #fff; box-shadow: 0 2px 8px rgba(0, 75, 50, .06); }
+.distribution-total-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; color: var(--piip-green-800); background: var(--piip-mint); }
+.distribution-total-icon mat-icon { width: 20px; height: 20px; font-size: 20px; }
+.distribution-total-copy { display: grid; min-width: 0; gap: 2px; }
+.distribution-total-label { color: #65736b; font-size: 11px; font-weight: 700; line-height: 1.1; }
+.distribution-total-value { display: flex; align-items: baseline; gap: 6px; }
+.distribution-total-number { color: var(--piip-green-900); font-family: var(--piip-display); font-size: 25px; line-height: .9; }
+.distribution-total-unit { color: #53645b; font-size: 12px; line-height: 1.1; }
+.distribution-toggle { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 44px; padding: 0; border: 1px solid var(--piip-border); border-radius: 50%; color: var(--piip-green-800); background: #fff; cursor: pointer; }
 .distribution-toggle:hover { border-color: var(--piip-green-700); background: var(--piip-mint-soft); }
 .status-chart { display: grid; gap: 17px; padding: 18px 20px 22px; }
 .status-chart[hidden] { display: none; }
@@ -152,6 +155,7 @@
   .panel-title, .notification-heading { align-items: flex-start; padding-inline: 16px; }
   .distribution-title { flex-wrap: wrap; }
   .distribution-actions { width: 100%; justify-content: space-between; }
+  .distribution-total { min-width: 0; flex: 1 1 auto; }
   .single-unit-chip > span { display: grid; gap: 1px; }
   .portfolio-row:not(.portfolio-head) { grid-template-areas: "code type" "name name" "status status" "unit unit" "action action"; }
   .notification-heading { flex-direction: column; }
