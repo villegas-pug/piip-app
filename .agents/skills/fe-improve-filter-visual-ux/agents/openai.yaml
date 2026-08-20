@@ -1,0 +1,7 @@
+interface:
+  display_name: "Mejorar filtros visuales PIIP"
+  short_description: "Mejora filtros de una pagina PIIP"
+  default_prompt: "Usa $fe-improve-filter-visual-ux con target_page=/iniciativas para mejorar visualmente sus filtros."
+
+policy:
+  allow_implicit_invocation: true

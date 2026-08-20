@@ -13,11 +13,23 @@
     <article class="panel projects-panel">
       <h3>Portafolio de proyectos</h3>
       <form class="project-filters" [formGroup]="filters">
-        <label class="field search"><span>Buscar proyecto</span><span><input formControlName="search" placeholder="Buscar por código o nombre..." /><mat-icon>search</mat-icon></span></label>
-        <label class="field"><span>Estado</span><select formControlName="status"><option>Todos</option>@for (status of projectStatuses; track status) {<option [value]="status">{{ status }}</option>}</select></label>
-        <label class="field"><span>Unidad</span><select formControlName="unit"><option>Todas</option>@for (unit of units(); track unit.id) {<option [value]="unit.id">{{ unit.acronym || unit.name }}</option>}</select></label>
-        <label class="field"><span>Componente digital</span><select formControlName="digital"><option>Todos</option>@for (option of catalogs.digitalComponents; track option) {<option [value]="option">{{ option }}</option>}</select></label>
-        <button class="secondary-button" type="button" (click)="resetFilters()"><mat-icon>filter_alt_off</mat-icon>Limpiar filtros</button>
+        <label class="filter-field search-field">
+          <span class="filter-label">Buscar proyecto</span>
+          <span class="filter-control search-control"><mat-icon aria-hidden="true">search</mat-icon><input formControlName="search" placeholder="Buscar por código o nombre..." /></span>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Estado</span>
+          <span class="filter-control select-control"><select formControlName="status"><option>Todos</option>@for (status of projectStatuses; track status) {<option [value]="status">{{ status }}</option>}</select></span>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Unidad</span>
+          <span class="filter-control select-control"><select formControlName="unit"><option>Todas</option>@for (unit of units(); track unit.id) {<option [value]="unit.id">{{ unit.acronym || unit.name }}</option>}</select></span>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Componente digital</span>
+          <span class="filter-control select-control"><select formControlName="digital"><option>Todos</option>@for (option of catalogs.digitalComponents; track option) {<option [value]="option">{{ option }}</option>}</select></span>
+        </label>
+        <button class="clear-button" type="button" (click)="resetFilters()"><mat-icon aria-hidden="true">filter_alt_off</mat-icon>Limpiar filtros</button>
       </form>
       @if (unitsState().phase === 'loading') {<p>Cargando Unidades Orgánicas...</p>} @else if (unitsState().phase === 'error') {<p role="alert">{{ unitsState().error }} <button type="button" (click)="repository.reloadOrganizationalUnits()">Reintentar</button></p>} @else if (!units().length) {<p>No hay Unidades Orgánicas activas para filtrar.</p>}
 
