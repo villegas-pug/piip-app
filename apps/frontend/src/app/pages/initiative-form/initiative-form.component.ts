@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal } from '@angular/core';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Overlay } from '@angular/cdk/overlay';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
-import { PIIP_CATALOGS, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
+import { PIIP_CATALOGS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { InitiativeReviewDialogComponent } from './initiative-review-dialog.component';
 
@@ -19,7 +19,7 @@ import { InitiativeReviewDialogComponent } from './initiative-review-dialog.comp
 export class InitiativeFormComponent {
   readonly pendingCode = 'Se asignará al registrar';
   private readonly formBuilder = inject(FormBuilder);
-  private readonly repository = inject(PIIP_REPOSITORY);
+  readonly repository = inject(PIIP_REPOSITORY);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
@@ -27,9 +27,9 @@ export class InitiativeFormComponent {
   private readonly overlay = inject(Overlay);
 
   readonly catalogs = PIIP_CATALOGS;
-  readonly units = computed(() => this.repository.organizationalUnits().length
-    ? this.repository.organizationalUnits().map((unit) => unit.acronym || unit.name)
-    : RESPONSIBLE_UNITS);
+  readonly catalogState = this.repository.catalogs;
+  readonly unitsState = this.repository.organizationalUnitsState;
+  readonly units = this.repository.organizationalUnits;
   readonly uploadedFilename = signal<string | null>(null);
   readonly uploadedFile = signal<File | null>(null);
   readonly submitting = signal(false);
@@ -42,16 +42,34 @@ export class InitiativeFormComponent {
     startDate: ['', Validators.required],
     name: ['', [Validators.required, Validators.maxLength(180)]],
     status: [{ value: 'Presentado', disabled: true }],
-    solutionType: ['', Validators.required],
-    source: ['', Validators.required],
+    solutionType: [{ value: '', disabled: this.catalogState().phase !== 'ready' }, Validators.required],
+    source: [{ value: '', disabled: this.catalogState().phase !== 'ready' }, Validators.required],
     digitalComponent: ['', Validators.required],
     description: ['', [Validators.required, Validators.maxLength(1000)]],
     responsible: ['', Validators.required],
-    responsibleUnits: ['', Validators.required],
+    responsibleUnits: [{ value: '', disabled: this.unitsState().phase !== 'ready' }, Validators.required],
     note: [''],
-    peiObjective: [''],
-    poiActivity: [''],
+    peiObjective: [{ value: '', disabled: this.catalogState().phase !== 'ready' }],
+    poiActivity: [{ value: '', disabled: this.catalogState().phase !== 'ready' }],
   });
+
+  constructor() {
+    effect(() => {
+      const catalogsReady = this.catalogState().phase === 'ready';
+      const unitsReady = this.unitsState().phase === 'ready';
+      this.syncDisabled(this.form.controls.solutionType, !catalogsReady);
+      this.syncDisabled(this.form.controls.source, !catalogsReady);
+      this.syncDisabled(this.form.controls.peiObjective, !catalogsReady);
+      this.syncDisabled(this.form.controls.poiActivity, !catalogsReady);
+      this.syncDisabled(this.form.controls.responsibleUnits, !unitsReady);
+      const catalogs = this.catalogState().value;
+      this.reconcile(this.form.controls.solutionType, catalogs.solutionTypes);
+      this.reconcile(this.form.controls.source, catalogs.sources);
+      this.reconcile(this.form.controls.peiObjective, catalogs.peiObjectives);
+      this.reconcile(this.form.controls.poiActivity, catalogs.poiActivities);
+      this.reconcile(this.form.controls.responsibleUnits, this.units());
+    });
+  }
 
   scrollTo(sectionId: string): void {
     this.elementRef.nativeElement.querySelector(`#${sectionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -77,7 +95,7 @@ export class InitiativeFormComponent {
       return;
     }
     this.form.markAllAsTouched();
-    if (this.form.invalid || !this.uploadedFilename()) {
+    if (!this.dependenciesReady() || this.form.invalid || !this.uploadedFilename()) {
       this.snackBar.open('Completa los campos requeridos y adjunta la ficha inicial.', 'Cerrar', { duration: 4200 });
       return;
     }
@@ -101,15 +119,16 @@ export class InitiativeFormComponent {
   }
 
   async registerInitiative(): Promise<boolean> {
-    if (this.submitting() || !this.canAdministerActiveScope()) return false;
+    if (this.submitting() || !this.canAdministerActiveScope() || !this.dependenciesReady()) return false;
     const value = this.form.getRawValue();
     this.submitting.set(true);
     try {
       const record = await Promise.resolve(this.repository.registerInitiative({
         code: value.code, startDate: value.startDate, name: value.name,
-        solutionType: value.solutionType as 'Solución potencial o adaptable' | 'Solución por definir' | 'No aplica',
-        source: value.source, responsible: value.responsible, responsibleUnits: value.responsibleUnits,
-        peiObjective: value.peiObjective, poiActivity: value.poiActivity, description: value.description,
+        solutionTypeId: Number(value.solutionType), sourceId: Number(value.source), responsible: value.responsible,
+        organizationalUnitId: Number(value.responsibleUnits),
+        peiObjectiveId: value.peiObjective ? Number(value.peiObjective) : undefined,
+        poiActivityId: value.poiActivity ? Number(value.poiActivity) : undefined, description: value.description,
         note: value.note, digitalComponent: value.digitalComponent as 'Si' | 'No',
         initialFilename: this.uploadedFilename() ?? '',
         initialFile: this.uploadedFile() ?? undefined,
@@ -123,5 +142,23 @@ export class InitiativeFormComponent {
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private reconcile(control: { value: string; setErrors(errors: Record<string, boolean> | null): void }, options: Array<{ id: number; active: boolean }>): void {
+    if (!control.value) return;
+    if (!options.some((option) => option.id === Number(control.value) && option.active)) control.setErrors({ unavailable: true });
+    else if ((control as { errors?: Record<string, boolean> | null }).errors?.['unavailable']) control.setErrors(null);
+  }
+
+  private dependenciesReady(): boolean {
+    const catalogs = this.catalogState();
+    const units = this.unitsState();
+    return catalogs.phase === 'ready' && catalogs.value.solutionTypes.length > 0 && catalogs.value.sources.length > 0
+      && units.phase === 'ready' && units.value.length > 0;
+  }
+
+  private syncDisabled(control: AbstractControl, disabled: boolean): void {
+    if (disabled && control.enabled) control.disable({ emitEvent: false });
+    else if (!disabled && control.disabled) control.enable({ emitEvent: false });
   }
 }

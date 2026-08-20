@@ -8,11 +8,11 @@ export interface InitiativeCreateRequest {
   executingUnitId: number;
   name: string;
   note?: string;
-  peiObjective?: string;
-  poiActivity?: string;
+  peiObjectiveId?: number;
+  poiActivityId?: number;
   responsible: string;
   responsibleUnits: Array<ResponsibleUnitInput>;
-  solutionType: 'POTENTIAL_OR_ADAPTABLE' | 'TO_BE_DEFINED' | 'NOT_APPLICABLE';
-  source: 'INITIATIVE_SHEET' | 'INTERNAL_CONTEST' | 'OPEN_INNOVATION' | 'MANAGEMENT_PROPOSAL' | 'OTHER' | 'CALL';
+  solutionTypeId: number;
+  sourceId: number;
   startDate: string;
 }

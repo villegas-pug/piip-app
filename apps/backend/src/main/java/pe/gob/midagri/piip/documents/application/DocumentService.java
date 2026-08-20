@@ -9,6 +9,7 @@ import pe.gob.midagri.piip.config.PiipProperties;
 import pe.gob.midagri.piip.documents.api.DocumentDtos.*;
 import pe.gob.midagri.piip.documents.domain.*;
 import pe.gob.midagri.piip.documents.persistence.*;
+import pe.gob.midagri.piip.catalogs.api.CatalogDtos.PersistentCatalogItemResponse;
 import pe.gob.midagri.piip.identity.application.*;
 import pe.gob.midagri.piip.identity.domain.RoleCode;
 import pe.gob.midagri.piip.identity.persistence.*;
@@ -28,12 +29,13 @@ public class DocumentService {
     private final UserRoleScopeRepository scopes; private final NotificationRepository notifications;
     private final LocalAuthorizationService authorization; private final AuditService audit;
     private final PiipProperties.Documents properties;
+    private final DocumentTypeRepository documentTypes;
 
     public DocumentService(PortfolioRecordRepository records, DocumentRepository documents, DocumentVersionRepository versions,
             DocumentContentRepository contents, UserRoleScopeRepository scopes, NotificationRepository notifications,
-            LocalAuthorizationService authorization, AuditService audit, PiipProperties.Documents properties) {
+            LocalAuthorizationService authorization, AuditService audit, PiipProperties.Documents properties, DocumentTypeRepository documentTypes) {
         this.records = records; this.documents = documents; this.versions = versions; this.contents = contents;
-        this.scopes = scopes; this.notifications = notifications; this.authorization = authorization; this.audit = audit; this.properties = properties;
+        this.scopes = scopes; this.notifications = notifications; this.authorization = authorization; this.audit = audit; this.properties = properties; this.documentTypes = documentTypes;
     }
 
     @Transactional(readOnly = true)
@@ -42,27 +44,27 @@ public class DocumentService {
         LocalAccessContext access = authorization.requireReadableUnit(record.getExecutingUnit().getId());
         boolean internal = access.coversExecutingUnit(RoleCode.ADMINISTRADOR_PIIP,
             record.getExecutingUnit().getId(), record.getExecutingUnit().getInstitution().getId());
-        return documents.findByRecordIdOrderByType(record.getId()).stream().map(document -> toResponse(document, internal)).toList();
+        return documents.findByRecordIdOrderByTypeDisplayOrderAscTypeCodeAsc(record.getId()).stream().map(document -> toResponse(document, internal)).toList();
     }
 
     @Transactional
-    public VersionResponse upload(String recordCode, DocumentType type, MultipartFile file) {
+    public VersionResponse upload(String recordCode, Long documentTypeId, MultipartFile file) {
         PortfolioRecordEntity record = record(recordCode); LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, record.getExecutingUnit().getId());
         validate(file); byte[] bytes = read(file);
-        DocumentEntity document = documents.findByRecordIdAndType(record.getId(), type).orElseGet(() -> documents.save(new DocumentEntity(record, type)));
+        DocumentEntity document = documentSlot(record, documentTypeId);
         int number = document.registerUpload();
         DocumentVersionEntity version = versions.save(new DocumentVersionEntity(document, number, sanitize(file.getOriginalFilename()), file.getContentType(), bytes.length, sha256(bytes), actor.subject()));
         contents.save(new DocumentContentEntity(version, bytes));
-        audit.event("DOCUMENTO_CARGADO", "REGISTRO_PORTAFOLIO", recordCode, Map.of("tipo", type.name(), "version", number), actor.subject());
+        audit.event("DOCUMENTO_CARGADO", "REGISTRO_PORTAFOLIO", recordCode, documentAudit(document, number), actor.subject());
         return toVersion(version);
     }
 
     @Transactional
-    public void markNotApplicable(String recordCode, DocumentType type, String reason) {
+    public void markNotApplicable(String recordCode, Long documentTypeId, String reason) {
         PortfolioRecordEntity record = record(recordCode); LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, record.getExecutingUnit().getId());
-        DocumentEntity document = documents.findByRecordIdAndType(record.getId(), type).orElseGet(() -> documents.save(new DocumentEntity(record, type)));
+        DocumentEntity document = documentSlot(record, documentTypeId);
         document.markNotApplicable(reason);
-        audit.event("DOCUMENTO_NO_APLICA", "REGISTRO_PORTAFOLIO", recordCode, Map.of("tipo", type.name(), "motivo", reason == null ? "" : reason), actor.subject());
+        audit.event("DOCUMENTO_NO_APLICA", "REGISTRO_PORTAFOLIO", recordCode, Map.of("tipoCodigo", document.getType().getCode(), "tipoNombre", document.getType().getName(), "motivo", reason == null ? "" : reason), actor.subject());
     }
 
     @Transactional
@@ -71,7 +73,8 @@ public class DocumentService {
         PortfolioRecordEntity record = version.getDocument().getRecord(); LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, record.getExecutingUnit().getId());
         if (version.getOptimisticVersion() != expectedVersion) throw new StaleVersionException();
         if (published) { version.publish(actor.subject()); notifyExternal(record, version); } else version.unpublish();
-        audit.event(published ? "DOCUMENTO_PUBLICADO" : "DOCUMENTO_RETIRADO", "REGISTRO_PORTAFOLIO", record.getCode(), Map.of("versionId", versionId), actor.subject());
+        audit.event(published ? "DOCUMENTO_PUBLICADO" : "DOCUMENTO_RETIRADO", "REGISTRO_PORTAFOLIO", record.getCode(),
+            Map.of("versionId", versionId, "tipoCodigo", version.getDocument().getType().getCode(), "tipoNombre", version.getDocument().getType().getName()), actor.subject());
         return toVersion(version);
     }
 
@@ -89,13 +92,26 @@ public class DocumentService {
     private void notifyExternal(PortfolioRecordEntity record, DocumentVersionEntity version) {
         scopes.findActiveRecipients(RoleCode.CONSULTA_EXTERNA, record.getExecutingUnit().getInstitution().getId(), record.getExecutingUnit().getId(), Instant.now()).stream()
             .map(UserRoleScopeEntity::getUser).distinct()
-            .forEach(user -> notifications.save(new NotificationEntity(user, record, "DOCUMENTO_PUBLICADO", "Se publicó " + version.getDocument().getType().label() + " para " + record.getCode())));
+            .forEach(user -> notifications.save(new NotificationEntity(user, record, "DOCUMENTO_PUBLICADO", "Se publicó " + version.getDocument().getType().getName() + " para " + record.getCode())));
     }
 
     private PortfolioRecordEntity record(String code) { return records.findByCodeIgnoreCase(code).orElseThrow(() -> new NotFoundException("Registro inexistente")); }
     private DocumentResponse toResponse(DocumentEntity document, boolean internal) {
         List<VersionResponse> items = versions.findByDocumentIdOrderByVersionNumberDesc(document.getId()).stream().filter(item -> internal || item.isExternallyPublished()).map(this::toVersion).toList();
-        return new DocumentResponse(document.getId(), document.getType(), document.getType().label(), document.getState(), document.getNotApplicableReason(), document.getLatestVersion(), items);
+        var type = document.getType();
+        return new DocumentResponse(document.getId(), new PersistentCatalogItemResponse(type.getId(), type.getCode(), type.getName(), type.getDisplayOrder(), type.isActive()), document.getState(), document.getNotApplicableReason(), document.getLatestVersion(), items);
+    }
+    private DocumentEntity documentSlot(PortfolioRecordEntity record, Long documentTypeId) {
+        if (documentTypeId == null) throw new InvalidReferenceException("El tipo documental es obligatorio", "documentTypeId", null, "NOT_FOUND");
+        return documents.findByRecordIdAndTypeId(record.getId(), documentTypeId).orElseGet(() -> {
+            DocumentTypeEntity type = documentTypes.findById(documentTypeId)
+                .orElseThrow(() -> new InvalidReferenceException("El tipo documental no existe", "documentTypeId", documentTypeId, "NOT_FOUND"));
+            if (!type.isActive()) throw new InvalidReferenceException("El tipo documental está inactivo", "documentTypeId", documentTypeId, "INACTIVE");
+            return documents.save(new DocumentEntity(record, type));
+        });
+    }
+    private Map<String, ?> documentAudit(DocumentEntity document, int version) {
+        return Map.of("tipoCodigo", document.getType().getCode(), "tipoNombre", document.getType().getName(), "version", version);
     }
     private VersionResponse toVersion(DocumentVersionEntity value) { return new VersionResponse(value.getId(), value.getVersionNumber(), value.getFilename(), value.getMimeType(), value.getSizeBytes(), value.getChecksumSha256(), value.getUploadedAt(), value.isExternallyPublished(), value.getOptimisticVersion()); }
     private void validate(MultipartFile file) { if (file.isEmpty()) throw new BusinessRuleException("El archivo está vacío"); if (file.getSize() > properties.maxSizeBytes()) throw new BusinessRuleException("El archivo excede el límite configurado"); if (!ALLOWED_MIME.contains(file.getContentType())) throw new BusinessRuleException("Tipo MIME no permitido"); }

@@ -1,16 +1,6 @@
 import { PiipStatus } from './piip.models';
 
 export const PIIP_CATALOGS = {
-  recordTypes: ['Iniciativa', 'Proyecto'],
-  solutionTypes: ['Solución potencial o adaptable', 'Solución por definir', 'No aplica'],
-  sources: [
-    'Ficha de iniciativa de innovación pública',
-    'Concurso interno',
-    'Innovación abierta',
-    'Propuesta de jefatura o directivos',
-    'Otros',
-    'Convocatoria',
-  ],
   statuses: [
     'Presentado',
     'Iniciativa aprobada',
@@ -71,5 +61,3 @@ export const PROJECT_STATUS_TRANSITIONS: Readonly<Record<ProjectStatus, readonly
   Cancelado: [],
   Finalizado: [],
 };
-
-export const RESPONSIBLE_UNITS = ['DGIA', 'DIPNA', 'DGA', 'DCLIMA', 'DGESEP', 'SENASA'] as const;

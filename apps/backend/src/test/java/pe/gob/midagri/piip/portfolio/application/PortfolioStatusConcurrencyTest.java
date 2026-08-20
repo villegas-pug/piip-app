@@ -42,10 +42,11 @@ import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ProjectStatusTransitionRe
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
-import pe.gob.midagri.piip.portfolio.domain.SolutionType;
-import pe.gob.midagri.piip.portfolio.domain.SourceOrigin;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.catalogs.persistence.*;
+import pe.gob.midagri.piip.organization.persistence.*;
+import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -59,6 +60,9 @@ class PortfolioStatusConcurrencyTest {
     @Autowired UserRepository users;
     @Autowired RoleRepository roles;
     @Autowired UserRoleScopeRepository scopes;
+    @Autowired CatalogRepository catalogs;
+    @Autowired CatalogItemRepository catalogItems;
+    @Autowired OrganizationalUnitRepository organizationalUnits;
 
     @AfterEach
     void clearSecurityContext() {
@@ -69,9 +73,8 @@ class PortfolioStatusConcurrencyTest {
     void serializesDerivationAndInitiativeArchivingOnTheSameOrigin() throws Exception {
         Actor actor = actor();
         String suffix = suffix();
-        PortfolioRecordEntity initiative = records.saveAndFlush(PortfolioRecordEntity.initiative("I-RACE-" + suffix, actor.unit,
-            "Iniciativa concurrente", SolutionType.TO_BE_DEFINED, SourceOrigin.OTHER, LocalDate.of(2026, 8, 18),
-            "Responsable", null, null, "Descripción", null, DigitalComponent.NO, actor.subject));
+        PortfolioRecordTestBuilder fixtures = PortfolioRecordTestBuilder.persistedReferences(catalogs, catalogItems, suffix);
+        PortfolioRecordEntity initiative = records.saveAndFlush(fixtures.initiative("I-RACE-" + suffix, actor.unit, "Iniciativa concurrente"));
         initiative.approve();
         records.saveAndFlush(initiative);
 
@@ -91,9 +94,9 @@ class PortfolioStatusConcurrencyTest {
             authenticate(actor);
             try {
                 service.createDerived(new DerivedProjectRequest(initiative.getCode(), LocalDate.of(2026, 8, 18),
-                    "Proyecto concurrente", SolutionType.TO_BE_DEFINED, SourceOrigin.OTHER, "Responsable", null, null,
+                    "Proyecto concurrente", fixtures.solution().getId(), fixtures.source().getId(), "Responsable", null, null,
                     "Descripción", null, null, DigitalComponent.NO,
-                    List.of(new pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ResponsibleUnitInput(null, "Responsable"))));
+                    List.of(new pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ResponsibleUnitInput(actor.organizationalUnit.getId()))));
                 return true;
             } catch (RuntimeException exception) {
                 return false;
@@ -115,9 +118,8 @@ class PortfolioStatusConcurrencyTest {
     void usesTheExistingOptimisticVersionForTwoTransitionsWithTheSameVersion() throws Exception {
         Actor actor = actor();
         String suffix = suffix();
-        PortfolioRecordEntity project = records.saveAndFlush(PortfolioRecordEntity.preexistingProject("P-RACE-" + suffix, actor.unit,
-            "Proyecto concurrente", SourceOrigin.OTHER, LocalDate.of(2026, 8, 18), "Responsable", null, null,
-            "Descripción", null, null, DigitalComponent.NO, actor.subject));
+        PortfolioRecordTestBuilder fixtures = PortfolioRecordTestBuilder.persistedReferences(catalogs, catalogItems, suffix);
+        PortfolioRecordEntity project = records.saveAndFlush(fixtures.preexistingProject("P-RACE-" + suffix, actor.unit, "Proyecto concurrente"));
 
         Callable<Boolean> approveProduct = transition(actor, project.getCode(), PortfolioStatus.PRODUCT_APPROVED);
         Callable<Boolean> suspend = transition(actor, project.getCode(), PortfolioStatus.SUSPENDED);
@@ -169,11 +171,12 @@ class PortfolioStatusConcurrencyTest {
         String suffix = suffix();
         InstitutionEntity institution = institutions.save(new InstitutionEntity("INST-RACE-" + suffix, "Institución concurrente"));
         ExecutingUnitEntity unit = executingUnits.save(new ExecutingUnitEntity(institution, "UE-RACE-" + suffix, "Unidad concurrente"));
+        OrganizationalUnitEntity organizationalUnit = organizationalUnits.save(new OrganizationalUnitEntity(unit, "UO-RACE-" + suffix, "Unidad responsable", "UR"));
         RoleEntity role = roles.findByCode(RoleCode.ADMINISTRADOR_PIIP)
             .orElseGet(() -> roles.save(new RoleEntity(RoleCode.ADMINISTRADOR_PIIP, "Administrador PIIP")));
         UserEntity user = users.save(new UserEntity("subject-race-" + suffix, "Usuario concurrente", "race-" + suffix + "@example.test"));
         scopes.saveAndFlush(new UserRoleScopeEntity(user, role, institution, unit, "test"));
-        return new Actor(user.getId(), user.getKeycloakSubject(), institution, unit);
+        return new Actor(user.getId(), user.getKeycloakSubject(), institution, unit, organizationalUnit);
     }
 
     private void authenticate(Actor actor) {
@@ -188,5 +191,5 @@ class PortfolioStatusConcurrencyTest {
         return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
     }
 
-    private record Actor(Long userId, String subject, InstitutionEntity institution, ExecutingUnitEntity unit) {}
+    private record Actor(Long userId, String subject, InstitutionEntity institution, ExecutingUnitEntity unit, OrganizationalUnitEntity organizationalUnit) {}
 }

@@ -39,4 +39,31 @@ describe('InitiativesComponent pagination', () => {
     expect(options).not.toEqual(expect.arrayContaining(['Proyecto en ejecución', 'Producto aprobado', 'Suspendido', 'Finalizado', 'No Aplicable']));
     expect(nativeElement.textContent).not.toContain('Cambiar estado');
   });
+
+  it('filtra por referencias resueltas de fuente y Unidad Orgánica conservando los filtros vigentes', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const target = repository.initiatives()[0];
+    const fixture = TestBed.createComponent(InitiativesComponent);
+    const component = fixture.componentInstance;
+    component.filters.patchValue({ source: String(target.sourceReference?.id), unit: String(target.organizationalUnits?.[0]?.id) });
+
+    expect(component.filteredInitiatives().map((item) => item.code)).toContain(target.code);
+    expect(Object.keys(component.filters.getRawValue()).sort()).toEqual(['date', 'search', 'source', 'status', 'unit']);
+  });
+
+  it('presenta carga, vacío y error de catálogos sin inventar opciones', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(InitiativesComponent);
+    repository.catalogs.set({ phase: 'loading', value: repository.catalogs().value, error: null, requestId: 2 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Cargando opciones de filtro');
+
+    repository.catalogs.set({ phase: 'ready', value: { ...repository.catalogs().value, sources: [] }, error: null, requestId: 3 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No hay opciones activas');
+
+    repository.catalogs.set({ phase: 'error', value: repository.catalogs().value, error: 'Fuentes no disponibles', requestId: 4 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Fuentes no disponibles');
+  });
 });

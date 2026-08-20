@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import pe.gob.midagri.piip.documents.api.DocumentDtos.*;
 import pe.gob.midagri.piip.documents.application.DocumentService;
-import pe.gob.midagri.piip.documents.domain.DocumentType;
 import java.util.List;
 
 @RestController
@@ -14,13 +13,13 @@ import java.util.List;
 public class DocumentController {
     private final DocumentService service;
     public DocumentController(DocumentService service) { this.service = service; }
-    @GetMapping public List<DocumentResponse> list(@PathVariable("recordCode") String recordCode) { return service.list(recordCode); }
-    @PostMapping(value = "/{type}/versions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE) public List<DocumentResponse> list(@PathVariable("recordCode") String recordCode) { return service.list(recordCode); }
+    @PostMapping(value = "/{documentTypeId}/versions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public VersionResponse upload(@PathVariable("recordCode") String recordCode, @PathVariable("type") DocumentType type, @RequestPart("file") MultipartFile file) { return service.upload(recordCode, type, file); }
-    @PutMapping("/{type}/not-applicable") @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void notApplicable(@PathVariable("recordCode") String recordCode, @PathVariable("type") DocumentType type, @Valid @RequestBody NotApplicableRequest request) { service.markNotApplicable(recordCode, type, request.reason()); }
-    @PutMapping("/versions/{versionId}/publication") public VersionResponse publication(@PathVariable("recordCode") String recordCode, @PathVariable("versionId") Long versionId, @RequestParam("published") boolean published, @RequestParam("version") long version) { return service.publish(versionId, published, version); }
+    public VersionResponse upload(@PathVariable("recordCode") String recordCode, @PathVariable("documentTypeId") Long documentTypeId, @RequestPart("file") MultipartFile file) { return service.upload(recordCode, documentTypeId, file); }
+    @PutMapping("/{documentTypeId}/not-applicable") @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void notApplicable(@PathVariable("recordCode") String recordCode, @PathVariable("documentTypeId") Long documentTypeId, @Valid @RequestBody NotApplicableRequest request) { service.markNotApplicable(recordCode, documentTypeId, request.reason()); }
+    @PutMapping(value = "/versions/{versionId}/publication", produces = MediaType.APPLICATION_JSON_VALUE) public VersionResponse publication(@PathVariable("recordCode") String recordCode, @PathVariable("versionId") Long versionId, @RequestParam("published") boolean published, @RequestParam("version") long version) { return service.publish(versionId, published, version); }
     @GetMapping("/versions/{versionId}/content")
     public ResponseEntity<byte[]> download(@PathVariable("recordCode") String recordCode, @PathVariable("versionId") Long versionId) {
         DownloadResponse value = service.download(versionId);

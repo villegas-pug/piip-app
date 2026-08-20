@@ -18,4 +18,8 @@ public final class PiipProperties {
     @ConfigurationProperties("piip.bootstrap")
     public record Bootstrap(boolean enabled, String subject, String name, String email,
             String institutionCode, List<String> executingUnitCodes) {}
+
+    @ConfigurationProperties("piip.test-reset")
+    public record TestReset(boolean enabled, String confirmation, String expectedConfirmation,
+            String allowedJdbcFingerprint, String allowedSchema) {}
 }

@@ -1,0 +1,24 @@
+spring:
+  main:
+    web-application-type: none
+  datasource:
+    url: ${ORACLE_URL}
+    username: ${ORACLE_USERNAME}
+    password: ${ORACLE_PASSWORD}
+    driver-class-name: oracle.jdbc.OracleDriver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+
+piip:
+  bootstrap:
+    enabled: false
+  test-reset:
+    enabled: ${PIIP_TEST_RESET_ENABLED:false}
+    confirmation: ${PIIP_TEST_RESET_CONFIRMATION:}
+    expected-confirmation: ${PIIP_TEST_RESET_EXPECTED_CONFIRMATION:RESET-PIIP-TEST}
+    allowed-jdbc-fingerprint: ${PIIP_TEST_RESET_JDBC_FINGERPRINT:}
+    allowed-schema: ${PIIP_TEST_RESET_SCHEMA:}

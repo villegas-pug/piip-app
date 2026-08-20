@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
-import { INITIATIVE_STATUSES, PIIP_CATALOGS, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
+import { INITIATIVE_STATUSES } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PiipStatus } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
@@ -21,21 +21,23 @@ export class InitiativesComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   readonly repository = inject(PIIP_REPOSITORY);
-  readonly catalogs = PIIP_CATALOGS;
+  readonly catalogState = this.repository.catalogs;
   readonly initiativeStatuses = INITIATIVE_STATUSES;
-  readonly units = RESPONSIBLE_UNITS;
-  readonly filters = this.formBuilder.nonNullable.group({ search: '', status: 'Todos', source: 'Todos', unit: 'Todas', date: '' });
+  readonly units = this.repository.organizationalUnits;
+  readonly unitsState = this.repository.organizationalUnitsState;
+  readonly filters = this.formBuilder.nonNullable.group({ search: '', status: 'Todos', source: [{ value: 'Todos', disabled: this.catalogState().phase !== 'ready' }], unit: 'Todas', date: '' });
   private readonly filterValue = toSignal(this.filters.valueChanges, { initialValue: this.filters.getRawValue() });
   readonly pageIndex = signal(0);
 
   readonly filteredInitiatives = computed(() => {
     const value = this.filterValue();
     const search = (value.search ?? '').trim().toLocaleLowerCase();
+    const source = value.source ?? 'Todos';
     return this.repository.initiatives().filter((initiative) =>
       (!search || `${initiative.code} ${initiative.name}`.toLocaleLowerCase().includes(search)) &&
       (value.status === 'Todos' || initiative.status === value.status) &&
-      (value.source === 'Todos' || initiative.source === value.source) &&
-      (value.unit === 'Todas' || initiative.unit === value.unit),
+      (source === 'Todos' || initiative.sourceReference?.id === Number(source)) &&
+      (value.unit === 'Todas' || initiative.organizationalUnits?.some((unit) => unit.id === Number(value.unit))),
     );
   });
 
@@ -52,6 +54,7 @@ export class InitiativesComponent {
   }
 
   constructor() {
+    effect(() => this.syncSourceFilterDisabled(this.catalogState().phase !== 'ready'));
     this.filters.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.pageIndex.set(0));
   }
 
@@ -64,5 +67,11 @@ export class InitiativesComponent {
     if (status === 'Iniciativa archivada') return 'archived';
     if (status === 'No Admisible' || status === 'No Aplicable') return 'rejected';
     return '';
+  }
+
+  private syncSourceFilterDisabled(disabled: boolean): void {
+    const control = this.filters.controls.source;
+    if (disabled && control.enabled) control.disable({ emitEvent: false });
+    else if (!disabled && control.disabled) control.enable({ emitEvent: false });
   }
 }

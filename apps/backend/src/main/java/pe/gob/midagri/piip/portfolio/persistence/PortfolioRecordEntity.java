@@ -2,6 +2,7 @@ package pe.gob.midagri.piip.portfolio.persistence;
 
 import jakarta.persistence.*;
 import pe.gob.midagri.piip.organization.persistence.ExecutingUnitEntity;
+import pe.gob.midagri.piip.catalogs.persistence.CatalogItemEntity;
 import pe.gob.midagri.piip.portfolio.domain.*;
 import java.time.*;
 
@@ -11,7 +12,11 @@ import java.time.*;
     @UniqueConstraint(name = "UK_REGISTRO_ORIGEN", columnNames = "ID_REGISTRO_ORIGEN")
 }, indexes = {
     @Index(name = "IDX_REGISTRO_TIPO_ESTADO", columnList = "TIPO_REGISTRO,ESTADO"),
-    @Index(name = "IDX_REGISTRO_EJECUTORA", columnList = "ID_UNIDAD_EJECUTORA")
+    @Index(name = "IDX_REGISTRO_EJECUTORA", columnList = "ID_UNIDAD_EJECUTORA"),
+    @Index(name = "IDX_REGISTRO_SOLUCION", columnList = "ID_TIPO_SOLUCION"),
+    @Index(name = "IDX_REGISTRO_FUENTE", columnList = "ID_FUENTE_ORIGEN"),
+    @Index(name = "IDX_REGISTRO_PEI", columnList = "ID_OBJETIVO_PEI"),
+    @Index(name = "IDX_REGISTRO_POI", columnList = "ID_ACTIVIDAD_POI")
 })
 public class PortfolioRecordEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,12 +28,12 @@ public class PortfolioRecordEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "ID_UNIDAD_EJECUTORA", nullable = false) private ExecutingUnitEntity executingUnit;
     @Column(name = "NOMBRE", length = 180, nullable = false) private String name;
-    @Enumerated(EnumType.STRING) @Column(name = "TIPO_SOLUCION", length = 40, nullable = false) private SolutionType solutionType;
-    @Enumerated(EnumType.STRING) @Column(name = "FUENTE_ORIGEN", length = 40, nullable = false) private SourceOrigin sourceOrigin;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_TIPO_SOLUCION", nullable = false) private CatalogItemEntity solutionType;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_FUENTE_ORIGEN", nullable = false) private CatalogItemEntity sourceOrigin;
     @Column(name = "FECHA_INICIO", nullable = false) private LocalDate startDate;
     @Column(name = "RESPONSABLE", length = 300, nullable = false) private String responsible;
-    @Column(name = "OBJETIVO_PEI", length = 500) private String peiObjective;
-    @Column(name = "ACTIVIDAD_POI", length = 500) private String poiActivity;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_OBJETIVO_PEI") private CatalogItemEntity peiObjective;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_ACTIVIDAD_POI") private CatalogItemEntity poiActivity;
     @Lob @Column(name = "DESCRIPCION", nullable = false) private String description;
     @Lob @Column(name = "RESULTADOS_CLAVE") private String keyResults;
     @Column(name = "NOTA", length = 600) private String note;
@@ -44,9 +49,9 @@ public class PortfolioRecordEntity {
     protected PortfolioRecordEntity() {}
 
     private PortfolioRecordEntity(RecordType recordType, String code, PortfolioRecordEntity originRecord,
-            ProjectOriginMode originMode, ExecutingUnitEntity executingUnit, String name, SolutionType solutionType,
-            SourceOrigin sourceOrigin, LocalDate startDate, String responsible, String peiObjective,
-            String poiActivity, String description, String keyResults, String note, PortfolioStatus status,
+            ProjectOriginMode originMode, ExecutingUnitEntity executingUnit, String name, CatalogItemEntity solutionType,
+            CatalogItemEntity sourceOrigin, LocalDate startDate, String responsible, CatalogItemEntity peiObjective,
+            CatalogItemEntity poiActivity, String description, String keyResults, String note, PortfolioStatus status,
             DigitalComponent digitalComponent, String actor) {
         this.recordType = recordType; this.code = code; this.originRecord = originRecord; this.originMode = originMode;
         this.executingUnit = executingUnit; this.name = name; this.solutionType = solutionType; this.sourceOrigin = sourceOrigin;
@@ -56,25 +61,25 @@ public class PortfolioRecordEntity {
     }
 
     public static PortfolioRecordEntity initiative(String code, ExecutingUnitEntity unit, String name,
-            SolutionType solutionType, SourceOrigin source, LocalDate startDate, String responsible,
-            String pei, String poi, String description, String note, DigitalComponent digital, String actor) {
+            CatalogItemEntity solutionType, CatalogItemEntity source, LocalDate startDate, String responsible,
+            CatalogItemEntity pei, CatalogItemEntity poi, String description, String note, DigitalComponent digital, String actor) {
         return new PortfolioRecordEntity(RecordType.INITIATIVE, code, null, null, unit, name, solutionType, source,
             startDate, responsible, pei, poi, description, null, note, PortfolioStatus.PRESENTED, digital, actor);
     }
 
     public static PortfolioRecordEntity derivedProject(String code, PortfolioRecordEntity origin, String name,
-            SolutionType solutionType, SourceOrigin source, LocalDate startDate, String responsible, String pei,
-            String poi, String description, String keyResults, String note, DigitalComponent digital, String actor) {
+            CatalogItemEntity solutionType, CatalogItemEntity source, LocalDate startDate, String responsible, CatalogItemEntity pei,
+            CatalogItemEntity poi, String description, String keyResults, String note, DigitalComponent digital, String actor) {
         return new PortfolioRecordEntity(RecordType.PROJECT, code, origin, ProjectOriginMode.DERIVED_FROM_INITIATIVE,
             origin.executingUnit, name, solutionType, source, startDate, responsible, pei, poi, description,
             keyResults, note, PortfolioStatus.PROJECT_IN_PROGRESS, digital, actor);
     }
 
     public static PortfolioRecordEntity preexistingProject(String code, ExecutingUnitEntity unit, String name,
-            SourceOrigin source, LocalDate startDate, String responsible, String pei, String poi, String description,
+            CatalogItemEntity solutionType, CatalogItemEntity source, LocalDate startDate, String responsible, CatalogItemEntity pei, CatalogItemEntity poi, String description,
             String keyResults, String note, DigitalComponent digital, String actor) {
         return new PortfolioRecordEntity(RecordType.PROJECT, code, null, ProjectOriginMode.PREEXISTING, unit, name,
-            SolutionType.NOT_APPLICABLE, source, startDate, responsible, pei, poi, description, keyResults, note,
+            solutionType, source, startDate, responsible, pei, poi, description, keyResults, note,
             PortfolioStatus.PROJECT_IN_PROGRESS, digital, actor);
     }
 
@@ -137,12 +142,12 @@ public class PortfolioRecordEntity {
     public ProjectOriginMode getOriginMode() { return originMode; }
     public ExecutingUnitEntity getExecutingUnit() { return executingUnit; }
     public String getName() { return name; }
-    public SolutionType getSolutionType() { return solutionType; }
-    public SourceOrigin getSourceOrigin() { return sourceOrigin; }
+    public CatalogItemEntity getSolutionType() { return solutionType; }
+    public CatalogItemEntity getSourceOrigin() { return sourceOrigin; }
     public LocalDate getStartDate() { return startDate; }
     public String getResponsible() { return responsible; }
-    public String getPeiObjective() { return peiObjective; }
-    public String getPoiActivity() { return poiActivity; }
+    public CatalogItemEntity getPeiObjective() { return peiObjective; }
+    public CatalogItemEntity getPoiActivity() { return poiActivity; }
     public String getDescription() { return description; }
     public String getKeyResults() { return keyResults; }
     public String getNote() { return note; }

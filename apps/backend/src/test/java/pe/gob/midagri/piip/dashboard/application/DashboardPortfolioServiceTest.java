@@ -23,9 +23,8 @@ import pe.gob.midagri.piip.organization.persistence.InstitutionEntity;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
-import pe.gob.midagri.piip.portfolio.domain.SolutionType;
-import pe.gob.midagri.piip.portfolio.domain.SourceOrigin;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
+import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 
 @ExtendWith(MockitoExtension.class)
 class DashboardPortfolioServiceTest {
@@ -86,9 +85,7 @@ class DashboardPortfolioServiceTest {
         ReflectionTestUtils.setField(institution, "id", unitId + 1000);
         ExecutingUnitEntity unit = new ExecutingUnitEntity(institution, "UE-" + unitId, "Unidad Ejecutora");
         ReflectionTestUtils.setField(unit, "id", unitId);
-        PortfolioRecordEntity record = PortfolioRecordEntity.initiative(code, unit, "Nombre", SolutionType.TO_BE_DEFINED,
-            SourceOrigin.OTHER, LocalDate.of(2026, 1, 1), "Responsable", null, null, "Descripción", null,
-            DigitalComponent.NO, "subject");
+        PortfolioRecordEntity record = PortfolioRecordTestBuilder.transientReferences().initiative(code, unit, "Nombre");
         ReflectionTestUtils.setField(record, "status", status);
         ReflectionTestUtils.setField(record, "updatedAt", Instant.parse("2026-08-18T15:00:00Z"));
         return record;

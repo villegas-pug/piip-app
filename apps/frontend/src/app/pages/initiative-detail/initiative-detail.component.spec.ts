@@ -155,7 +155,7 @@ describe('InitiativeDetailComponent', () => {
     const receivedEvents: AuditEvent[] = [
       {
         recordCode: 'I-024-2026', timestamp: '20/05/2026\n10:28:19', event: 'DOCUMENTO_CARGADO', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
-        observation: '{"tipo":"INITIATIVE_TECHNICAL_OPINION","version":1}', rawDetail: '{"tipo":"INITIATIVE_TECHNICAL_OPINION","version":1}', icon: 'cloud_upload',
+        observation: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Informe de opinión técnica de evaluación de iniciativa","version":1}', rawDetail: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Informe de opinión técnica de evaluación de iniciativa","version":1}', icon: 'cloud_upload',
       },
       {
         recordCode: 'I-024-2026', timestamp: '20/05/2026\n09:31:12', event: 'INICIATIVA_REGISTRADA', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
@@ -204,5 +204,21 @@ describe('InitiativeDetailComponent', () => {
     await fixture.componentInstance.transitionStatus();
     expect(repository.getInitiativeDetail('I-024-2026')?.initiative.status).toBe('Iniciativa archivada');
     expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual([]);
+  });
+
+  it('muestra código, nombre y estado activo de las referencias PEI y POI', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.portfolioRecords.update((records) => records.map((record) => record.code === 'I-024-2026' ? {
+      ...record,
+      peiObjectiveReference: { id: 20, code: 'PEI-01', name: 'Objetivo PEI vigente', displayOrder: 1, active: true },
+      poiActivityReference: { id: 30, code: 'POI-01', name: 'Actividad POI histórica', displayOrder: 1, active: false },
+    } : record));
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('PEI-01 — Objetivo PEI vigente');
+    expect(text).toContain('POI-01 — Actividad POI histórica');
+    expect(text).toContain('Inactivo');
   });
 });

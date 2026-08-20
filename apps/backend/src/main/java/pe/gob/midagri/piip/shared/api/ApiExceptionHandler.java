@@ -15,6 +15,15 @@ public class ApiExceptionHandler {
     @ExceptionHandler({BusinessRuleException.class, IllegalStateException.class})
     ProblemDetail business(RuntimeException exception) { return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Regla de negocio", exception.getMessage()); }
 
+    @ExceptionHandler(InvalidReferenceException.class)
+    ProblemDetail invalidReference(InvalidReferenceException exception) {
+        ProblemDetail detail = problem(HttpStatus.UNPROCESSABLE_ENTITY, "Referencia inválida", exception.getMessage());
+        detail.setProperty("referenceField", exception.getReferenceField());
+        detail.setProperty("referenceId", exception.getReferenceId());
+        detail.setProperty("reason", exception.getReason());
+        return detail;
+    }
+
     @ExceptionHandler({OptimisticLockException.class, org.springframework.orm.ObjectOptimisticLockingFailureException.class, StaleVersionException.class})
     ProblemDetail conflict(RuntimeException exception) { return problem(HttpStatus.CONFLICT, "Conflicto de versión", "El recurso fue modificado por otro usuario"); }
 

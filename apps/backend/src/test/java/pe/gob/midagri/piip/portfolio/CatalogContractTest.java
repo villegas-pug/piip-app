@@ -1,34 +1,37 @@
 package pe.gob.midagri.piip.portfolio;
 
-import org.junit.jupiter.api.Test;
-import pe.gob.midagri.piip.portfolio.domain.*;
-import java.nio.file.*;
-import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import pe.gob.midagri.piip.catalogs.application.CatalogQueryService;
+import pe.gob.midagri.piip.catalogs.domain.CatalogCode;
+import pe.gob.midagri.piip.catalogs.persistence.*;
+import pe.gob.midagri.piip.documents.persistence.*;
+import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
 
 class CatalogContractTest {
     @Test
-    void preservesTheSixExcelCatalogs() {
-        assertThat(labels(RecordType.values())).containsExactly("Iniciativa", "Proyecto");
-        assertThat(labels(SolutionType.values())).containsExactly("Solución potencial o adaptable", "Solución por definir", "No aplica");
-        assertThat(labels(SourceOrigin.values())).containsExactly("Ficha de iniciativa de innovación pública", "Concurso interno", "Innovación abierta", "Propuesta de jefatura o directivos", "Otros", "Convocatoria");
-        assertThat(labels(PortfolioStatus.values())).containsExactly("Presentado", "Iniciativa aprobada", "Iniciativa archivada", "Proyecto en ejecución", "Producto aprobado", "Producto no aprobado", "Suspendido", "Cancelado", "Finalizado", "No Aplicable", "No Admisible");
-        assertThat(labels(FinalProductType.values())).containsExactly("Prototipo de solución conceptualizada", "Solución funcional", "NA");
-        assertThat(labels(DigitalComponent.values())).containsExactly("Si", "No");
-    }
+    void devuelveBundleTipadoCompletoSinOpcionesLocales() {
+        CatalogItemRepository items = mock(CatalogItemRepository.class);
+        DocumentTypeRepository documentTypes = mock(DocumentTypeRepository.class);
+        LocalAuthorizationService authorization = mock(LocalAuthorizationService.class);
+        for (CatalogCode code : CatalogCode.values()) {
+            CatalogEntity catalog = new CatalogEntity(code, code.name(), code.ordinal(), true);
+            when(items.findByCatalogCodeAndCatalogActiveTrueAndActiveTrueOrderByDisplayOrderAscCodeAsc(code))
+                .thenReturn(List.of(new CatalogItemEntity(catalog, code.name() + "-01", code.name(), 10, true)));
+        }
+        when(documentTypes.findByActiveTrueOrderByDisplayOrderAscCodeAsc())
+            .thenReturn(List.of(new DocumentTypeEntity("TECHNICAL_OPINION", "Informe técnico", 10, true)));
 
-    @Test
-    void frontendKeepsTheSameCanonicalValues() throws Exception {
-        String source = Files.readString(Path.of("..", "frontend", "src", "app", "core", "piip.catalogs.ts"));
-        for (LabeledCatalog value : allValues()) assertThat(source).contains("'" + value.label() + "'");
-    }
+        var bundle = new CatalogQueryService(items, documentTypes, authorization).bundle();
 
-    private List<String> labels(LabeledCatalog[] values) { return Arrays.stream(values).map(LabeledCatalog::label).toList(); }
-    private List<LabeledCatalog> allValues() {
-        List<LabeledCatalog> values = new ArrayList<>();
-        values.addAll(Arrays.asList(RecordType.values())); values.addAll(Arrays.asList(SolutionType.values()));
-        values.addAll(Arrays.asList(SourceOrigin.values())); values.addAll(Arrays.asList(PortfolioStatus.values()));
-        values.addAll(Arrays.asList(FinalProductType.values())); values.addAll(Arrays.asList(DigitalComponent.values()));
-        return values;
+        assertThat(bundle.recordTypes()).extracting("code").containsExactly("INITIATIVE", "PROJECT");
+        assertThat(bundle.solutionTypes()).hasSize(1);
+        assertThat(bundle.sources()).hasSize(1);
+        assertThat(bundle.peiObjectives()).hasSize(1);
+        assertThat(bundle.poiActivities()).hasSize(1);
+        assertThat(bundle.documentTypes()).hasSize(1);
+        assertThat(bundle.toString()).doesNotContain("Todos", "Todas", "official", "synthetic", "testData");
     }
 }

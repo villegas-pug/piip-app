@@ -4,6 +4,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 import org.springframework.transaction.annotation.Transactional;
 import pe.gob.midagri.piip.config.PiipProperties;
 import pe.gob.midagri.piip.identity.domain.RoleCode;
@@ -12,6 +13,7 @@ import pe.gob.midagri.piip.organization.persistence.*;
 import java.util.Arrays;
 
 @Component
+@Profile("!test-reset")
 public class IdentityBootstrap implements ApplicationRunner {
     private final PiipProperties.Bootstrap properties;
     private final RoleRepository roles;

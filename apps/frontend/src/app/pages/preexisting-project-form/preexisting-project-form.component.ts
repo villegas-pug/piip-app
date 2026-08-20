@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal } from '@angular/core';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
-import { PIIP_CATALOGS, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
+import { PIIP_CATALOGS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PreexistingProjectInput } from '../../core/piip.models';
 
@@ -31,9 +31,9 @@ export class PreexistingProjectFormComponent {
   private readonly elementRef = inject(ElementRef<HTMLElement>);
 
   readonly catalogs = PIIP_CATALOGS;
-  readonly units = computed(() => this.repository.organizationalUnits().length
-    ? this.repository.organizationalUnits().map((unit) => unit.acronym || unit.name)
-    : RESPONSIBLE_UNITS);
+  readonly catalogState = this.repository.catalogs;
+  readonly unitsState = this.repository.organizationalUnitsState;
+  readonly units = this.repository.organizationalUnits;
   readonly provisionalCode = `P-${String(this.repository.projects().length + 3).padStart(3, '0')}-2026`;
   readonly reviewOpen = signal(false);
   readonly submitting = signal(false);
@@ -49,15 +49,15 @@ export class PreexistingProjectFormComponent {
     recordType: [{ value: 'Proyecto', disabled: true }],
     code: [{ value: this.provisionalCode, disabled: true }],
     originCode: [{ value: 'NA', disabled: true }],
-    solutionType: [{ value: 'No aplica', disabled: true }],
+    solutionType: [{ value: 'Definido por el backend', disabled: true }],
     status: [{ value: 'Proyecto en ejecución', disabled: true }],
     startDate: ['', Validators.required],
     name: ['', [Validators.required, Validators.maxLength(180)]],
-    source: ['', Validators.required],
+    source: [{ value: '', disabled: this.catalogState().phase !== 'ready' }, Validators.required],
     responsible: ['', Validators.required],
-    responsibleUnits: ['', Validators.required],
-    peiObjective: [''],
-    poiActivity: [''],
+    responsibleUnits: [{ value: '', disabled: this.unitsState().phase !== 'ready' }, Validators.required],
+    peiObjective: [{ value: '', disabled: this.catalogState().phase !== 'ready' }],
+    poiActivity: [{ value: '', disabled: this.catalogState().phase !== 'ready' }],
     description: ['', [Validators.required, Validators.maxLength(1000)]],
     keyResults: ['', Validators.maxLength(1000)],
     note: ['', Validators.maxLength(600)],
@@ -68,6 +68,22 @@ export class PreexistingProjectFormComponent {
     projectManagementMode: ['PENDING' as DocumentMode],
     finalClosureMode: ['NOT_APPLICABLE' as DocumentMode],
   });
+
+  constructor() {
+    effect(() => {
+      const catalogsReady = this.catalogState().phase === 'ready';
+      const unitsReady = this.unitsState().phase === 'ready';
+      this.syncDisabled(this.form.controls.source, !catalogsReady);
+      this.syncDisabled(this.form.controls.peiObjective, !catalogsReady);
+      this.syncDisabled(this.form.controls.poiActivity, !catalogsReady);
+      this.syncDisabled(this.form.controls.responsibleUnits, !unitsReady);
+      const catalogs = this.catalogState().value;
+      this.reconcile(this.form.controls.source, catalogs.sources);
+      this.reconcile(this.form.controls.peiObjective, catalogs.peiObjectives);
+      this.reconcile(this.form.controls.poiActivity, catalogs.poiActivities);
+      this.reconcile(this.form.controls.responsibleUnits, this.units());
+    });
+  }
 
   scrollTo(sectionId: string): void {
     this.elementRef.nativeElement.querySelector(`#${sectionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -87,7 +103,7 @@ export class PreexistingProjectFormComponent {
 
   openReview(): void {
     this.form.markAllAsTouched();
-    if (this.form.invalid || this.hasMissingSelectedFile()) {
+    if (!this.dependenciesReady() || this.form.invalid || this.hasMissingSelectedFile()) {
       this.snackBar.open('Completa los campos requeridos y adjunta los archivos seleccionados.', 'Cerrar', { duration: 4200 });
       return;
     }
@@ -95,7 +111,7 @@ export class PreexistingProjectFormComponent {
   }
 
   async registerProject(): Promise<void> {
-    if (this.submitting()) return;
+    if (this.submitting() || !this.dependenciesReady()) return;
     this.submitting.set(true);
     try {
       const record = await Promise.resolve(this.repository.registerPreexistingProject(this.buildRegistrationInput()));
@@ -128,11 +144,11 @@ export class PreexistingProjectFormComponent {
       code: this.provisionalCode,
       name: value.name,
       startDate: value.startDate,
-      source: value.source,
+      sourceId: Number(value.source),
       responsible: value.responsible,
-      responsibleUnits: value.responsibleUnits,
-      peiObjective: value.peiObjective,
-      poiActivity: value.poiActivity,
+      organizationalUnitId: Number(value.responsibleUnits),
+      peiObjectiveId: value.peiObjective ? Number(value.peiObjective) : undefined,
+      poiActivityId: value.poiActivity ? Number(value.poiActivity) : undefined,
       description: value.description,
       keyResults: value.keyResults,
       note: value.note,
@@ -158,6 +174,26 @@ export class PreexistingProjectFormComponent {
   }
 
   private attachment(field: DocumentField, mode: DocumentMode, type: import('../../core/piip.models').DocumentType) {
-    return { type, mode, file: this.documentFiles()[field] ?? undefined };
+    const documentTypeId = this.catalogState().value.documentTypes.find((item) => item.code === type && item.active)?.id;
+    if (documentTypeId === undefined) throw new Error('El tipo documental seleccionado ya no está disponible. Recarga los catálogos.');
+    return { type, documentTypeId, mode, file: this.documentFiles()[field] ?? undefined };
+  }
+
+  private reconcile(control: { value: string; setErrors(errors: Record<string, boolean> | null): void }, options: Array<{ id: number; active: boolean }>): void {
+    if (!control.value) return;
+    if (!options.some((option) => option.id === Number(control.value) && option.active)) control.setErrors({ unavailable: true });
+    else if ((control as { errors?: Record<string, boolean> | null }).errors?.['unavailable']) control.setErrors(null);
+  }
+
+  private dependenciesReady(): boolean {
+    const catalogs = this.catalogState();
+    const units = this.unitsState();
+    return catalogs.phase === 'ready' && catalogs.value.sources.length > 0
+      && units.phase === 'ready' && units.value.length > 0;
+  }
+
+  private syncDisabled(control: AbstractControl, disabled: boolean): void {
+    if (disabled && control.enabled) control.disable({ emitEvent: false });
+    else if (!disabled && control.disabled) control.enable({ emitEvent: false });
   }
 }

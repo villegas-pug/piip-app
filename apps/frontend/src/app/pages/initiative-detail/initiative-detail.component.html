@@ -37,8 +37,8 @@
             <div><dt>Tipo de registro</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div>
             <div><dt>Código de origen</dt><dd>{{ detail.portfolioRecord.originCode }}</dd></div>
             <div><dt>Fecha de inicio</dt><dd>{{ detail.portfolioRecord.startDate }}</dd></div>
-            <div><dt>Tipo de solución</dt><dd>{{ detail.portfolioRecord.solutionType }}</dd></div>
-            <div><dt>Fuente u origen</dt><dd>{{ detail.portfolioRecord.source }}</dd></div>
+            <div><dt>Tipo de solución</dt><dd>@if (detail.portfolioRecord.solutionTypeReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else { {{ detail.portfolioRecord.solutionType }} }</dd></div>
+            <div><dt>Fuente u origen</dt><dd>@if (detail.portfolioRecord.sourceReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else { {{ detail.portfolioRecord.source }} }</dd></div>
             <div><dt>Componente Digital</dt><dd>{{ detail.portfolioRecord.digitalComponent }}</dd></div>
             <div class="wide"><dt>Descripción</dt><dd>{{ detail.portfolioRecord.description }}</dd></div>
             <div class="wide"><dt>Nota</dt><dd>{{ detail.portfolioRecord.note || 'Sin nota registrada' }}</dd></div>
@@ -50,8 +50,8 @@
           <dl class="data-grid">
             <div><dt>Responsable</dt><dd>{{ detail.portfolioRecord.responsible }}</dd></div>
             <div><dt>Unidades responsables</dt><dd>{{ detail.portfolioRecord.responsibleUnits }}</dd></div>
-            <div class="wide"><dt>Objetivo PEI</dt><dd>{{ detail.portfolioRecord.peiObjective || 'Sin información registrada' }}</dd></div>
-            <div class="wide"><dt>Actividad POI</dt><dd>{{ detail.portfolioRecord.poiActivity || 'Sin información registrada' }}</dd></div>
+            <div class="wide"><dt>Objetivo PEI</dt><dd>@if (detail.portfolioRecord.peiObjectiveReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else {Sin información registrada}</dd></div>
+            <div class="wide"><dt>Actividad POI</dt><dd>@if (detail.portfolioRecord.poiActivityReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else {Sin información registrada}</dd></div>
           </dl>
         </article>
 

@@ -5,7 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
-import { PIIP_CATALOGS, PROJECT_STATUSES, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
+import { PIIP_CATALOGS, PROJECT_STATUSES } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PiipStatus } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
@@ -31,7 +31,8 @@ export class ProjectsComponent {
   readonly repository = inject(PIIP_REPOSITORY);
   readonly catalogs = PIIP_CATALOGS;
   readonly projectStatuses = PROJECT_STATUSES;
-  readonly units = RESPONSIBLE_UNITS;
+  readonly units = this.repository.organizationalUnits;
+  readonly unitsState = this.repository.organizationalUnitsState;
   readonly filters = this.formBuilder.nonNullable.group({ search: '', status: 'Todos', unit: 'Todas', digital: 'Todos' });
   private readonly filterValue = toSignal(this.filters.valueChanges, { initialValue: this.filters.getRawValue() });
   readonly pageIndex = signal(0);
@@ -41,7 +42,7 @@ export class ProjectsComponent {
     return this.repository.projects().filter((project) =>
       (!search || `${project.code} ${project.name}`.toLocaleLowerCase().includes(search)) &&
       (value.status === 'Todos' || project.status === value.status) &&
-      (value.unit === 'Todas' || project.unit === value.unit) &&
+      (value.unit === 'Todas' || project.organizationalUnits?.some((unit) => unit.id === Number(value.unit))) &&
       (value.digital === 'Todos' || project.digitalComponent === value.digital),
     );
   });

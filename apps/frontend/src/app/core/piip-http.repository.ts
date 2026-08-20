@@ -7,28 +7,31 @@ import {
   InitiativeInput, InitiativeRecord, InitiativeStatusTransitionInput, NotificationItem, OrganizationalUnit,
   PiipPortfolioRecord, PiipRecordType, PreexistingProjectInput, ProjectDetail, ProjectRecord,
   ProjectStatusTransitionInput, UserRole, UserRoleCode, WorkItem, HomePortfolioQuery, HomePortfolioResult,
-  HomePortfolioItem, HomePortfolioStatusCount, PiipStatus,
+  HomePortfolioItem, HomePortfolioStatusCount, PiipStatus, CatalogBundle, PersistentCatalogOption,
+  TechnicalCatalogOption,
 } from './piip.models';
-import { CurrentUserResponse, DashboardControllerService, EventResponse, PortfolioControllerService, UserAdministrationControllerService } from '../api/generated';
+import { CatalogControllerService, CurrentUserResponse, DashboardControllerService, DocumentControllerService, EventResponse, PortfolioControllerService, UserAdministrationControllerService } from '../api/generated';
 import { PiipRepository } from './piip.repository';
+import { PiipCatalogsStore } from './piip-catalogs.store';
 import { resolveApiUrl as runtimeApiUrl } from './piip-runtime-config';
 import {
   ApprovalRequest, DerivedProjectRequest, InitiativeCreateRequest, InitiativeStatusTransitionRequest,
-  PreexistingProjectRequest, ProjectStatusTransitionRequest, ResponsibleUnitInput,
+  DossierSummary, PersistentCatalogItemResponse, PreexistingProjectRequest, ProjectStatusTransitionRequest,
+  ResponsibleUnitResponse, TechnicalCatalogItemResponse,
 } from '../api/generated/models';
 
 interface ApiPortfolioRecord {
-  recordType: PiipRecordType;
+  recordType: TechnicalCatalogItemResponse;
   code: string;
   originCode: string;
   name: string;
-  solutionType: PiipPortfolioRecord['solutionType'];
-  source: string;
+  solutionType: PersistentCatalogItemResponse;
+  source: PersistentCatalogItemResponse;
   startDate: string;
   responsible: string;
-  peiObjective: string | null;
-  poiActivity: string | null;
-  responsibleUnits: string[];
+  peiObjective: PersistentCatalogItemResponse | null;
+  poiActivity: PersistentCatalogItemResponse | null;
+  responsibleUnits: ResponsibleUnitResponse[];
   description: string;
   keyResults: string | null;
   note: string | null;
@@ -65,8 +68,7 @@ interface ApiDocumentVersion {
 }
 
 interface ApiDocument {
-  type: DocumentType;
-  name: string;
+  documentType: PersistentCatalogItemResponse;
   state: 'PENDING' | 'LOADED' | 'NOT_APPLICABLE';
   versions: ApiDocumentVersion[];
 }
@@ -97,6 +99,7 @@ export class PiipApiError extends Error {
 
 @Injectable({ providedIn: 'root' })
 export class PiipHttpRepository extends PiipRepository {
+  private readonly catalogStore = inject(PiipCatalogsStore);
   readonly demoMode = false;
   readonly currentUser = signal<CurrentUser | null>(null);
   readonly administrableScopes = signal<AdministrableScope[]>([]);
@@ -116,7 +119,9 @@ export class PiipHttpRepository extends PiipRepository {
   readonly notificationsError = signal<string | null>(null);
   readonly dashboardSummary = signal<DashboardSummary>(emptyDashboard());
   readonly executingUnits = signal<ExecutingUnit[]>([]);
-  readonly organizationalUnits = signal<OrganizationalUnit[]>([]);
+  readonly catalogs = this.catalogStore.catalogs;
+  readonly organizationalUnitsState = this.catalogStore.organizationalUnits;
+  readonly organizationalUnits = computed(() => this.organizationalUnitsState().value);
   readonly selectedExecutingUnitId = signal<number | null>(null);
   readonly role = computed(() => this.effectiveRoleForExecutingUnit(this.selectedExecutingUnitId()));
   readonly loading = signal(false);
@@ -126,6 +131,8 @@ export class PiipHttpRepository extends PiipRepository {
   private readonly userAdministration = inject(UserAdministrationControllerService);
   private readonly portfolio = inject(PortfolioControllerService);
   private readonly dashboard = inject(DashboardControllerService);
+  private readonly catalogApi = inject(CatalogControllerService);
+  private readonly documentApi = inject(DocumentControllerService);
   private readonly apiUrl = runtimeApiUrl();
   private readonly recordVersions = new Map<string, number>();
   private readonly eligibleInitiatives = signal<InitiativeRecord[]>([]);
@@ -138,6 +145,8 @@ export class PiipHttpRepository extends PiipRepository {
     this.userAdministration.rootUrl = this.apiUrl;
     this.portfolio.rootUrl = this.apiUrl;
     this.dashboard.rootUrl = this.apiUrl;
+    this.catalogApi.rootUrl = this.apiUrl;
+    this.documentApi.rootUrl = this.apiUrl;
     void this.initialize();
   }
 
@@ -159,6 +168,7 @@ export class PiipHttpRepository extends PiipRepository {
       await this.loadIdentity();
       await this.loadExecutingUnits();
       await this.restoreExecutingUnit();
+      await this.reloadCatalogs();
       await this.refreshAll();
     } catch (error) {
       this.captureError(error);
@@ -175,8 +185,11 @@ export class PiipHttpRepository extends PiipRepository {
       this.auditEvents.set([]);
       this.auditAccesses.set([]);
     }
+    // Documentos y auditoría se acotan con los registros de la UE activa. Esperar
+    // el portafolio evita que una respuesta concurrente observe una lista vacía
+    // y termine mostrando datos de otra unidad.
+    await this.loadPortfolio();
     await Promise.all([
-      this.loadPortfolio(),
       this.loadDocumentSummaries(),
       this.loadDashboard(),
       this.loadNotifications(),
@@ -191,6 +204,19 @@ export class PiipHttpRepository extends PiipRepository {
     await this.reconcileExecutingUnit(this.selectedExecutingUnitId());
     if (!this.canAdministerExecutingUnit(this.selectedExecutingUnitId())) this.administrableScopes.set([]);
     await this.refreshAll();
+  }
+
+  async reloadCatalogs(): Promise<void> {
+    await this.catalogStore.loadCatalogs(async () => mapCatalogBundle(await this.request(this.catalogApi.get())));
+  }
+
+  async reloadOrganizationalUnits(): Promise<void> {
+    const executingUnitId = this.selectedExecutingUnitId();
+    if (executingUnitId === null) {
+      this.catalogStore.clearOrganizationalUnits();
+      return;
+    }
+    await this.loadOrganizationalUnits(executingUnitId);
   }
 
   clearError(): void {
@@ -243,7 +269,7 @@ export class PiipHttpRepository extends PiipRepository {
     this.documentDossiers.set([]);
     this.documentDossierSummaries.set([]);
     this.eligibleInitiatives.set([]);
-    this.organizationalUnits.set([]);
+    this.catalogStore.clearOrganizationalUnits();
     this.selectedExecutingUnitId.set(executingUnitId);
     if (!this.canAdministerExecutingUnit(executingUnitId)) this.administrableScopes.set([]);
     localStorage.setItem('piip-selected-executing-unit', String(executingUnitId));
@@ -325,19 +351,19 @@ export class PiipHttpRepository extends PiipRepository {
       executingUnitId,
       startDate: input.startDate,
       name: input.name,
-      solutionType: solutionCode(input.solutionType),
-      source: sourceCode(input.source),
+      solutionTypeId: input.solutionTypeId,
+      sourceId: input.sourceId,
       responsible: input.responsible,
-      responsibleUnits: [responsibleUnitInput(input.responsibleUnits, this.organizationalUnits())],
-      peiObjective: input.peiObjective,
-      poiActivity: input.poiActivity,
+      responsibleUnits: [{ organizationalUnitId: input.organizationalUnitId }],
+      peiObjectiveId: input.peiObjectiveId,
+      poiActivityId: input.poiActivityId,
       description: input.description,
       note: input.note,
       digitalComponent: input.digitalComponent === 'Si' ? 'YES' : 'NO',
     };
-    const created = await this.request(this.http.post<ApiPortfolioRecord>(`${this.apiUrl}/initiatives`, request));
+    const created = await this.request(this.portfolio.createInitiative({ body: request })) as unknown as ApiPortfolioRecord;
     if (input.initialFile) {
-      await this.uploadDocument(created.code, 'PUBLIC_INNOVATION_INITIATIVE_SHEET', input.initialFile);
+      await this.uploadDocument(created.code, this.requireDocumentTypeId('PUBLIC_INNOVATION_INITIATIVE_SHEET'), input.initialFile);
     }
     await this.refreshAll();
     return toPortfolioRecord(created);
@@ -393,18 +419,18 @@ export class PiipHttpRepository extends PiipRepository {
       initiativeCode: input.initiativeCode,
       startDate: input.startDate,
       name: input.name,
-      solutionType: solutionCode(input.solutionType),
-      source: sourceCode(input.source),
+      solutionTypeId: input.solutionTypeId,
+      sourceId: input.sourceId,
       responsible: input.responsible,
-      responsibleUnits: [responsibleUnitInput(input.responsibleUnits, this.organizationalUnits())],
-      peiObjective: input.peiObjective,
-      poiActivity: input.poiActivity,
+      responsibleUnits: [{ organizationalUnitId: input.organizationalUnitId }],
+      peiObjectiveId: input.peiObjectiveId,
+      poiActivityId: input.poiActivityId,
       description: input.description,
       keyResults: input.keyResults,
       note: input.note,
       digitalComponent: input.digitalComponent === 'Si' ? 'YES' : 'NO',
     };
-    const record = await this.request(this.http.post<ApiPortfolioRecord>(`${this.apiUrl}/projects/derived`, request));
+    const record = await this.request(this.portfolio.derived({ body: request })) as unknown as ApiPortfolioRecord;
     await this.refreshAll();
     return toPortfolioRecord(record);
   }
@@ -415,36 +441,34 @@ export class PiipHttpRepository extends PiipRepository {
       executingUnitId: this.requireSelectedExecutingUnit(),
       startDate: input.startDate,
       name: input.name,
-      source: sourceCode(input.source),
+      sourceId: input.sourceId,
       responsible: input.responsible,
-      responsibleUnits: [responsibleUnitInput(input.responsibleUnits, this.organizationalUnits())],
-      peiObjective: input.peiObjective,
-      poiActivity: input.poiActivity,
+      responsibleUnits: [{ organizationalUnitId: input.organizationalUnitId }],
+      peiObjectiveId: input.peiObjectiveId,
+      poiActivityId: input.poiActivityId,
       description: input.description,
       keyResults: input.keyResults,
       note: input.note,
       digitalComponent: input.digitalComponent === 'Si' ? 'YES' : 'NO',
     };
-    const record = await this.request(this.http.post<ApiPortfolioRecord>(`${this.apiUrl}/projects/preexisting`, request));
+    const record = await this.request(this.portfolio.preexisting({ body: request })) as unknown as ApiPortfolioRecord;
     for (const attachment of input.documentAttachments ?? []) {
-      if (attachment.mode === 'FILE' && attachment.file) await this.uploadDocument(record.code, attachment.type, attachment.file);
-      if (attachment.mode === 'NOT_APPLICABLE') await this.markDocumentNotApplicable(record.code, attachment.type, 'Proyecto preexistente');
+      if (attachment.mode === 'FILE' && attachment.file) await this.uploadDocument(record.code, attachment.documentTypeId, attachment.file);
+      if (attachment.mode === 'NOT_APPLICABLE') await this.markDocumentNotApplicable(record.code, attachment.documentTypeId, 'Proyecto preexistente');
     }
     await this.refreshAll();
     return toPortfolioRecord(record);
   }
 
-  async uploadDocument(code: string, type: DocumentType, file: File): Promise<void> {
-    const form = new FormData();
-    form.append('file', file, file.name);
-    await this.request(this.http.post(`${this.apiUrl}/portfolio-records/${code}/documents/${type}/versions`, form));
+  async uploadDocument(code: string, documentTypeId: number, file: File): Promise<void> {
+    await this.request(this.documentApi.upload({ recordCode: code, documentTypeId, body: { file } }));
     const recordType = this.portfolioRecords().find((record) => record.code === code)?.recordType;
     if (recordType) await this.loadDocuments(recordType, code);
     await this.loadDocumentSummaries();
   }
 
-  async markDocumentNotApplicable(code: string, type: DocumentType, reason: string): Promise<void> {
-    await this.request(this.http.put(`${this.apiUrl}/portfolio-records/${code}/documents/${type}/not-applicable`, { reason }));
+  async markDocumentNotApplicable(code: string, documentTypeId: number, reason: string): Promise<void> {
+    await this.request(this.documentApi.notApplicable({ recordCode: code, documentTypeId, body: { reason } }));
     const recordType = this.portfolioRecords().find((record) => record.code === code)?.recordType;
     if (recordType) await this.loadDocuments(recordType, code);
     await this.loadDocumentSummaries();
@@ -560,7 +584,7 @@ export class PiipHttpRepository extends PiipRepository {
       : units[0]?.id ?? null;
     this.selectedExecutingUnitId.set(selected);
     if (selected === null) {
-      this.organizationalUnits.set([]);
+      this.catalogStore.clearOrganizationalUnits();
       localStorage.removeItem('piip-selected-executing-unit');
       return;
     }
@@ -569,9 +593,12 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   private async loadOrganizationalUnits(executingUnitId: number): Promise<void> {
-    this.organizationalUnits.set(await this.request(this.http.get<OrganizationalUnit[]>(`${this.apiUrl}/organizational-units`, {
-      params: { executingUnitId },
-    })));
+    await this.catalogStore.loadOrganizationalUnits(executingUnitId, async () => {
+      const values = await this.request(this.http.get<Array<Partial<OrganizationalUnit>>>(`${this.apiUrl}/organizational-units`, { params: { executingUnitId } }));
+      return values.flatMap((value): OrganizationalUnit[] => value.id !== undefined && value.code && value.name
+        ? [{ id: value.id, code: value.code, name: value.name, acronym: value.acronym ?? '', parentId: value.parentId ?? null, executingUnitId: value.executingUnitId ?? executingUnitId, active: value.active ?? false }]
+        : []);
+    });
   }
 
   private async loadPortfolio(): Promise<void> {
@@ -596,9 +623,18 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   private async loadDocumentSummaries(): Promise<void> {
-    const items = await this.request(this.http.get<DocumentDossierSummary[]>(`${this.apiUrl}/documents`));
-    const visibleCodes = new Set(this.portfolioRecords().map((record) => record.code));
-    this.documentDossierSummaries.set(items.filter((item) => !visibleCodes.size || visibleCodes.has(item.code)).map((item) => ({ ...item, lastActivity: formatDate(item.lastActivity) })));
+    const selectedExecutingUnitId = this.selectedExecutingUnitId();
+    let params = new HttpParams();
+    if (selectedExecutingUnitId !== null) params = params.set('executingUnitId', selectedExecutingUnitId);
+    const items = await this.request(this.http.get<DossierSummary[]>(`${this.apiUrl}/documents`, { params }));
+    this.documentDossierSummaries.set(items.flatMap((item): DocumentDossierSummary[] => {
+      if (!item.code || !item.name || !item.recordType || !item.status) return [];
+      if (selectedExecutingUnitId !== null && item.executingUnitId !== selectedExecutingUnitId) return [];
+      return [{ recordType: item.recordType as PiipRecordType, code: item.code, name: item.name, unit: item.unit ?? '', status: item.status as PiipStatus,
+        loadedCount: item.loadedCount ?? 0, pendingCount: item.pendingCount ?? 0, notApplicableCount: item.notApplicableCount ?? 0,
+        lastActivity: item.lastActivity ? formatDate(item.lastActivity) : '', executingUnitId: item.executingUnitId,
+        organizationalUnits: (item.organizationalUnits ?? []).flatMap(mapOrganizationalUnit) }];
+    }));
   }
 
   private async loadDocuments(recordType: PiipRecordType, code: string): Promise<void> {
@@ -625,11 +661,21 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   private async loadAudit(): Promise<void> {
+    const selectedExecutingUnitId = this.selectedExecutingUnitId();
+    let params = new HttpParams();
+    if (selectedExecutingUnitId !== null) params = params.set('executingUnitId', selectedExecutingUnitId);
     const [items, accesses] = await Promise.all([
-      this.request(this.http.get<EventResponse[]>(`${this.apiUrl}/audit/events`)),
-      this.request(this.http.get<AuditAccess[]>(`${this.apiUrl}/audit/accesses`)),
+      this.request(this.http.get<EventResponse[]>(`${this.apiUrl}/audit/events`, { params })),
+      this.request(this.http.get<AuditAccess[]>(`${this.apiUrl}/audit/accesses`, { params })),
     ]);
-    this.auditEvents.set(items.map((item) => ({
+    const visibleCodes = new Set(this.portfolioRecords().map((record) => record.code));
+    const scopedItems = selectedExecutingUnitId === null
+      ? items
+      : items.filter((item) => !item.entityCode || visibleCodes.has(item.entityCode));
+    const scopedAccesses = selectedExecutingUnitId === null
+      ? accesses
+      : accesses.filter((access) => !access.recordCode || visibleCodes.has(access.recordCode));
+    this.auditEvents.set(scopedItems.map((item) => ({
       recordCode: item.entityCode,
       timestamp: item.occurredAt ? formatDate(item.occurredAt) : 'Fecha no registrada',
       event: item.event ?? 'EVENTO_REGISTRADO',
@@ -640,7 +686,7 @@ export class PiipHttpRepository extends PiipRepository {
       rawDetail: item.detail ?? '',
       icon: 'history',
     })));
-    this.auditAccesses.set(accesses);
+    this.auditAccesses.set(scopedAccesses);
   }
 
   private async loadPortfolioRecord(recordType: PiipRecordType, code: string): Promise<PiipPortfolioRecord | undefined> {
@@ -691,6 +737,12 @@ export class PiipHttpRepository extends PiipRepository {
     const value = this.selectedExecutingUnitId();
     if (value === null) throw new PiipApiError(422, 'Selecciona una Unidad Ejecutora antes de registrar.');
     return value;
+  }
+
+  private requireDocumentTypeId(code: DocumentType): number {
+    const option = this.catalogs().value.documentTypes.find((item) => item.code === code && item.active);
+    if (!option) throw new PiipApiError(422, 'El tipo documental requerido ya no está disponible. Recarga los catálogos.');
+    return option.id;
   }
 
   private executingUnitIdForRecord(code: string): number | undefined {
@@ -755,18 +807,24 @@ function portfolioStatusCode(status: PiipPortfolioRecord['status']): string {
 }
 
 function toPortfolioRecord(value: ApiPortfolioRecord): PiipPortfolioRecord {
+  const recordTypeReference = mapTechnicalOption(value.recordType);
+  const solutionTypeReference = mapPersistentOption(value.solutionType);
+  const sourceReference = mapPersistentOption(value.source);
+  const peiObjectiveReference = value.peiObjective ? mapPersistentOption(value.peiObjective) : null;
+  const poiActivityReference = value.poiActivity ? mapPersistentOption(value.poiActivity) : null;
+  const responsibleUnitReferences = value.responsibleUnits.flatMap((item) => item.organizationalUnit ? mapOrganizationalUnit(item.organizationalUnit) : []);
   return {
-    recordType: value.recordType,
+    recordType: recordTypeReference.name,
     code: value.code,
     originCode: value.originCode,
     name: value.name,
-    solutionType: value.solutionType,
-    source: value.source,
+    solutionType: solutionTypeReference.name as PiipPortfolioRecord['solutionType'],
+    source: sourceReference.name,
     startDate: value.startDate,
     responsible: value.responsible,
-    peiObjective: value.peiObjective ?? '',
-    poiActivity: value.poiActivity ?? '',
-    responsibleUnits: value.responsibleUnits.join(', '),
+    peiObjective: peiObjectiveReference?.name ?? '',
+    poiActivity: poiActivityReference?.name ?? '',
+    responsibleUnits: responsibleUnitReferences.map((item) => item.acronym || item.name).join(', '),
     description: value.description,
     keyResults: value.keyResults ?? '',
     note: value.note ?? '',
@@ -780,43 +838,54 @@ function toPortfolioRecord(value: ApiPortfolioRecord): PiipPortfolioRecord {
     projectManagementDocumentation: value.projectManagementDocumentation ?? '',
     finalClosureReport: value.finalClosureReport ?? '',
     executingUnitId: value.executingUnitId,
+    recordTypeReference, solutionTypeReference, sourceReference, peiObjectiveReference, poiActivityReference,
+    responsibleUnitReferences,
   };
 }
 
 function toInitiativeRecord(value: ApiPortfolioRecord): InitiativeRecord {
+  const organizationalUnits = value.responsibleUnits.flatMap((item) => item.organizationalUnit ? mapOrganizationalUnit(item.organizationalUnit) : []);
+  const sourceReference = mapPersistentOption(value.source);
   return {
     code: value.code,
     name: value.name,
-    source: value.source,
+    source: sourceReference.name,
     responsible: value.responsible,
     role: '',
-    unit: value.responsibleUnits.join(', '),
+    unit: value.responsibleUnits.flatMap((item) => item.organizationalUnit?.name ?? []).join(', '),
     status: value.status,
     updatedAt: formatDate(value.updatedAt),
     executingUnitId: value.executingUnitId,
+    sourceReference,
+    organizationalUnits,
   };
 }
 
 function toProjectRecord(value: ApiPortfolioRecord): ProjectRecord {
+  const organizationalUnits = value.responsibleUnits.flatMap((item) => item.organizationalUnit ? mapOrganizationalUnit(item.organizationalUnit) : []);
   return {
     code: value.code,
     name: value.name,
     originCode: value.originCode,
     originMode: value.originCode === 'NA' ? 'PREEXISTING' : 'DERIVED_FROM_INITIATIVE',
-    unit: value.responsibleUnits.join(', '),
+    unit: value.responsibleUnits.flatMap((item) => item.organizationalUnit?.name ?? []).join(', '),
     responsible: value.responsible,
     status: value.status,
     digitalComponent: value.digitalComponent,
     executingUnitId: value.executingUnitId,
+    organizationalUnits,
   };
 }
 
 function mapDocuments(items: ApiDocument[], types: DocumentType[]): DocumentRecord[] {
-  return items.filter((item) => types.includes(item.type)).map((item) => {
+  return items.filter((item) => types.includes(item.documentType.code as DocumentType)).map((item) => {
+    const documentType = mapPersistentOption(item.documentType);
     const version = item.versions[0];
     return {
-      type: item.type,
-      name: item.name,
+      type: documentType.code as DocumentType,
+      documentTypeId: documentType.id,
+      documentType,
+      name: documentType.name,
       required: false,
       filename: version?.filename ?? null,
       version: version ? `${version.version}.0` : null,
@@ -829,27 +898,35 @@ function mapDocuments(items: ApiDocument[], types: DocumentType[]): DocumentReco
   });
 }
 
-function responsibleUnitInput(value: string, units: OrganizationalUnit[]): ResponsibleUnitInput {
-  const unit = units.find((candidate) => candidate.id === Number(value) || candidate.acronym === value || candidate.name === value);
-  return { organizationalUnitId: unit?.id, originalDesignation: unit?.name ?? value };
-}
-
-function solutionCode(value: PiipPortfolioRecord['solutionType']): InitiativeCreateRequest['solutionType'] {
-  if (value === 'Solución potencial o adaptable') return 'POTENTIAL_OR_ADAPTABLE';
-  if (value === 'Solución por definir') return 'TO_BE_DEFINED';
-  return 'NOT_APPLICABLE';
-}
-
-function sourceCode(value: string): InitiativeCreateRequest['source'] {
-  const values: Record<string, InitiativeCreateRequest['source']> = {
-    'Ficha de iniciativa de innovación pública': 'INITIATIVE_SHEET',
-    'Concurso interno': 'INTERNAL_CONTEST',
-    'Innovación abierta': 'OPEN_INNOVATION',
-    'Propuesta de jefatura o directivos': 'MANAGEMENT_PROPOSAL',
-    Otros: 'OTHER',
-    Convocatoria: 'CALL',
+function mapCatalogBundle(value: import('../api/generated/models').CatalogBundleResponse): CatalogBundle {
+  return {
+    recordTypes: (value.recordTypes ?? []).map(mapTechnicalOption),
+    solutionTypes: (value.solutionTypes ?? []).map(mapPersistentOption),
+    sources: (value.sources ?? []).map(mapPersistentOption),
+    peiObjectives: (value.peiObjectives ?? []).map(mapPersistentOption),
+    poiActivities: (value.poiActivities ?? []).map(mapPersistentOption),
+    documentTypes: (value.documentTypes ?? []).map(mapPersistentOption),
   };
-  return values[value] ?? 'OTHER';
+}
+
+function mapPersistentOption(value: PersistentCatalogItemResponse): PersistentCatalogOption {
+  if (value.id === undefined || !value.code || !value.name || value.displayOrder === undefined || value.active === undefined) {
+    throw new PiipApiError(502, 'El backend devolvió una opción de catálogo incompleta.');
+  }
+  return { id: value.id, code: value.code, name: value.name, displayOrder: value.displayOrder, active: value.active };
+}
+
+function mapTechnicalOption(value: TechnicalCatalogItemResponse): TechnicalCatalogOption {
+  if ((value.code !== 'INITIATIVE' && value.code !== 'PROJECT') || (value.name !== 'Iniciativa' && value.name !== 'Proyecto') || value.displayOrder === undefined || value.active === undefined) {
+    throw new PiipApiError(502, 'El backend devolvió un tipo de registro incompleto.');
+  }
+  return { code: value.code, name: value.name, displayOrder: value.displayOrder, active: value.active };
+}
+
+function mapOrganizationalUnit(value: import('../api/generated/models').OrganizationalUnitResponse): OrganizationalUnit[] {
+  return value.id !== undefined && value.code && value.name && value.executingUnitId !== undefined && value.active !== undefined
+    ? [{ id: value.id, code: value.code, name: value.name, acronym: value.acronym ?? '', parentId: value.parentId ?? null, executingUnitId: value.executingUnitId, active: value.active }]
+    : [];
 }
 
 function formatDate(value: string): string {

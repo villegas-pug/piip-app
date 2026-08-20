@@ -10,7 +10,7 @@
 
 - `apps/backend` es un monolito modular Java 21/Spring Boot 4.1; `apps/frontend` usa Angular 22 con componentes standalone.
 - Keycloak autentica; Oracle autoriza mediante `USUARIO`, `ROL` y `USUARIO_ROL_AMBITO`.
-- Hibernate JPA es la fuente canónica del esquema: no uses SQL nativo, `JdbcTemplate`, procedimientos almacenados, Flyway ni Liquibase. Los controladores delegan y las reglas y transacciones pertenecen a servicios de aplicación.
+- Hibernate JPA es la fuente canónica del esquema: no uses SQL nativo, `JdbcTemplate`, procedimientos almacenados, Flyway ni Liquibase para acceso funcional o definición estructural. La única excepción es el DML externo, versionado, sin DDL e idempotente de un perfil destructivo exclusivo de desarrollo/pruebas, con guardias fail-closed y prohibido en producción, conforme a la constitución. Los controladores delegan y las reglas y transacciones pertenecen a servicios de aplicación.
 - No expongas entidades JPA en contratos HTTP.
 
 ## Contexto: RoviDev Vault -> Graphify -> código fuente
@@ -35,6 +35,7 @@
 - Un usuario autenticado sin asignación Oracle activa no recibe permisos funcionales.
 - Toda operación sensible exige autorización en el servicio y evidencia en auditoría.
 - `AUDITORIA_ACCESO` no guarda tokens, cuerpos HTTP ni contenido documental.
+- La auditoría es append-only durante la operación normal. El perfil destructivo exclusivo de desarrollo/pruebas puede eliminar y recrear íntegramente sus tablas; esta excepción permanece deshabilitada por defecto y prohibida en producción.
 
 ## Spec Kit y Codex
 
@@ -55,5 +56,5 @@
 - Ningún especialista ejecuta pruebas, builds, generación OpenAPI, integración Oracle ni acciones destructivas sin autorización explícita del usuario en el turno actual.
 
 <!-- SPECKIT START -->
-Para la feature activa, leer `specs/010-actualizar-inicio-piip/plan.md` antes de planificar o implementar.
+Para la feature activa, leer `specs/011-centralizar-catalogos-piip/plan.md` antes de planificar o implementar.
 <!-- SPECKIT END -->

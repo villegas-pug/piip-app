@@ -16,16 +16,15 @@ public class PortfolioController {
     private final PortfolioService service;
     public PortfolioController(PortfolioService service) { this.service = service; }
 
-    @GetMapping("/initiatives") public PageResponse<PortfolioRecordResponse> initiatives(
+    @GetMapping(value = "/initiatives", produces = MediaType.APPLICATION_JSON_VALUE) public PageResponse<PortfolioRecordResponse> initiatives(
             @RequestParam(value = "q", required = false) String q, @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "executingUnitId", required = false) Long executingUnitId, @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size, @RequestParam(value = "sort", defaultValue = "updatedAt") String sort,
-            @RequestParam(value = "direction", defaultValue = "desc") String direction) {
-        return service.list(RecordType.INITIATIVE, q, status, executingUnitId, page, size, sort, direction);
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        return service.list(RecordType.INITIATIVE, q, status, executingUnitId, page, size, "updatedAt", "desc");
     }
-    @PostMapping("/initiatives") @ResponseStatus(HttpStatus.CREATED) public PortfolioRecordResponse createInitiative(@Valid @RequestBody InitiativeCreateRequest request) { return service.createInitiative(request); }
-    @GetMapping("/initiatives/{code}") public PortfolioRecordResponse initiative(@PathVariable("code") String code) { return service.get(code); }
-    @PostMapping("/initiatives/{code}/approval") public PortfolioRecordResponse approve(@PathVariable("code") String code, @Valid @RequestBody ApprovalRequest request) { return service.approve(code, request); }
+    @PostMapping(value = "/initiatives", produces = MediaType.APPLICATION_JSON_VALUE) @ResponseStatus(HttpStatus.CREATED) public PortfolioRecordResponse createInitiative(@Valid @RequestBody InitiativeCreateRequest request) { return service.createInitiative(request); }
+    @GetMapping(value = "/initiatives/{code}", produces = MediaType.APPLICATION_JSON_VALUE) public PortfolioRecordResponse initiative(@PathVariable("code") String code) { return service.get(code); }
+    @PostMapping(value = "/initiatives/{code}/approval", produces = MediaType.APPLICATION_JSON_VALUE) public PortfolioRecordResponse approve(@PathVariable("code") String code, @Valid @RequestBody ApprovalRequest request) { return service.approve(code, request); }
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Transición aplicada"),
         @ApiResponse(responseCode = "400", description = "Request inválido"),
@@ -39,17 +38,16 @@ public class PortfolioController {
         return service.transitionInitiativeStatus(code, request);
     }
 
-    @GetMapping("/projects") public PageResponse<PortfolioRecordResponse> projects(
+    @GetMapping(value = "/projects", produces = MediaType.APPLICATION_JSON_VALUE) public PageResponse<PortfolioRecordResponse> projects(
             @RequestParam(value = "q", required = false) String q, @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "executingUnitId", required = false) Long executingUnitId, @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size, @RequestParam(value = "sort", defaultValue = "updatedAt") String sort,
-            @RequestParam(value = "direction", defaultValue = "desc") String direction) {
-        return service.list(RecordType.PROJECT, q, status, executingUnitId, page, size, sort, direction);
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        return service.list(RecordType.PROJECT, q, status, executingUnitId, page, size, "updatedAt", "desc");
     }
-    @GetMapping("/projects/eligible-initiatives") public List<PortfolioRecordResponse> eligible() { return service.eligibleInitiatives(); }
-    @PostMapping("/projects/derived") @ResponseStatus(HttpStatus.CREATED) public PortfolioRecordResponse derived(@Valid @RequestBody DerivedProjectRequest request) { return service.createDerived(request); }
-    @PostMapping("/projects/preexisting") @ResponseStatus(HttpStatus.CREATED) public PortfolioRecordResponse preexisting(@Valid @RequestBody PreexistingProjectRequest request) { return service.createPreexisting(request); }
-    @GetMapping("/projects/{code}") public PortfolioRecordResponse project(@PathVariable("code") String code) { return service.get(code); }
+    @GetMapping(value = "/projects/eligible-initiatives", produces = MediaType.APPLICATION_JSON_VALUE) public List<PortfolioRecordResponse> eligible() { return service.eligibleInitiatives(); }
+    @PostMapping(value = "/projects/derived", produces = MediaType.APPLICATION_JSON_VALUE) @ResponseStatus(HttpStatus.CREATED) public PortfolioRecordResponse derived(@Valid @RequestBody DerivedProjectRequest request) { return service.createDerived(request); }
+    @PostMapping(value = "/projects/preexisting", produces = MediaType.APPLICATION_JSON_VALUE) @ResponseStatus(HttpStatus.CREATED) public PortfolioRecordResponse preexisting(@Valid @RequestBody PreexistingProjectRequest request) { return service.createPreexisting(request); }
+    @GetMapping(value = "/projects/{code}", produces = MediaType.APPLICATION_JSON_VALUE) public PortfolioRecordResponse project(@PathVariable("code") String code) { return service.get(code); }
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Transición aplicada"),
         @ApiResponse(responseCode = "400", description = "Request inválido"),

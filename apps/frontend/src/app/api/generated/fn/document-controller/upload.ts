@@ -11,7 +11,7 @@ import { VersionResponse } from '../../models/version-response';
 
 export interface Upload$Params {
   recordCode: string;
-  type: 'PUBLIC_INNOVATION_INITIATIVE_SHEET' | 'INITIATIVE_TECHNICAL_OPINION' | 'FORMAL_APPROVAL_DECISION' | 'FINAL_PRODUCT_APPROVAL' | 'PROJECT_MANAGEMENT_DOCUMENTATION' | 'FINAL_CLOSURE_REPORT';
+  documentTypeId: number;
       body?: {
 'file': Blob;
 }
@@ -21,12 +21,12 @@ export function upload(http: HttpClient, rootUrl: string, params: Upload$Params,
   const rb = new RequestBuilder(rootUrl, upload.PATH, 'post');
   if (params) {
     rb.path('recordCode', params.recordCode, {});
-    rb.path('type', params.type, {});
+    rb.path('documentTypeId', params.documentTypeId, {});
     rb.body(params.body, 'multipart/form-data');
   }
 
   return http.request(
-    rb.build({ responseType: 'blob', accept: '*/*', context })
+    rb.build({ responseType: 'json', accept: 'application/json', context })
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
@@ -35,4 +35,4 @@ export function upload(http: HttpClient, rootUrl: string, params: Upload$Params,
   );
 }
 
-upload.PATH = '/portfolio-records/{recordCode}/documents/{type}/versions';
+upload.PATH = '/portfolio-records/{recordCode}/documents/{documentTypeId}/versions';

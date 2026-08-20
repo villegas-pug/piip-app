@@ -1,0 +1,470 @@
+openapi: 3.1.0
+info:
+  title: Contrato objetivo de catálogos centralizados PIIP
+  version: 0.2.0-design
+  description: >-
+    Artefacto de diseño de la feature 011. Documenta las superficies que cambian;
+    no reemplaza ni genera por sí mismo apps/backend/target/piip-openapi.json.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /catalogs:
+    get:
+      operationId: getCatalogBundle
+      summary: Obtiene las opciones globales activas de PIIP
+      description: >-
+        La respuesta es atómica: si no puede construirse un grupo, falla el bundle
+        completo. Todos/Todas no forma parte de ningún catálogo funcional.
+      responses:
+        '200':
+          description: Catálogos globales activos y ordenados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogBundleResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /organizational-units:
+    get:
+      operationId: getActiveOrganizationalUnits
+      summary: Obtiene Unidades Orgánicas activas de una Unidad Ejecutora autorizada
+      parameters:
+        - name: executingUnitId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Unidades activas ordenadas; una lista vacía es válida
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrganizationalUnitOptionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /initiatives:
+    get:
+      operationId: listInitiatives
+      summary: Lista iniciativas con referencias de catálogo resolubles
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/ExecutingUnitId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          $ref: '#/components/responses/PortfolioPage'
+    post:
+      operationId: createInitiative
+      summary: Crea una iniciativa usando identidades persistentes activas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiativeCreateRequest'
+      responses:
+        '201':
+          description: Iniciativa creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioRecordResponse'
+        '422':
+          $ref: '#/components/responses/InvalidReference'
+
+  /projects:
+    get:
+      operationId: listProjects
+      summary: Lista proyectos con referencias de catálogo resolubles
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/ExecutingUnitId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          $ref: '#/components/responses/PortfolioPage'
+
+  /projects/derived:
+    post:
+      operationId: createDerivedProject
+      summary: Crea un proyecto derivado con referencias activas
+      description: >-
+        Un valor heredado inactivo se entrega como contexto en la iniciativa elegible,
+        pero debe reemplazarse por un ID activo antes de esta escritura.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DerivedProjectRequest'
+      responses:
+        '201':
+          description: Proyecto creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioRecordResponse'
+        '422':
+          $ref: '#/components/responses/InvalidReference'
+
+  /projects/preexisting:
+    post:
+      operationId: createPreexistingProject
+      summary: Crea un proyecto preexistente con referencias activas
+      description: >-
+        El backend resuelve Tipo de solución NOT_APPLICABLE por código estable
+        dentro de SOLUTION_TYPE; el cliente no envía ni hardcodea su ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreexistingProjectRequest'
+      responses:
+        '201':
+          description: Proyecto creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortfolioRecordResponse'
+        '422':
+          $ref: '#/components/responses/InvalidReference'
+
+  /portfolio-records/{recordCode}/documents:
+    parameters:
+      - $ref: '#/components/parameters/RecordCode'
+    get:
+      operationId: listDocumentSlots
+      summary: Lista las seis posiciones documentales con tipo persistente
+      responses:
+        '200':
+          description: Posiciones y versiones vigentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentResponse'
+
+  /portfolio-records/{recordCode}/documents/{documentTypeId}/versions:
+    parameters:
+      - $ref: '#/components/parameters/RecordCode'
+      - $ref: '#/components/parameters/DocumentTypeId'
+    post:
+      operationId: uploadDocumentVersion
+      summary: Carga una versión en una posición identificada por tipo documental
+      description: >-
+        La posición debe existir en el expediente. Si su tipo quedó inactivo,
+        continúa siendo operable porque esta acción no crea una referencia nueva.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Versión creada; conserva el contrato vigente de versión
+        '422':
+          $ref: '#/components/responses/InvalidReference'
+
+  /portfolio-records/{recordCode}/documents/{documentTypeId}/not-applicable:
+    parameters:
+      - $ref: '#/components/parameters/RecordCode'
+      - $ref: '#/components/parameters/DocumentTypeId'
+    put:
+      operationId: markDocumentNotApplicable
+      summary: Marca la posición como No aplica sin cambiar su identidad persistente
+      description: >-
+        La operación se aplica a una posición existente aun si su tipo es histórico
+        inactivo; no habilita ese tipo para posiciones nuevas.
+      responses:
+        '204':
+          description: Posición actualizada
+        '422':
+          $ref: '#/components/responses/InvalidReference'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Query:
+      name: q
+      in: query
+      schema: { type: string }
+    Status:
+      name: status
+      in: query
+      description: Código técnico de estado vigente; no se centraliza en esta feature.
+      schema: { type: string }
+    ExecutingUnitId:
+      name: executingUnitId
+      in: query
+      schema: { type: integer, format: int64 }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+    Size:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    RecordCode:
+      name: recordCode
+      in: path
+      required: true
+      schema: { type: string }
+    DocumentTypeId:
+      name: documentTypeId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+
+  schemas:
+    PersistentCatalogItemResponse:
+      type: object
+      required: [id, code, name, displayOrder, active]
+      properties:
+        id: { type: integer, format: int64 }
+        code: { type: string }
+        name: { type: string }
+        displayOrder: { type: integer, minimum: 0 }
+        active: { type: boolean }
+
+    TechnicalCatalogItemResponse:
+      type: object
+      required: [code, name, displayOrder, active]
+      properties:
+        code: { type: string, enum: [INITIATIVE, PROJECT] }
+        name: { type: string }
+        displayOrder: { type: integer, minimum: 0 }
+        active: { type: boolean }
+
+    CatalogBundleResponse:
+      type: object
+      required:
+        - recordTypes
+        - solutionTypes
+        - sources
+        - peiObjectives
+        - poiActivities
+        - documentTypes
+      properties:
+        recordTypes:
+          type: array
+          items: { $ref: '#/components/schemas/TechnicalCatalogItemResponse' }
+        solutionTypes:
+          type: array
+          items: { $ref: '#/components/schemas/PersistentCatalogItemResponse' }
+        sources:
+          type: array
+          items: { $ref: '#/components/schemas/PersistentCatalogItemResponse' }
+        peiObjectives:
+          type: array
+          items: { $ref: '#/components/schemas/PersistentCatalogItemResponse' }
+        poiActivities:
+          type: array
+          items: { $ref: '#/components/schemas/PersistentCatalogItemResponse' }
+        documentTypes:
+          type: array
+          items: { $ref: '#/components/schemas/PersistentCatalogItemResponse' }
+
+    OrganizationalUnitOptionResponse:
+      type: object
+      required: [id, code, name, active, executingUnitId]
+      properties:
+        id: { type: integer, format: int64 }
+        code: { type: string }
+        name: { type: string }
+        active: { type: boolean }
+        acronym: { type: [string, 'null'] }
+        parentId: { type: [integer, 'null'], format: int64 }
+        executingUnitId: { type: integer, format: int64 }
+
+    ResponsibleUnitInput:
+      type: object
+      required: [organizationalUnitId]
+      properties:
+        organizationalUnitId: { type: integer, format: int64 }
+
+    ResponsibleUnitResponse:
+      type: object
+      required: [organizationalUnit, originalDesignation, displayOrder]
+      properties:
+        organizationalUnit:
+          $ref: '#/components/schemas/OrganizationalUnitOptionResponse'
+        originalDesignation: { type: string }
+        displayOrder: { type: integer, minimum: 0 }
+
+    CatalogReferencesInput:
+      type: object
+      required: [sourceId, responsibleUnits]
+      properties:
+        solutionTypeId: { type: integer, format: int64 }
+        sourceId: { type: integer, format: int64 }
+        peiObjectiveId: { type: [integer, 'null'], format: int64 }
+        poiActivityId: { type: [integer, 'null'], format: int64 }
+        responsibleUnits:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/ResponsibleUnitInput' }
+
+    InitiativeCreateRequest:
+      allOf:
+        - $ref: '#/components/schemas/CatalogReferencesInput'
+        - type: object
+          required: [executingUnitId, name, solutionTypeId, startDate, responsible, description, digitalComponent]
+          properties:
+            executingUnitId: { type: integer, format: int64 }
+            name: { type: string, maxLength: 180 }
+            startDate: { type: string, format: date }
+            responsible: { type: string, maxLength: 300 }
+            description: { type: string, maxLength: 1000 }
+            note: { type: [string, 'null'], maxLength: 600 }
+            digitalComponent: { type: string }
+
+    DerivedProjectRequest:
+      allOf:
+        - $ref: '#/components/schemas/CatalogReferencesInput'
+        - type: object
+          required: [initiativeCode, name, solutionTypeId, startDate, responsible, description, digitalComponent]
+          properties:
+            initiativeCode: { type: string }
+            name: { type: string, maxLength: 180 }
+            startDate: { type: string, format: date }
+            responsible: { type: string, maxLength: 300 }
+            description: { type: string, maxLength: 1000 }
+            keyResults: { type: [string, 'null'], maxLength: 1000 }
+            note: { type: [string, 'null'], maxLength: 600 }
+            digitalComponent: { type: string }
+
+    PreexistingProjectRequest:
+      allOf:
+        - $ref: '#/components/schemas/CatalogReferencesInput'
+        - type: object
+          required: [executingUnitId, name, startDate, responsible, description, digitalComponent]
+          properties:
+            executingUnitId: { type: integer, format: int64 }
+            name: { type: string, maxLength: 180 }
+            startDate: { type: string, format: date }
+            responsible: { type: string, maxLength: 300 }
+            description: { type: string, maxLength: 1000 }
+            keyResults: { type: [string, 'null'], maxLength: 1000 }
+            note: { type: [string, 'null'], maxLength: 600 }
+            digitalComponent: { type: string }
+
+    PortfolioRecordResponse:
+      type: object
+      required:
+        - recordType
+        - code
+        - name
+        - solutionType
+        - source
+        - responsibleUnits
+        - status
+        - version
+      properties:
+        recordType: { $ref: '#/components/schemas/TechnicalCatalogItemResponse' }
+        code: { type: string }
+        originCode: { type: [string, 'null'] }
+        name: { type: string }
+        solutionType: { $ref: '#/components/schemas/PersistentCatalogItemResponse' }
+        source: { $ref: '#/components/schemas/PersistentCatalogItemResponse' }
+        peiObjective:
+          oneOf:
+            - $ref: '#/components/schemas/PersistentCatalogItemResponse'
+            - type: 'null'
+        poiActivity:
+          oneOf:
+            - $ref: '#/components/schemas/PersistentCatalogItemResponse'
+            - type: 'null'
+        responsibleUnits:
+          type: array
+          items: { $ref: '#/components/schemas/ResponsibleUnitResponse' }
+        status: { type: string }
+        version: { type: integer, format: int64 }
+      additionalProperties: true
+      description: >-
+        Conserva los demás campos vigentes. Las referencias embebidas pueden
+        tener active=false para resolver el historial.
+
+    DocumentResponse:
+      type: object
+      required: [id, documentType, state, latestVersion, versions]
+      properties:
+        id: { type: integer, format: int64 }
+        documentType: { $ref: '#/components/schemas/PersistentCatalogItemResponse' }
+        state: { type: string }
+        notApplicableReason: { type: [string, 'null'] }
+        latestVersion: { type: integer, minimum: 0 }
+        versions:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    PagePortfolioRecordResponse:
+      type: object
+      required: [content, page, size, totalElements, totalPages]
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/PortfolioRecordResponse' }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+
+    ProblemDetail:
+      type: object
+      properties:
+        status: { type: integer }
+        title: { type: string }
+        detail: { type: string }
+        referenceField: { type: string }
+        referenceId: { type: integer, format: int64 }
+        reason:
+          type: string
+          enum: [NOT_FOUND, WRONG_CATALOG, INACTIVE, OUTSIDE_EXECUTING_UNIT]
+
+  responses:
+    PortfolioPage:
+      description: Página de registros con referencias históricas resueltas
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PagePortfolioRecordResponse' }
+    InvalidReference:
+      description: Referencia inexistente, de otro catálogo, inactiva o fuera del ámbito organizacional
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    Unauthorized:
+      description: No autenticado
+    Forbidden:
+      description: Sin rol local o fuera del ámbito autorizado

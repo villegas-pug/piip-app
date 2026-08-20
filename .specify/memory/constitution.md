@@ -1,11 +1,16 @@
 <!--
 Sync Impact Report
-- Cambio de versión: 1.0.0 -> 1.1.0
-- Principio modificado: II. Estados y transiciones (ratificación de la feature 009)
+- Cambio de versión: 1.1.0 -> 1.2.0
+- Principios modificados: IV. Persistencia; V. Trazabilidad y calidad
 - Secciones agregadas: ninguna
 - Secciones eliminadas: ninguna
-- Artefactos alineados: AGENTS.md y specs/009-ciclo-vida-portafolio/plan.md
+- Artefactos alineados: AGENTS.md y artefactos Spec Kit de la feature 011
+- Templates actualizados: .specify/templates/overrides/plan-template.md y
+  .specify/templates/overrides/tasks-template.md
 - Templates revisados sin cambios: plan-template.md, spec-template.md y tasks-template.md
+- Documentación revisada sin cambios: docs/development/spec-kit-adoption.md y
+  docs/deployment/institutional-development.md
+- Comandos revisados: .specify/templates/commands/ no existe en este checkout
 - Pendientes: ninguno
 -->
 
@@ -43,12 +48,25 @@ Cada registro pertenece a una Unidad Ejecutora y sus unidades orgánicas respons
 
 ## IV. Persistencia
 
-Hibernate JPA es la fuente canónica del esquema Oracle. Se prohíbe SQL nativo. Los binarios documentales se almacenan como BLOB separado de sus metadatos.
+Hibernate JPA es la fuente canónica del esquema Oracle. Se prohíben SQL nativo,
+`JdbcTemplate`, procedimientos almacenados, Flyway y Liquibase para el acceso funcional y la
+definición estructural permanente. Como única excepción, un perfil destructivo explícito y
+exclusivo de desarrollo o pruebas PUEDE ejecutar un archivo externo versionado con DML de datos
+iniciales, siempre que no contenga DDL, sea idempotente, permanezca deshabilitado por defecto y
+valide de forma fail-closed el perfil, la confirmación, la conexión y el esquema antes de escribir.
+Esta excepción NO PUEDE habilitarse en operación normal ni en producción. Los binarios
+documentales se almacenan como BLOB separado de sus metadatos.
 
 ## V. Trazabilidad y calidad
 
-Las escrituras generan eventos append-only. Las llamadas API generan auditoría de acceso sin cuerpos ni secretos. Los cambios relevantes requieren pruebas automatizadas.
+Durante la operación normal, las escrituras generan eventos append-only y las llamadas API
+generan auditoría de acceso sin cuerpos ni secretos. Un perfil destructivo exclusivo de desarrollo
+o pruebas PUEDE eliminar y recrear por completo las tablas de auditoría y descartar su contenido,
+siempre que cumpla las guardias fail-closed del principio IV y no pueda activarse en producción.
+Los cambios relevantes requieren pruebas automatizadas.
 
-**Versión:** 1.1.0  
-**Ratificada:** 2026-07-28  
-**Última enmienda:** 2026-08-18
+**Versión:** 1.2.0
+
+**Ratificada:** 2026-07-28
+
+**Última enmienda:** 2026-08-20

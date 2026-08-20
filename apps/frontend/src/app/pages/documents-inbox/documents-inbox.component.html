@@ -14,11 +14,12 @@
   <article class="panel inbox-panel">
     <form class="filters" [formGroup]="filters">
       <label class="field search"><span>Buscar expediente</span><span class="input-icon"><input formControlName="search" placeholder="Código o nombre" /><mat-icon>search</mat-icon></span></label>
-      <label class="field"><span>Tipo de registro</span><select formControlName="recordType"><option>Todos</option>@for (type of catalogs.recordTypes; track type) {<option [value]="type">{{ type }}</option>}</select></label>
+      <label class="field"><span>Tipo de registro</span><select formControlName="recordType"><option>Todos</option>@for (type of recordTypes(); track type.code) {<option [value]="type.name">{{ type.name }}</option>}</select></label>
       <label class="field"><span>Estado</span><select formControlName="status"><option>Todos</option>@for (status of catalogs.statuses; track status) {<option [value]="status">{{ status }}</option>}</select></label>
-      <label class="field"><span>Unidad responsable</span><select formControlName="unit"><option>Todas</option>@for (unit of units; track unit) {<option [value]="unit">{{ unit }}</option>}</select></label>
+      <label class="field"><span>Unidad responsable</span><select formControlName="unit"><option>Todas</option>@for (unit of units(); track unit.id) {<option [value]="unit.id">{{ unit.acronym || unit.name }}</option>}</select></label>
       <button class="secondary-button" type="button" (click)="resetFilters()"><mat-icon>filter_alt_off</mat-icon>Limpiar</button>
     </form>
+    @if (catalogState().phase === 'loading' || unitsState().phase === 'loading') {<p>Cargando opciones de filtro...</p>} @else if (catalogState().phase === 'error' || unitsState().phase === 'error') {<p role="alert">{{ catalogState().error || unitsState().error }} <button type="button" (click)="catalogState().phase === 'error' ? repository.reloadCatalogs() : repository.reloadOrganizationalUnits()">Reintentar</button></p>} @else if (!recordTypes().length || !units().length) {<p>No hay opciones activas para uno o más filtros.</p>}
 
     <div class="result-meta"><span><b>{{ filteredDossiers().length }}</b> expedientes encontrados</span><span>Disponibilidad documental informativa</span></div>
 

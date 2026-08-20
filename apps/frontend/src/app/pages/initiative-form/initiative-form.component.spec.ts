@@ -51,8 +51,8 @@ describe('InitiativeFormComponent', () => {
     const fixture = TestBed.createComponent(InitiativeFormComponent);
     const component = fixture.componentInstance;
     component.form.patchValue({
-      startDate: '2026-08-14', name: 'Iniciativa', solutionType: 'Solución por definir', source: 'Interna',
-      digitalComponent: 'Si', description: 'Descripción', responsible: 'Responsable', responsibleUnits: 'OGTI',
+      startDate: '2026-08-14', name: 'Iniciativa', solutionType: '2', source: '10',
+      digitalComponent: 'Si', description: 'Descripción', responsible: 'Responsable', responsibleUnits: '101',
     });
     component.uploadedFilename.set('ficha.pdf');
 
@@ -74,5 +74,63 @@ describe('InitiativeFormComponent', () => {
     }
     expect(fixture.nativeElement.querySelector('[formControlName="name"]')?.getAttribute('aria-describedby')).toBe('initiative-name-error');
     expect(fixture.nativeElement.querySelector('[formControlName="description"]')?.getAttribute('aria-describedby')).toBe('initiative-description-error');
+  });
+
+  it('muestra carga, vacío y error de catálogos con reintento', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const reload = vi.spyOn(repository, 'reloadCatalogs');
+    const fixture = TestBed.createComponent(InitiativeFormComponent);
+
+    repository.catalogs.set({ phase: 'loading', value: repository.catalogs().value, error: null, requestId: 2 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Cargando opciones');
+
+    repository.catalogs.set({ phase: 'ready', value: { ...repository.catalogs().value, solutionTypes: [] }, error: null, requestId: 3 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No hay opciones disponibles');
+
+    repository.catalogs.set({ phase: 'error', value: repository.catalogs().value, error: 'Catálogos no disponibles', requestId: 4 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Catálogos no disponibles');
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((button) => button.textContent?.includes('Reintentar'))?.click();
+    expect(reload).toHaveBeenCalled();
+  });
+
+  it('sincroniza el disabled del formulario con el estado de catálogos', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(InitiativeFormComponent);
+    repository.catalogs.set({ phase: 'loading', value: repository.catalogs().value, error: null, requestId: 5 });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.form.controls.solutionType.disabled).toBe(true);
+    expect(fixture.componentInstance.form.controls.source.disabled).toBe(true);
+
+    repository.catalogs.set({ phase: 'ready', value: repository.catalogs().value, error: null, requestId: 6 });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.form.controls.solutionType.enabled).toBe(true);
+    expect(fixture.componentInstance.form.controls.source.enabled).toBe(true);
+  });
+
+  it('preserva y envía las selecciones por ID', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const register = vi.spyOn(repository, 'registerInitiative').mockResolvedValue(repository.portfolioRecords()[0]);
+    const fixture = TestBed.createComponent(InitiativeFormComponent);
+    fixture.componentInstance.form.patchValue({
+      startDate: '2026-08-20', name: 'Iniciativa por ID', solutionType: '2', source: '10', digitalComponent: 'Si',
+      description: 'Descripción', responsible: 'Responsable', responsibleUnits: '101', peiObjective: '20', poiActivity: '30',
+    });
+    fixture.componentInstance.uploadedFilename.set('ficha.pdf');
+    repository.catalogs.update((state) => ({
+      ...state,
+      value: { ...state.value, sources: state.value.sources.map((item) => item.id === 10 ? { ...item, name: 'Fuente renombrada' } : item) },
+    }));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.form.controls.source.value).toBe('10');
+
+    await fixture.componentInstance.registerInitiative();
+
+    expect(register).toHaveBeenCalledWith(expect.objectContaining({
+      solutionTypeId: 2, sourceId: 10, organizationalUnitId: 101, peiObjectiveId: 20, poiActivityId: 30,
+    }));
   });
 });

@@ -7,9 +7,11 @@
       <div class="panel document-upload-panel" [attr.aria-busy]="isPending('upload')">
         <label class="document-type-field">
           <span>Tipo documental</span>
-          <select [value]="uploadType()" [disabled]="operationPending()" (change)="selectUploadType($event)">
-            @for (item of documentTypes; track item.type) {<option [value]="item.type">{{ item.label }}</option>}
+          <select [value]="uploadType() ?? ''" [disabled]="operationPending() || catalogState().phase !== 'ready'" (change)="selectUploadType($event)">
+            <option value="">Seleccionar tipo documental</option>
+            @for (item of documentTypes(); track item.id) {<option [value]="item.id">{{ item.name }}</option>}
           </select>
+          @if (catalogState().phase === 'loading') {<small>Cargando tipos documentales...</small>} @else if (catalogState().phase === 'error') {<small class="error" role="alert">{{ catalogState().error }} <button type="button" (click)="repository.reloadCatalogs()">Reintentar</button></small>} @else if (!documentTypes().length) {<small>No hay tipos documentales disponibles.</small>}
         </label>
         <label class="file-picker" [class.file-selected]="uploadFile()" [class.file-disabled]="operationPending()" [attr.title]="uploadFile()?.name ?? null">
           <input class="file-picker-input" type="file" accept=".pdf,.docx,.xlsx" [disabled]="operationPending()" aria-describedby="document-upload-formats" (change)="selectUploadFile($event)" />
@@ -22,7 +24,7 @@
         </label>
         <div class="document-upload-actions">
           <button class="secondary-button" type="button" [disabled]="operationPending()" (click)="closeUploadPanel()">Cancelar</button>
-          <button class="primary-button" type="button" [disabled]="!uploadFile() || operationPending()" (click)="upload()">@if (isPending('upload')) {<mat-icon class="button-spinner">progress_activity</mat-icon>Cargando...} @else {Cargar}</button>
+          <button class="primary-button" type="button" [disabled]="!uploadFile() || !uploadType() || operationPending()" (click)="upload()">@if (isPending('upload')) {<mat-icon class="button-spinner">progress_activity</mat-icon>Cargando...} @else {Cargar}</button>
         </div>
       </div>
     }
@@ -42,7 +44,7 @@
               <div class="document-table document-head"><span>Documento</span><span>Obligatorio</span><span>Archivo</span><span>Versión</span><span>Fecha de carga</span><span>Estado</span><span>Acciones</span></div>
               @for (document of pagedStageRecords(stage); track document.name) {
                 <div class="document-table document-row">
-                  <strong>{{ document.name }}</strong><span class="required">{{ document.required ? '*' : '—' }}</span><span class="filename">{{ document.filename ?? '—' }}</span><span>{{ document.version ?? '—' }}</span><span>{{ document.uploadedAt ?? '—' }}</span><span><b class="status" [class.pending]="document.state === 'Pendiente'" [class.not-applicable]="document.state === 'No aplica'">{{ document.state }}</b>@if (document.state === 'Cargado') {<small>{{ document.externallyPublished ? 'Publicado' : 'Uso interno' }}</small>}</span>
+                  <strong>{{ document.name }} @if (document.documentType && !document.documentType.active) {<small>(Inactivo)</small>}</strong><span class="required">{{ document.required ? '*' : '—' }}</span><span class="filename">{{ document.filename ?? '—' }}</span><span>{{ document.version ?? '—' }}</span><span>{{ document.uploadedAt ?? '—' }}</span><span><b class="status" [class.pending]="document.state === 'Pendiente'" [class.not-applicable]="document.state === 'No aplica'">{{ document.state }}</b>@if (document.state === 'Cargado') {<small>{{ document.externallyPublished ? 'Publicado' : 'Uso interno' }}</small>}</span>
                   <span class="actions">
                     @if (document.filename || (canAdministerRecord() && document.state === 'Pendiente')) {
                       <button class="document-action-trigger" type="button" [matMenuTriggerFor]="documentActions" [disabled]="operationPending()" [attr.aria-busy]="isDocumentPending(document)" [attr.aria-label]="'Acciones de ' + document.name">

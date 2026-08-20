@@ -30,7 +30,7 @@ export class DocumentControllerService extends BaseService {
   }
 
   /** Path part for operation `notApplicable()` */
-  static readonly NotApplicablePath = '/portfolio-records/{recordCode}/documents/{type}/not-applicable';
+  static readonly NotApplicablePath = '/portfolio-records/{recordCode}/documents/{documentTypeId}/not-applicable';
 
   /**
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
@@ -84,7 +84,7 @@ export class DocumentControllerService extends BaseService {
   }
 
   /** Path part for operation `upload()` */
-  static readonly UploadPath = '/portfolio-records/{recordCode}/documents/{type}/versions';
+  static readonly UploadPath = '/portfolio-records/{recordCode}/documents/{documentTypeId}/versions';
 
   /**
    * This method provides access to the full `HttpResponse`, allowing access to response headers.

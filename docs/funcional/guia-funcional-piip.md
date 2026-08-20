@@ -77,6 +77,10 @@ Desde el registro de iniciativa, un `Administrador PIIP` de la UE activa complet
 
 Los datos se organizan alrededor de los 23 campos canónicos: identificación, fechas y responsables, contenido, estado/producto y posiciones documentales. Los seis catálogos controlados incluyen tipo de registro, tipo de solución, fuente u origen, estado, tipo de producto final aprobado y componente digital. `NA` (por ejemplo, ausencia de iniciativa predecesora) y `No aplica` (situación documental o valor de catálogo) no significan lo mismo.
 
+Antes de habilitar el registro, PIIP obtiene del backend las opciones vigentes de Tipo de solución, Fuente u origen, Objetivo PEI, Actividad POI y Tipo documental. Tipo de registro también procede del backend como catálogo técnico; la opción **Todos** pertenece únicamente a los filtros de la interfaz. Objetivo PEI y Actividad POI son selecciones independientes y opcionales: elegir una no filtra, exige ni modifica la otra.
+
+La persona selecciona las opciones por su nombre, pero PIIP conserva y envía sus identidades. Las unidades responsables se consultan después de conocer la Unidad Ejecutora y solo incluyen Unidades Orgánicas activas de esa UE. Si la carga continúa, queda vacía o falla, la pantalla lo diferencia y no reemplaza la respuesta con listas locales. Un campo requerido sin opciones válidas bloquea la confirmación y ofrece reintentar la consulta.
+
 Al registrar la iniciativa se crea su expediente documental y una tarea pendiente para registrar la decisión. También se genera un aviso para la persona asignada y evidencia de auditoría del registro y de la tarea.
 
 Guardar un borrador en la interfaz no es un estado oficial del portafolio; es una ayuda local de la pantalla. La iniciativa oficial aparece cuando se confirma el registro.
@@ -98,6 +102,8 @@ Al aprobar, la tarea de decisión pendiente se completa y se crea una nueva tare
 Un proyecto derivado se crea explícitamente desde una iniciativa aprobada. El sistema exige que la iniciativa esté en `Iniciativa aprobada`, que el actor sea `Administrador PIIP` en la UE de esa iniciativa y que todavía no exista otro proyecto derivado para el mismo origen. Por lo tanto, la relación es de una iniciativa elegible a un único proyecto derivado.
 
 El nuevo proyecto es un segundo registro vinculado, con código propio y código de origen no editable. La interfaz precarga y permite revisar o editar antes de registrar estos datos comunes de la iniciativa: nombre, tipo de solución, fuente u origen, responsable, unidades de organización responsables, objetivo PEI, actividad POI, descripción y componente digital.
+
+Si una referencia heredada dejó de estar activa, permanece visible como contexto histórico, pero no sirve como selección para la nueva escritura. La persona debe reemplazarla por una opción vigente antes de confirmar el proyecto. PIIP no sustituye automáticamente esa elección ni vuelve a ofrecer el elemento inactivo entre las opciones.
 
 El proyecto empieza con datos propios que no se copian automáticamente: fecha de inicio efectiva, resultados clave y nota. Su estado inicial es `Proyecto en ejecución`. Desde el detalle general, el selector solo ofrece estados propios del proyecto: `Producto aprobado`, `Producto no aprobado`, `Suspendido` y `Cancelado`; `Suspendido` y `Producto no aprobado` pueden volver a `Proyecto en ejecución` o cancelarse, y `Producto aprobado` puede pasar a `Finalizado`.
 
@@ -128,7 +134,9 @@ Cada iniciativa o proyecto mantiene un expediente separado con posiciones para:
 5. Documentación de la gestión del proyecto.
 6. Informe final de cierre.
 
-Cada posición puede tener versiones. El repositorio controla los formatos PDF, DOCX y XLSX mediante tipo MIME, además de tamaño configurado y checksum. Un `Administrador PIIP` del ámbito del registro puede cargar, marcar una posición como `No aplica` y publicar o retirar una versión para consulta externa. Una persona con `Consulta externa` solo puede descargar versiones publicadas para su ámbito.
+Los seis tipos proceden del catálogo documental del backend y están disponibles tanto para iniciativas como para proyectos. Cada posición conserva la identidad del tipo documental; su código estable puede utilizarse para ordenar o agrupar la presentación, pero no sustituye al identificador de las operaciones.
+
+Cada posición puede tener versiones. El repositorio controla los formatos PDF, DOCX y XLSX mediante tipo MIME, además de tamaño configurado y checksum. Un `Administrador PIIP` del ámbito del registro puede cargar, marcar una posición como `No aplica` y publicar o retirar una versión para consulta externa. Una persona con `Consulta externa` solo puede descargar versiones publicadas para su ámbito. Si un tipo documental ya utilizado queda inactivo, la posición histórica continúa visible y conserva sus operaciones vigentes; ese tipo no se ofrece para crear una referencia nueva.
 
 ### Inconsistencias y límites documentales visibles
 
@@ -136,11 +144,13 @@ Las fuentes crean posiciones para todos los tipos documentales en cada registro,
 
 En consecuencia, no debe inferirse que una posición pendiente impida una aprobación, un proyecto derivado o un cierre. Tampoco debe inventarse una matriz definitiva de documentos obligatorios por etapa: ese criterio requiere confirmación funcional.
 
+La bandeja de expedientes consulta y muestra únicamente los registros de la Unidad Ejecutora activa. Si esa unidad no tiene expedientes, presenta el estado vacío y no mezcla información de otra Unidad Ejecutora.
+
 ## Tareas, notificaciones y auditoría
 
 PIIP conserva tareas pendientes asociadas a registros, con responsable, prioridad, plazo y alerta. Las tareas pueden completarse o reasignarse a otro administrador del mismo ámbito. Los avisos notifican, entre otros hechos, la creación de tareas y la publicación de documentos; cada destinatario puede marcarlos como leídos.
 
-La auditoría funcional conserva eventos como registro de iniciativa, aprobación, registro de proyecto derivado o preexistente, carga/publicación de documentos y operaciones sobre tareas y asignaciones. La bandeja de auditoría está restringida a `Administrador PIIP`. La auditoría de acceso y la funcional no guardan tokens, cuerpos HTTP ni contenido documental.
+La auditoría funcional conserva eventos como registro de iniciativa, aprobación, registro de proyecto derivado o preexistente, carga/publicación de documentos y operaciones sobre tareas y asignaciones. La bandeja de auditoría está restringida a `Administrador PIIP` y aplica el ámbito de la Unidad Ejecutora activa a los eventos y accesos mostrados. La auditoría de acceso y la funcional no guardan tokens, cuerpos HTTP ni contenido documental. Las notificaciones siguen siendo personales del usuario autenticado y no se restringen por Unidad Ejecutora.
 
 ## Administración de usuarios
 
@@ -178,6 +188,7 @@ La constitución 1.1.0 y la feature 009 ratifican, además del flujo base `Prese
 
 - `docs/architecture/piip-fields.md` para los campos y catálogos canónicos.
 - `apps/backend/.../portfolio/application/PortfolioService.java` y `PortfolioController.java` para registro, aprobación y proyectos.
-- `apps/backend/.../documents/application/DocumentService.java` y `DocumentType.java` para expediente, versiones, publicación y formatos.
+- `apps/backend/.../documents/application/DocumentService.java` y el modelo persistente de Tipo documental para expediente, versiones, publicación y formatos.
+- `specs/011-centralizar-catalogos-piip/` para identidades de catálogo, disponibilidad histórica y límites del reset de pruebas.
 - `apps/backend/.../work/api/WorkController.java` y los componentes de iniciativa, proyecto y documentos para tareas, avisos y representación de interfaz.
 - `specs/008-administrar-usuarios/spec.md`, su contrato y `UserAdministrationService.java` para roles, ámbitos, administración y restricciones.

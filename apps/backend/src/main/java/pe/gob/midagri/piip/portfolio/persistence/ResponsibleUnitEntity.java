@@ -10,8 +10,8 @@ public class ResponsibleUnitEntity {
     @Column(name = "ID_REGISTRO_UNIDAD") private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "ID_REGISTRO", nullable = false) private PortfolioRecordEntity record;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_UNIDAD_ORGANICA") private OrganizationalUnitEntity organizationalUnit;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ID_UNIDAD_ORGANICA", nullable = false) private OrganizationalUnitEntity organizationalUnit;
     @Column(name = "DENOMINACION_ORIGINAL", length = 300, nullable = false) private String originalDesignation;
     @Column(name = "ORDEN_PRESENTACION", nullable = false) private int displayOrder;
 

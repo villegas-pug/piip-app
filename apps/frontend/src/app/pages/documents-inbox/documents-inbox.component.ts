@@ -3,7 +3,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import { PIIP_CATALOGS, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
+import { PIIP_CATALOGS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { DocumentDossierSummary, PiipStatus } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
@@ -21,7 +21,10 @@ export class DocumentsInboxComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly catalogs = PIIP_CATALOGS;
-  readonly units = RESPONSIBLE_UNITS;
+  readonly recordTypes = computed(() => this.repository.catalogs().value.recordTypes);
+  readonly units = this.repository.organizationalUnits;
+  readonly catalogState = this.repository.catalogs;
+  readonly unitsState = this.repository.organizationalUnitsState;
   readonly filters = this.formBuilder.nonNullable.group({ search: '', recordType: 'Todos', status: 'Todos', unit: 'Todas' });
   private readonly filterValue = toSignal(this.filters.valueChanges, { initialValue: this.filters.getRawValue() });
   readonly pageIndex = signal(0);
@@ -34,7 +37,7 @@ export class DocumentsInboxComponent {
       (!search || `${dossier.code} ${dossier.name}`.toLocaleLowerCase().includes(search)) &&
       (value.recordType === 'Todos' || dossier.recordType === value.recordType) &&
       (value.status === 'Todos' || dossier.status === value.status) &&
-      (value.unit === 'Todas' || dossier.unit === value.unit),
+      (value.unit === 'Todas' || dossier.organizationalUnits?.some((unit) => unit.id === Number(value.unit))),
     );
   });
   readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.filteredDossiers().length));

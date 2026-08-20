@@ -1,10 +1,10 @@
 import { Signal, WritableSignal } from '@angular/core';
 import {
   AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
-  DocumentDossierSummary, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput,
+  DocumentDossierSummary, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput,
   InitiativeRecord, InitiativeStatusTransitionInput, NotificationItem, OrganizationalUnit, PiipPortfolioRecord,
   PreexistingProjectInput, ProjectDetail, ProjectRecord, ProjectStatusTransitionInput, PiipRecordType, UserRole, WorkItem,
-  HomePortfolioQuery, HomePortfolioResult,
+  HomePortfolioQuery, HomePortfolioResult, CatalogBundle, ResourceState,
 } from './piip.models';
 
 export type RepositoryOperation<T> = T | Promise<T>;
@@ -30,13 +30,17 @@ export abstract class PiipRepository {
   abstract readonly currentUser: WritableSignal<CurrentUser | null>;
   abstract readonly executingUnits: WritableSignal<ExecutingUnit[]>;
   abstract readonly administrableScopes: WritableSignal<AdministrableScope[]>;
-  abstract readonly organizationalUnits: WritableSignal<OrganizationalUnit[]>;
+  abstract readonly organizationalUnits: Signal<OrganizationalUnit[]>;
+  abstract readonly catalogs: Signal<ResourceState<CatalogBundle>>;
+  abstract readonly organizationalUnitsState: Signal<ResourceState<OrganizationalUnit[]>>;
   abstract readonly selectedExecutingUnitId: WritableSignal<number | null>;
   abstract readonly loading: WritableSignal<boolean>;
   abstract readonly lastError: WritableSignal<string | null>;
   abstract initialize(): RepositoryOperation<void>;
   abstract refreshAll(): RepositoryOperation<void>;
   abstract refreshAuthorizationContext(): RepositoryOperation<void>;
+  abstract reloadCatalogs(): RepositoryOperation<void>;
+  abstract reloadOrganizationalUnits(): RepositoryOperation<void>;
   abstract loadAdministrableScopes(): RepositoryOperation<void>;
   abstract clearError(): void;
   abstract canReadExecutingUnit(executingUnitId: number | null | undefined): boolean;
@@ -61,8 +65,8 @@ export abstract class PiipRepository {
   abstract transitionProjectStatus(input: ProjectStatusTransitionInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract registerDerivedProject(input: DerivedProjectInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract registerPreexistingProject(input: PreexistingProjectInput): RepositoryOperation<PiipPortfolioRecord>;
-  abstract uploadDocument(code: string, type: DocumentType, file: File): RepositoryOperation<void>;
-  abstract markDocumentNotApplicable(code: string, type: DocumentType, reason: string): RepositoryOperation<void>;
+  abstract uploadDocument(code: string, documentTypeId: number, file: File): RepositoryOperation<void>;
+  abstract markDocumentNotApplicable(code: string, documentTypeId: number, reason: string): RepositoryOperation<void>;
   abstract downloadDocument(code: string, versionId: number, filename: string): RepositoryOperation<void>;
   abstract setDocumentPublication(code: string, versionId: number, published: boolean, version: number): RepositoryOperation<void>;
   abstract markNotificationRead(id: number): RepositoryOperation<void>;

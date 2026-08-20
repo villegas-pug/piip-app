@@ -15,10 +15,11 @@
       <form class="project-filters" [formGroup]="filters">
         <label class="field search"><span>Buscar proyecto</span><span><input formControlName="search" placeholder="Buscar por código o nombre..." /><mat-icon>search</mat-icon></span></label>
         <label class="field"><span>Estado</span><select formControlName="status"><option>Todos</option>@for (status of projectStatuses; track status) {<option [value]="status">{{ status }}</option>}</select></label>
-        <label class="field"><span>Unidad</span><select formControlName="unit"><option>Todas</option>@for (unit of units; track unit) {<option [value]="unit">{{ unit }}</option>}</select></label>
+        <label class="field"><span>Unidad</span><select formControlName="unit"><option>Todas</option>@for (unit of units(); track unit.id) {<option [value]="unit.id">{{ unit.acronym || unit.name }}</option>}</select></label>
         <label class="field"><span>Componente digital</span><select formControlName="digital"><option>Todos</option>@for (option of catalogs.digitalComponents; track option) {<option [value]="option">{{ option }}</option>}</select></label>
         <button class="secondary-button" type="button" (click)="resetFilters()"><mat-icon>filter_alt_off</mat-icon>Limpiar filtros</button>
       </form>
+      @if (unitsState().phase === 'loading') {<p>Cargando Unidades Orgánicas...</p>} @else if (unitsState().phase === 'error') {<p role="alert">{{ unitsState().error }} <button type="button" (click)="repository.reloadOrganizationalUnits()">Reintentar</button></p>} @else if (!units().length) {<p>No hay Unidades Orgánicas activas para filtrar.</p>}
 
       <div class="table-scroll"><table><thead><tr><th>Código</th><th>Proyecto</th><th>Iniciativa origen</th><th>Unidad</th><th>Responsable</th><th>Estado</th><th>Componente digital</th><th>Acción</th></tr></thead><tbody>
         @for (project of pagedProjects(); track project.code) {

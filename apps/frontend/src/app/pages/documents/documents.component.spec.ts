@@ -33,6 +33,7 @@ describe('DocumentsComponent operations', () => {
   it('renders one compact and keyboard-accessible file selector', () => {
     const fixture = TestBed.createComponent(DocumentsComponent);
     fixture.componentInstance.uploadOpen.set(true);
+    fixture.componentInstance.uploadType.set(40);
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
 
@@ -50,6 +51,7 @@ describe('DocumentsComponent operations', () => {
   it('shows the selected filename, enables upload and clears it when cancelled', () => {
     const fixture = TestBed.createComponent(DocumentsComponent);
     fixture.componentInstance.uploadOpen.set(true);
+    fixture.componentInstance.uploadType.set(40);
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
     const input = host.querySelector<HTMLInputElement>('.file-picker-input')!;
@@ -77,7 +79,7 @@ describe('DocumentsComponent operations', () => {
     const fixture = TestBed.createComponent(DocumentsComponent);
     fixture.componentInstance.uploadOpen.set(true);
     fixture.componentInstance.uploadFile.set(new File(['documento'], 'ficha.pdf', { type: 'application/pdf' }));
-    fixture.componentInstance.pendingOperation.set({ kind: 'upload', key: fixture.componentInstance.uploadType() });
+    fixture.componentInstance.pendingOperation.set({ kind: 'upload', key: String(fixture.componentInstance.uploadType()) });
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
 
@@ -95,6 +97,7 @@ describe('DocumentsComponent operations', () => {
     const fixture = TestBed.createComponent(DocumentsComponent);
     const selectedFile = new File(['documento'], 'ficha.pdf', { type: 'application/pdf' });
     fixture.componentInstance.uploadOpen.set(true);
+    fixture.componentInstance.uploadType.set(40);
     fixture.componentInstance.uploadFile.set(selectedFile);
 
     const firstUpload = fixture.componentInstance.upload();
@@ -108,6 +111,7 @@ describe('DocumentsComponent operations', () => {
 
     uploadDocument.mockImplementationOnce(() => Promise.reject(new Error('Carga rechazada')) as unknown as void);
     fixture.componentInstance.uploadOpen.set(true);
+    fixture.componentInstance.uploadType.set(40);
     fixture.componentInstance.uploadFile.set(selectedFile);
     await fixture.componentInstance.upload();
     expect(fixture.componentInstance.uploadOpen()).toBe(true);
@@ -287,5 +291,31 @@ describe('DocumentsComponent operations', () => {
     expect(component.pagedStageRecords(firstStage)).toHaveLength(1);
     expect(component.stagePageIndex(secondStage)).toBe(0);
     expect(component.pagedStageRecords(secondStage)).toHaveLength(5);
+  });
+
+  it('usa IDs en el selector y conserva versión, publicación, No aplica e histórico inactivo', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const dossier = repository.documentDossiers()[0];
+    const loaded = dossier.stages[0].records[0];
+    const pending = dossier.stages.flatMap((stage) => stage.records).find((record) => record.state === 'Pendiente');
+    if (!loaded || !pending) throw new Error('El expediente de prueba debe incluir documentos cargados y pendientes.');
+    loaded.documentTypeId = 40;
+    loaded.documentType = { id: 40, code: 'PUBLIC_INNOVATION_INITIATIVE_SHEET', name: 'Ficha histórica renombrada', displayOrder: 1, active: false };
+    loaded.name = 'Ficha histórica renombrada';
+    loaded.version = '3.0';
+    loaded.externallyPublished = true;
+    pending.state = 'No aplica';
+    const fixture = TestBed.createComponent(DocumentsComponent);
+    fixture.componentInstance.uploadOpen.set(true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const options = Array.from(host.querySelectorAll<HTMLOptionElement>('select option'));
+
+    expect(options.some((item) => item.value === '40')).toBe(true);
+    expect(host.textContent).toContain('Ficha histórica renombrada');
+    expect(host.textContent).toContain('Inactivo');
+    expect(host.textContent).toContain('3.0');
+    expect(host.textContent).toContain('Publicado');
+    expect(host.textContent).toContain('No aplica');
   });
 });

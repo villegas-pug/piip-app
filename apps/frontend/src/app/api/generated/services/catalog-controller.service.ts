@@ -10,8 +10,9 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
-import { catalogs } from '../fn/catalog-controller/catalogs';
-import { Catalogs$Params } from '../fn/catalog-controller/catalogs';
+import { CatalogBundleResponse } from '../models/catalog-bundle-response';
+import { get } from '../fn/catalog-controller/get';
+import { Get$Params } from '../fn/catalog-controller/get';
 
 @Injectable({ providedIn: 'root' })
 export class CatalogControllerService extends BaseService {
@@ -19,38 +20,30 @@ export class CatalogControllerService extends BaseService {
     super(config, http);
   }
 
-  /** Path part for operation `catalogs()` */
-  static readonly CatalogsPath = '/catalogs';
+  /** Path part for operation `get()` */
+  static readonly GetPath = '/catalogs';
 
   /**
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
-   * To access only the response body, use `catalogs()` instead.
+   * To access only the response body, use `get()` instead.
    *
    * This method doesn't expect any request body.
    */
-  catalogs$Response(params?: Catalogs$Params, context?: HttpContext): Observable<StrictHttpResponse<{
-[key: string]: Array<string>;
-}>> {
-    const obs = catalogs(this.http, this.rootUrl, params, context);
+  get$Response(params?: Get$Params, context?: HttpContext): Observable<StrictHttpResponse<CatalogBundleResponse>> {
+    const obs = get(this.http, this.rootUrl, params, context);
     return obs;
   }
 
   /**
    * This method provides access only to the response body.
-   * To access the full response (for headers, for example), `catalogs$Response()` instead.
+   * To access the full response (for headers, for example), `get$Response()` instead.
    *
    * This method doesn't expect any request body.
    */
-  catalogs(params?: Catalogs$Params, context?: HttpContext): Observable<{
-[key: string]: Array<string>;
-}> {
-    const resp = this.catalogs$Response(params, context);
+  get(params?: Get$Params, context?: HttpContext): Observable<CatalogBundleResponse> {
+    const resp = this.get$Response(params, context);
     return resp.pipe(
-      map((r: StrictHttpResponse<{
-[key: string]: Array<string>;
-}>): {
-[key: string]: Array<string>;
-} => r.body)
+      map((r: StrictHttpResponse<CatalogBundleResponse>): CatalogBundleResponse => r.body)
     );
   }
 

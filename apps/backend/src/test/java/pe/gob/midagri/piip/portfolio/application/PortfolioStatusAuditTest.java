@@ -45,9 +45,10 @@ import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.InitiativeStatusTransitio
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ProjectStatusTransitionRequest;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
-import pe.gob.midagri.piip.portfolio.domain.SourceOrigin;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.catalogs.persistence.*;
+import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -65,6 +66,8 @@ class PortfolioStatusAuditTest {
     @Autowired UserRoleScopeRepository scopes;
     @Autowired FailingAuditService audit;
     @Autowired ObjectMapper objectMapper;
+    @Autowired CatalogRepository catalogs;
+    @Autowired CatalogItemRepository catalogItems;
 
     private Actor actor;
 
@@ -141,15 +144,15 @@ class PortfolioStatusAuditTest {
     }
 
     private PortfolioRecordEntity initiative() {
-        return records.saveAndFlush(PortfolioRecordEntity.initiative("I-AUDIT-" + suffix(), actor.unit, "Iniciativa auditada",
-            pe.gob.midagri.piip.portfolio.domain.SolutionType.TO_BE_DEFINED, SourceOrigin.OTHER,
-            LocalDate.of(2026, 8, 18), "Responsable", null, null, "Descripción", null, DigitalComponent.NO, actor.subject));
+        String suffix = suffix();
+        return records.saveAndFlush(PortfolioRecordTestBuilder.persistedReferences(catalogs, catalogItems, suffix)
+            .initiative("I-AUDIT-" + suffix, actor.unit, "Iniciativa auditada"));
     }
 
     private PortfolioRecordEntity project() {
-        return records.saveAndFlush(PortfolioRecordEntity.preexistingProject("P-AUDIT-" + suffix(), actor.unit, "Proyecto auditado",
-            SourceOrigin.OTHER, LocalDate.of(2026, 8, 18), "Responsable", null, null, "Descripción", null, null,
-            DigitalComponent.NO, actor.subject));
+        String suffix = suffix();
+        return records.saveAndFlush(PortfolioRecordTestBuilder.persistedReferences(catalogs, catalogItems, suffix)
+            .preexistingProject("P-AUDIT-" + suffix, actor.unit, "Proyecto auditado"));
     }
 
     private AuditEventEntity eventFor(String code, String eventType) {

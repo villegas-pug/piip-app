@@ -42,6 +42,36 @@ describe('PiipHttpRepository', () => {
     expect(repository.role()).toBeNull();
   });
 
+  it('carga el bundle de catálogos como JSON y conserva sus opciones', async () => {
+    const initialization = repository.initialize();
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Fin de preparación', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await initialization;
+
+    const reload = repository.reloadCatalogs();
+    const request = http.expectOne('http://127.0.0.1:4001/api/v1/catalogs');
+    expect(request.request.responseType).toBe('json');
+    request.flush({
+      recordTypes: [{ code: 'INITIATIVE', name: 'Iniciativa', displayOrder: 0, active: true }],
+      solutionTypes: [{ id: 10, code: 'GOODS', name: 'Bienes', displayOrder: 1, active: true }],
+      sources: [{ id: 20, code: 'INTERNAL', name: 'Interna', displayOrder: 1, active: true }],
+      peiObjectives: [],
+      poiActivities: [],
+      documentTypes: [],
+    });
+    await reload;
+
+    expect(repository.catalogs()).toMatchObject({
+      phase: 'ready',
+      value: {
+        solutionTypes: [{ id: 10, code: 'GOODS', name: 'Bienes' }],
+        sources: [{ id: 20, code: 'INTERNAL', name: 'Interna' }],
+      },
+    });
+  });
+
   it('keeps role and scope in the same grant when resolving permissions', () => {
     repository.executingUnits.set([
       { id: 1, code: 'UE-001', name: 'UE-001', institutionId: 1 },
@@ -171,6 +201,77 @@ describe('PiipHttpRepository', () => {
     expect(repository.role()).toBe('Administrador PIIP');
   });
 
+  it('envía la UE por ID, filtra activo/pertenencia y descarta la respuesta tardía', async () => {
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Fin de preparación', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await repository.initialize();
+    const adapter = repository as unknown as { loadOrganizationalUnits(executingUnitId: number): Promise<void> };
+
+    const first = adapter.loadOrganizationalUnits(1);
+    const firstRequest = http.expectOne((request) => request.url.endsWith('/organizational-units') && request.params.get('executingUnitId') === '1');
+    const second = adapter.loadOrganizationalUnits(2);
+    const secondRequest = http.expectOne((request) => request.url.endsWith('/organizational-units') && request.params.get('executingUnitId') === '2');
+    secondRequest.flush([
+      { id: 201, code: 'UO-201', name: 'Unidad vigente', acronym: 'UV', executingUnitId: 2, active: true },
+      { id: 202, code: 'UO-202', name: 'Unidad inactiva', acronym: 'UI', executingUnitId: 2, active: false },
+      { id: 101, code: 'UO-101', name: 'Unidad ajena', acronym: 'UA', executingUnitId: 1, active: true },
+    ]);
+    await second;
+    firstRequest.flush([{ id: 100, code: 'UO-100', name: 'Respuesta tardía', acronym: 'UT', executingUnitId: 1, active: true }]);
+    await first;
+
+    expect(repository.organizationalUnits()).toEqual([
+      expect.objectContaining({ id: 201, executingUnitId: 2, active: true }),
+    ]);
+  });
+
+  it('filtra la bandeja documental por la UE activa aunque el portafolio aún esté vacío', async () => {
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Fin de preparación', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await repository.initialize();
+    repository.selectedExecutingUnitId.set(1);
+
+    const load = (repository as unknown as { loadDocumentSummaries(): Promise<void> }).loadDocumentSummaries.call(repository);
+    const request = http.expectOne((candidate) => candidate.url === 'http://127.0.0.1:4001/api/v1/documents' && candidate.params.get('executingUnitId') === '1');
+    request.flush([
+      { code: 'I-001-2026', name: 'UE 001', recordType: 'Iniciativa', status: 'Presentado', executingUnitId: 1, loadedCount: 0, pendingCount: 1 },
+      { code: 'I-002-2026', name: 'UE 002', recordType: 'Iniciativa', status: 'Presentado', executingUnitId: 2, loadedCount: 0, pendingCount: 1 },
+    ]);
+    await load;
+
+    expect(repository.getDocumentDossierSummaries().map((item) => item.code)).toEqual(['I-001-2026']);
+  });
+
+  it('no muestra eventos ni accesos de otra UE cuando la UE activa no tiene registros', async () => {
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Fin de preparación', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await repository.initialize();
+    repository.selectedExecutingUnitId.set(1);
+    repository.portfolioRecords.set([]);
+
+    const load = (repository as unknown as { loadAudit(): Promise<void> }).loadAudit.call(repository);
+    const events = http.expectOne((candidate) => candidate.url === 'http://127.0.0.1:4001/api/v1/audit/events' && candidate.params.get('executingUnitId') === '1');
+    events.flush([
+      { entityCode: 'I-002-2026', event: 'INICIATIVA_REGISTRADA', actorName: 'UE 002' },
+      { event: 'ROL_ASIGNADO', actorName: 'Administrador' },
+    ]);
+    const accesses = http.expectOne((candidate) => candidate.url === 'http://127.0.0.1:4001/api/v1/audit/accesses' && candidate.params.get('executingUnitId') === '1');
+    accesses.flush([
+      { recordCode: 'I-002-2026', status: 403, occurredAt: '2026-08-20T10:00:00Z' },
+      { status: 200, occurredAt: '2026-08-20T10:01:00Z' },
+    ]);
+    await load;
+
+    expect(repository.auditEvents().map((item) => item.recordCode)).toEqual([undefined]);
+    expect(repository.auditAccesses().map((item) => item.recordCode)).toEqual([undefined]);
+  });
+
   it('sends the contextual project transition with the cached version and refreshes the visible version', async () => {
     http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
       { detail: 'Fin de prueba', status: 403 },
@@ -192,7 +293,13 @@ describe('PiipHttpRepository', () => {
     const request = http.expectOne('http://127.0.0.1:4001/api/v1/projects/P-001-2026/status-transitions');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ version: 3, targetStatus: 'PRODUCT_APPROVED', observation: 'Producto revisado' });
-    request.flush({ ...record, responsibleUnits: ['Responsable'], status: 'Producto aprobado', version: 4, updatedAt: '2026-08-18T12:00:00Z' });
+    request.flush({ ...record,
+      recordType: { code: 'PROJECT', name: 'Proyecto', displayOrder: 2, active: true },
+      solutionType: { id: 3, code: 'NOT_APPLICABLE', name: 'No aplica', displayOrder: 3, active: true },
+      source: { id: 14, code: 'OTHER', name: 'Otros', displayOrder: 5, active: true },
+      peiObjective: null, poiActivity: null,
+      responsibleUnits: [{ originalDesignation: 'Responsable', displayOrder: 1, organizationalUnit: { id: 10, code: 'UO-10', name: 'Responsable', acronym: 'UO', active: true, executingUnitId: 1 } }],
+      status: 'Producto aprobado', version: 4, updatedAt: '2026-08-18T12:00:00Z' });
     await operation;
 
     expect((repository as unknown as { recordVersions: Map<string, number> }).recordVersions.get(record.code)).toBe(4);

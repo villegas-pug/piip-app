@@ -1,10 +1,12 @@
 package pe.gob.midagri.piip.documents.persistence;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import pe.gob.midagri.piip.documents.domain.DocumentType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import java.util.*;
 
 public interface DocumentRepository extends JpaRepository<DocumentEntity, Long> {
-    List<DocumentEntity> findByRecordIdOrderByType(Long recordId);
-    Optional<DocumentEntity> findByRecordIdAndType(Long recordId, DocumentType type);
+    @EntityGraph(attributePaths = "type")
+    List<DocumentEntity> findByRecordIdOrderByTypeDisplayOrderAscTypeCodeAsc(Long recordId);
+    @EntityGraph(attributePaths = "type")
+    Optional<DocumentEntity> findByRecordIdAndTypeId(Long recordId, Long typeId);
 }

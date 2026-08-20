@@ -52,7 +52,7 @@
 
 *GATE: debe aprobarse antes del diseño y volver a revisarse al finalizarlo.*
 
-[Evidencia de cumplimiento de `.specify/memory/constitution.md`. Toda contradicción no resuelta se marca NEEDS CLARIFICATION.]
+[Evidencia de cumplimiento de `.specify/memory/constitution.md`. Toda contradicción no resuelta se marca NEEDS CLARIFICATION. Si se usa la excepción de DML inicial o de reset destructivo de auditoría, documentar perfil exclusivo, guardias fail-closed, prohibición productiva, alcance exacto y verificaciones propuestas.]
 
 ## Dependencias y secuencia
 
@@ -99,4 +99,3 @@ Eliminar áreas sin impacto.]
 | Contradicción | Necesidad | Alternativa más simple descartada porque |
 |---------------|-----------|------------------------------------------|
 | [Decisión] | [Motivo verificable] | [Razón] |
-

@@ -5,8 +5,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import pe.gob.midagri.piip.audit.application.AuditService;
-import pe.gob.midagri.piip.documents.domain.DocumentType;
 import pe.gob.midagri.piip.documents.persistence.*;
+import pe.gob.midagri.piip.catalogs.api.CatalogDtos.*;
+import pe.gob.midagri.piip.catalogs.application.CatalogReferenceService;
+import pe.gob.midagri.piip.catalogs.domain.CatalogCode;
+import pe.gob.midagri.piip.catalogs.persistence.CatalogItemEntity;
 import pe.gob.midagri.piip.identity.application.*;
 import pe.gob.midagri.piip.identity.domain.RoleCode;
 import pe.gob.midagri.piip.identity.persistence.*;
@@ -35,23 +38,28 @@ public class PortfolioService {
     private final LocalAuthorizationService authorization;
     private final AuditService audit;
     private final Clock clock;
+    private final CatalogReferenceService catalogReferences;
+    private final DocumentTypeRepository documentTypes;
 
     @Autowired
     public PortfolioService(PortfolioRecordRepository records, ResponsibleUnitRepository responsibleUnits,
             ExecutingUnitRepository executingUnits, OrganizationalUnitRepository organizationalUnits,
             UserRepository users, WorkTaskRepository tasks, NotificationRepository notifications, DocumentRepository documents,
-            CodeGeneratorService codes, LocalAuthorizationService authorization, AuditService audit, Clock clock) {
+            CodeGeneratorService codes, LocalAuthorizationService authorization, AuditService audit, Clock clock,
+            CatalogReferenceService catalogReferences, DocumentTypeRepository documentTypes) {
         this.records = records; this.responsibleUnits = responsibleUnits; this.executingUnits = executingUnits;
         this.organizationalUnits = organizationalUnits; this.users = users; this.tasks = tasks; this.notifications = notifications; this.documents = documents;
         this.codes = codes; this.authorization = authorization; this.audit = audit; this.clock = clock;
+        this.catalogReferences = catalogReferences; this.documentTypes = documentTypes;
     }
 
     public PortfolioService(PortfolioRecordRepository records, ResponsibleUnitRepository responsibleUnits,
             ExecutingUnitRepository executingUnits, OrganizationalUnitRepository organizationalUnits,
             UserRepository users, WorkTaskRepository tasks, NotificationRepository notifications, DocumentRepository documents,
-            CodeGeneratorService codes, LocalAuthorizationService authorization, AuditService audit) {
+            CodeGeneratorService codes, LocalAuthorizationService authorization, AuditService audit,
+            CatalogReferenceService catalogReferences, DocumentTypeRepository documentTypes) {
         this(records, responsibleUnits, executingUnits, organizationalUnits, users, tasks, notifications, documents,
-            codes, authorization, audit, Clock.systemUTC());
+            codes, authorization, audit, Clock.systemUTC(), catalogReferences, documentTypes);
     }
 
     @Transactional(readOnly = true)
@@ -84,8 +92,12 @@ public class PortfolioService {
         LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, request.executingUnitId());
         ExecutingUnitEntity unit = executingUnits.findById(request.executingUnitId()).orElseThrow(() -> new NotFoundException("Unidad Ejecutora inexistente"));
         String code = codes.next(RecordType.INITIATIVE, request.startDate().getYear());
-        PortfolioRecordEntity record = records.save(PortfolioRecordEntity.initiative(code, unit, request.name(), request.solutionType(), request.source(),
-            request.startDate(), request.responsible(), request.peiObjective(), request.poiActivity(), request.description(), request.note(), request.digitalComponent(), actor.subject()));
+        PortfolioRecordEntity record = records.save(PortfolioRecordEntity.initiative(code, unit, request.name(),
+            catalogReferences.resolveActive(request.solutionTypeId(), CatalogCode.SOLUTION_TYPE, "solutionTypeId"),
+            catalogReferences.resolveActive(request.sourceId(), CatalogCode.SOURCE_ORIGIN, "sourceId"), request.startDate(), request.responsible(),
+            catalogReferences.resolveActive(request.peiObjectiveId(), CatalogCode.PEI_OBJECTIVE, "peiObjectiveId"),
+            catalogReferences.resolveActive(request.poiActivityId(), CatalogCode.POI_ACTIVITY, "poiActivityId"),
+            request.description(), request.note(), request.digitalComponent(), actor.subject()));
         saveResponsibleUnits(record, request.responsibleUnits()); createDocumentSlots(record);
         UserEntity assigned = users.findById(actor.userId()).orElseThrow();
         WorkTaskEntity decisionTask = tasks.save(new WorkTaskEntity(record, TaskType.REGISTER_DECISION, "Registrar decisión de la iniciativa", assigned, TaskPriority.HIGH, LocalDate.now().plusDays(20), "INICIATIVA_REGISTRADA"));
@@ -153,8 +165,12 @@ public class PortfolioService {
         if (initiative.getStatus() != PortfolioStatus.INITIATIVE_APPROVED) throw new BusinessRuleException("La iniciativa debe estar aprobada");
         if (records.existsByOriginRecordId(initiative.getId())) throw new BusinessRuleException("La iniciativa ya tiene un proyecto derivado");
         String code = codes.next(RecordType.PROJECT, request.startDate().getYear());
-        PortfolioRecordEntity project = records.save(PortfolioRecordEntity.derivedProject(code, initiative, request.name(), request.solutionType(), request.source(),
-            request.startDate(), request.responsible(), request.peiObjective(), request.poiActivity(), request.description(), request.keyResults(), request.note(), request.digitalComponent(), actor.subject()));
+        PortfolioRecordEntity project = records.save(PortfolioRecordEntity.derivedProject(code, initiative, request.name(),
+            catalogReferences.resolveActive(request.solutionTypeId(), CatalogCode.SOLUTION_TYPE, "solutionTypeId"),
+            catalogReferences.resolveActive(request.sourceId(), CatalogCode.SOURCE_ORIGIN, "sourceId"), request.startDate(), request.responsible(),
+            catalogReferences.resolveActive(request.peiObjectiveId(), CatalogCode.PEI_OBJECTIVE, "peiObjectiveId"),
+            catalogReferences.resolveActive(request.poiActivityId(), CatalogCode.POI_ACTIVITY, "poiActivityId"),
+            request.description(), request.keyResults(), request.note(), request.digitalComponent(), actor.subject()));
         saveResponsibleUnits(project, request.responsibleUnits()); createDocumentSlots(project);
         tasks.findFirstByRecordIdAndTypeAndStatus(initiative.getId(), TaskType.CREATE_DERIVED_PROJECT, TaskStatus.PENDING).ifPresent(task -> {
             task.complete();
@@ -188,8 +204,12 @@ public class PortfolioService {
         LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, request.executingUnitId());
         ExecutingUnitEntity unit = executingUnits.findById(request.executingUnitId()).orElseThrow(() -> new NotFoundException("Unidad Ejecutora inexistente"));
         String code = codes.next(RecordType.PROJECT, request.startDate().getYear());
-        PortfolioRecordEntity project = records.save(PortfolioRecordEntity.preexistingProject(code, unit, request.name(), request.source(), request.startDate(), request.responsible(),
-            request.peiObjective(), request.poiActivity(), request.description(), request.keyResults(), request.note(), request.digitalComponent(), actor.subject()));
+        PortfolioRecordEntity project = records.save(PortfolioRecordEntity.preexistingProject(code, unit, request.name(),
+            catalogReferences.resolveActiveByCode(CatalogCode.SOLUTION_TYPE, "NOT_APPLICABLE", "solutionTypeId"),
+            catalogReferences.resolveActive(request.sourceId(), CatalogCode.SOURCE_ORIGIN, "sourceId"), request.startDate(), request.responsible(),
+            catalogReferences.resolveActive(request.peiObjectiveId(), CatalogCode.PEI_OBJECTIVE, "peiObjectiveId"),
+            catalogReferences.resolveActive(request.poiActivityId(), CatalogCode.POI_ACTIVITY, "poiActivityId"),
+            request.description(), request.keyResults(), request.note(), request.digitalComponent(), actor.subject()));
         saveResponsibleUnits(project, request.responsibleUnits()); createDocumentSlots(project);
         audit.event("PROYECTO_PREEXISTENTE_REGISTRADO", "REGISTRO_PORTAFOLIO", code, Map.of("origen", "NA"), actor.subject());
         return toResponse(project);
@@ -219,14 +239,17 @@ public class PortfolioService {
     private void saveResponsibleUnits(PortfolioRecordEntity record, List<ResponsibleUnitInput> inputs) {
         int order = 1;
         for (ResponsibleUnitInput input : inputs) {
-            OrganizationalUnitEntity unit = input.organizationalUnitId() == null ? null : organizationalUnits.findById(input.organizationalUnitId())
-                .orElseThrow(() -> new NotFoundException("Unidad orgánica inexistente"));
-            if (unit != null && !unit.getExecutingUnit().getId().equals(record.getExecutingUnit().getId())) throw new BusinessRuleException("La unidad orgánica pertenece a otra Unidad Ejecutora");
-            responsibleUnits.save(new ResponsibleUnitEntity(record, unit, input.originalDesignation(), order++));
+            OrganizationalUnitEntity unit = organizationalUnits.findHistoricalById(input.organizationalUnitId())
+                .orElseThrow(() -> new InvalidReferenceException("La Unidad Orgánica no existe", "organizationalUnitId", input.organizationalUnitId(), "NOT_FOUND"));
+            if (!unit.isActive()) throw new InvalidReferenceException("La Unidad Orgánica está inactiva", "organizationalUnitId", input.organizationalUnitId(), "INACTIVE");
+            if (!unit.getExecutingUnit().getId().equals(record.getExecutingUnit().getId())) throw new InvalidReferenceException("La Unidad Orgánica pertenece a otra Unidad Ejecutora", "organizationalUnitId", input.organizationalUnitId(), "OUTSIDE_EXECUTING_UNIT");
+            responsibleUnits.save(new ResponsibleUnitEntity(record, unit, unit.getName(), order++));
         }
     }
 
-    private void createDocumentSlots(PortfolioRecordEntity record) { for (DocumentType type : DocumentType.values()) documents.save(new DocumentEntity(record, type)); }
+    private void createDocumentSlots(PortfolioRecordEntity record) {
+        for (DocumentTypeEntity type : documentTypes.findByActiveTrueOrderByDisplayOrderAscCodeAsc()) documents.save(new DocumentEntity(record, type));
+    }
 
     private Map<String, ?> transitionAuditDetail(PortfolioStatus previous, PortfolioStatus current,
             PortfolioRecordEntity record, String observation) {
@@ -241,11 +264,21 @@ public class PortfolioService {
     }
 
     private PortfolioRecordResponse toResponse(PortfolioRecordEntity record) {
-        List<String> units = responsibleUnits.findByRecordIdOrderByDisplayOrder(record.getId()).stream().map(ResponsibleUnitEntity::getOriginalDesignation).toList();
-        return new PortfolioRecordResponse(record.getRecordType().label(), record.getCode(), record.getOriginCode(), record.getName(), record.getSolutionType().label(),
-            record.getSourceOrigin().label(), record.getStartDate(), record.getResponsible(), record.getPeiObjective(), record.getPoiActivity(), units,
+        List<ResponsibleUnitResponse> units = responsibleUnits.findByRecordIdOrderByDisplayOrder(record.getId()).stream().map(value -> {
+            OrganizationalUnitEntity unit = value.getOrganizationalUnit();
+            return new ResponsibleUnitResponse(new pe.gob.midagri.piip.organization.api.OrganizationController.OrganizationalUnitResponse(
+                unit.getId(), unit.getCode(), unit.getName(), unit.isActive(), unit.getAcronym(), unit.getParent() == null ? null : unit.getParent().getId(), unit.getExecutingUnit().getId()),
+                value.getOriginalDesignation(), value.getDisplayOrder());
+        }).toList();
+        return new PortfolioRecordResponse(new TechnicalCatalogItemResponse(record.getRecordType().name(), record.getRecordType().label(), record.getRecordType().ordinal(), true),
+            record.getCode(), record.getOriginCode(), record.getName(), catalog(record.getSolutionType()),
+            catalog(record.getSourceOrigin()), record.getStartDate(), record.getResponsible(), catalog(record.getPeiObjective()), catalog(record.getPoiActivity()), units,
             record.getDescription(), record.getKeyResults(), record.getNote(), record.getStatus().label(), record.getFinalProductType().label(),
             record.getDigitalComponent().label(), record.getClosingDate(), null, null, null, null, null,
             record.getExecutingUnit().getId(), record.getExecutingUnit().getName(), record.getUpdatedAt(), record.getVersion());
+    }
+
+    private PersistentCatalogItemResponse catalog(CatalogItemEntity value) {
+        return value == null ? null : new PersistentCatalogItemResponse(value.getId(), value.getCode(), value.getName(), value.getDisplayOrder(), value.isActive());
     }
 }

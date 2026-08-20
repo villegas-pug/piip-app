@@ -3,7 +3,9 @@
 
 export interface OrganizationalUnitResponse {
   acronym?: string;
+  active?: boolean;
   code?: string;
+  executingUnitId?: number;
   id?: number;
   name?: string;
   parentId?: number;

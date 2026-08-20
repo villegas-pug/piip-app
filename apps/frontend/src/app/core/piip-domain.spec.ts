@@ -3,10 +3,8 @@ import { PIIP_CATALOGS } from './piip.catalogs';
 import { PiipMockRepository, resolveProjectOriginCode } from './piip-mock.repository';
 
 describe('PIIP functional source', () => {
-  it('keeps the six Excel catalogs and their canonical values', () => {
-    expect(Object.keys(PIIP_CATALOGS)).toHaveLength(6);
-    expect(PIIP_CATALOGS.recordTypes).toEqual(['Iniciativa', 'Proyecto']);
-    expect(PIIP_CATALOGS.solutionTypes).toContain('No aplica');
+  it('conserva localmente solo los conceptos fuera de las siete fuentes centralizadas', () => {
+    expect(Object.keys(PIIP_CATALOGS)).toEqual(['statuses', 'finalProductTypes', 'digitalComponents']);
     expect(PIIP_CATALOGS.statuses).toContain('No Aplicable');
     expect(PIIP_CATALOGS.statuses).toContain('No Admisible');
     expect(PIIP_CATALOGS.finalProductTypes).toContain('NA');
@@ -45,7 +43,7 @@ describe('PIIP functional source', () => {
 
   it('models the 23 operational Excel fields without adding the initial ficha to that flat contract', () => {
     const repository = TestBed.inject(PiipMockRepository);
-    expect(Object.keys(repository.portfolioRecords()[0])).toHaveLength(23);
+    expect(repository.portfolioRecords()[0].solutionTypeReference?.id).toBeTypeOf('number');
     expect(repository.portfolioRecords()[0].originCode).toBe('NA');
     const preexistingProject = repository.portfolioRecords().find((record) => record.code === 'P-005-2026');
     expect(preexistingProject?.technicalOpinionReport).toBe('No Aplica');
@@ -88,12 +86,10 @@ describe('PIIP functional source', () => {
       code,
       startDate: '2026-06-01',
       name: initiative.portfolioRecord.name,
-      solutionType: initiative.portfolioRecord.solutionType,
-      source: initiative.portfolioRecord.source,
+      solutionTypeId: 2,
+      sourceId: 12,
       responsible: initiative.portfolioRecord.responsible,
-      responsibleUnits: initiative.portfolioRecord.responsibleUnits,
-      peiObjective: initiative.portfolioRecord.peiObjective,
-      poiActivity: initiative.portfolioRecord.poiActivity,
+      organizationalUnitId: 101,
       description: initiative.portfolioRecord.description,
       keyResults: 'Resultado propio del proyecto.',
       note: '',
@@ -106,7 +102,7 @@ describe('PIIP functional source', () => {
     expect(project?.originCode).toBe('I-019-2026');
     expect(project?.originMode).toBe('DERIVED_FROM_INITIATIVE');
     expect(portfolioRecord?.status).toBe('Proyecto en ejecución');
-    expect(portfolioRecord && Object.keys(portfolioRecord)).toHaveLength(23);
+    expect(portfolioRecord?.solutionType).toBe('Solución por definir');
     expect(portfolioRecord?.technicalOpinionReport).toBe('');
     expect(dossier?.stages.flatMap((stage) => stage.records)).toHaveLength(3);
     expect(repository.auditEvents()[0].event).toBe('Proyecto derivado registrado');
@@ -125,12 +121,10 @@ describe('PIIP functional source', () => {
       code: repository.getNextProjectCode(initiative.initiative.code),
       startDate: '2026-06-01',
       name: initiative.portfolioRecord.name,
-      solutionType: initiative.portfolioRecord.solutionType,
-      source: initiative.portfolioRecord.source,
+      solutionTypeId: 2,
+      sourceId: 12,
       responsible: initiative.portfolioRecord.responsible,
-      responsibleUnits: initiative.portfolioRecord.responsibleUnits,
-      peiObjective: initiative.portfolioRecord.peiObjective,
-      poiActivity: initiative.portfolioRecord.poiActivity,
+      organizationalUnitId: 101,
       description: initiative.portfolioRecord.description,
       keyResults: '',
       note: '',
@@ -144,8 +138,8 @@ describe('PIIP functional source', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const baseInput = {
       code: 'P-011-2026', startDate: '2026-06-01', name: 'Proyecto de prueba',
-      solutionType: 'Solución por definir' as const, source: 'Otros', responsible: 'Responsable',
-      responsibleUnits: 'DGIA', peiObjective: '', poiActivity: '', description: 'Descripción',
+      solutionTypeId: 2, sourceId: 14, responsible: 'Responsable',
+      organizationalUnitId: 101, description: 'Descripción',
       keyResults: '', note: '', digitalComponent: 'No' as const,
     };
 
@@ -177,11 +171,11 @@ describe('PIIP functional source', () => {
       code: 'P-011-2026',
       name: 'Proyecto preexistente de prueba',
       startDate: '2025-08-01',
-      source: 'Otros',
+      sourceId: 14,
       responsible: 'Responsable de prueba',
-      responsibleUnits: 'DGIA',
-      peiObjective: 'Objetivo PEI',
-      poiActivity: 'Actividad POI',
+      organizationalUnitId: 101,
+      peiObjectiveId: 20,
+      poiActivityId: 30,
       description: 'Proyecto iniciado antes del flujo de iniciativas.',
       keyResults: 'Resultado de prueba',
       note: '',
@@ -199,7 +193,7 @@ describe('PIIP functional source', () => {
     expect(project.originCode).toBe('NA');
     expect(project.status).toBe('Proyecto en ejecución');
     expect(portfolioRecord.solutionType).toBe('No aplica');
-    expect(Object.keys(portfolioRecord)).toHaveLength(23);
+    expect(portfolioRecord.source).toBe('Otros');
     expect(repository.auditEvents()[0].event).toBe('Proyecto preexistente registrado');
     expect(repository.getDocumentDossier('Proyecto', 'P-011-2026')?.stages[0].records[0].state).toBe('No aplica');
   });

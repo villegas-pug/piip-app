@@ -18,6 +18,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 import pe.gob.midagri.piip.audit.application.AuditService;
 import pe.gob.midagri.piip.documents.persistence.DocumentRepository;
+import pe.gob.midagri.piip.documents.persistence.DocumentTypeRepository;
+import pe.gob.midagri.piip.catalogs.application.CatalogReferenceService;
+import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 import pe.gob.midagri.piip.identity.application.LocalAccessContext;
 import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
 import pe.gob.midagri.piip.identity.application.RoleScopeGrant;
@@ -30,8 +33,6 @@ import pe.gob.midagri.piip.organization.persistence.OrganizationalUnitRepository
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.InitiativeStatusTransitionRequest;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
-import pe.gob.midagri.piip.portfolio.domain.SolutionType;
-import pe.gob.midagri.piip.portfolio.domain.SourceOrigin;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
@@ -52,12 +53,14 @@ class PortfolioInitiativeStatusServiceTest {
     @Mock CodeGeneratorService codes;
     @Mock LocalAuthorizationService authorization;
     @Mock AuditService audit;
+    @Mock CatalogReferenceService catalogReferences;
+    @Mock DocumentTypeRepository documentTypes;
     private PortfolioService service;
 
     @BeforeEach
     void setUp() {
         service = new PortfolioService(records, responsibleUnits, executingUnits, organizationalUnits, users, tasks,
-            notifications, documents, codes, authorization, audit);
+            notifications, documents, codes, authorization, audit, catalogReferences, documentTypes);
         lenient().when(responsibleUnits.findByRecordIdOrderByDisplayOrder(any())).thenReturn(List.of());
     }
 
@@ -110,9 +113,7 @@ class PortfolioInitiativeStatusServiceTest {
         ReflectionTestUtils.setField(institution, "id", 100L);
         ExecutingUnitEntity unit = new ExecutingUnitEntity(institution, "UE-001", "Unidad Ejecutora");
         ReflectionTestUtils.setField(unit, "id", unitId);
-        PortfolioRecordEntity initiative = PortfolioRecordEntity.initiative("I-001-2026", unit, "Iniciativa",
-            SolutionType.TO_BE_DEFINED, SourceOrigin.OTHER, LocalDate.of(2026, 8, 1), "Responsable", null, null,
-            "Descripción", null, DigitalComponent.NO, "subject");
+        PortfolioRecordEntity initiative = PortfolioRecordTestBuilder.transientReferences().initiative("I-001-2026", unit, "Iniciativa");
         ReflectionTestUtils.setField(initiative, "id", id);
         return initiative;
     }

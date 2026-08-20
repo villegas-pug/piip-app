@@ -36,10 +36,15 @@ public class OrganizationController {
     public List<OrganizationalUnitResponse> organizationalUnits(@RequestParam("executingUnitId") Long executingUnitId) {
         authorization.requireReadableUnit(executingUnitId);
         return organizationalUnits.findByExecutingUnitIdAndActiveTrueOrderByName(executingUnitId).stream()
-            .map(item -> new OrganizationalUnitResponse(item.getId(), item.getCode(), item.getName(), item.getAcronym(), item.getParent() == null ? null : item.getParent().getId())).toList();
+            .map(item -> response(item)).toList();
+    }
+
+    static OrganizationalUnitResponse response(OrganizationalUnitEntity item) {
+        return new OrganizationalUnitResponse(item.getId(), item.getCode(), item.getName(), item.isActive(), item.getAcronym(),
+            item.getParent() == null ? null : item.getParent().getId(), item.getExecutingUnit().getId());
     }
 
     public record InstitutionResponse(Long id, String code, String name) {}
     public record ExecutingUnitResponse(Long id, String code, String name, Long institutionId) {}
-    public record OrganizationalUnitResponse(Long id, String code, String name, String acronym, Long parentId) {}
+    public record OrganizationalUnitResponse(Long id, String code, String name, boolean active, String acronym, Long parentId, Long executingUnitId) {}
 }

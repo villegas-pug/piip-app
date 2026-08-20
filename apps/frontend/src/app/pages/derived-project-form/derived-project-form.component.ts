@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal } from '@angular/core';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { PIIP_CATALOGS, RESPONSIBLE_UNITS } from '../../core/piip.catalogs';
+import { PIIP_CATALOGS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { DerivedProjectInput } from '../../core/piip.models';
 
@@ -22,11 +22,17 @@ export class DerivedProjectFormComponent {
   private readonly elementRef = inject(ElementRef<HTMLElement>);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly catalogs = PIIP_CATALOGS;
-  readonly units = computed(() => this.repository.organizationalUnits().length
-    ? this.repository.organizationalUnits().map((unit) => unit.acronym || unit.name)
-    : RESPONSIBLE_UNITS);
+  readonly catalogState = this.repository.catalogs;
+  readonly unitsState = this.repository.organizationalUnitsState;
+  readonly units = this.repository.organizationalUnits;
   readonly initiativeCode = this.route.snapshot.paramMap.get('initiativeCode') ?? '';
   readonly detail = this.repository.getInitiativeDetail(this.initiativeCode);
+  readonly inheritedInactive = [
+    this.detail?.portfolioRecord.solutionTypeReference,
+    this.detail?.portfolioRecord.sourceReference,
+    this.detail?.portfolioRecord.peiObjectiveReference,
+    this.detail?.portfolioRecord.poiActivityReference,
+  ].filter((item) => item && !item.active);
   readonly existingProject = this.repository.getProjectByOrigin(this.initiativeCode);
   readonly provisionalCode = this.repository.getNextProjectCode(this.initiativeCode);
   readonly reviewOpen = signal(false);
@@ -39,17 +45,35 @@ export class DerivedProjectFormComponent {
     status: [{ value: 'Proyecto en ejecución', disabled: true }],
     startDate: ['', Validators.required],
     name: [this.detail?.portfolioRecord.name ?? '', [Validators.required, Validators.maxLength(180)]],
-    solutionType: [this.detail?.portfolioRecord.solutionType ?? '', Validators.required],
-    source: [this.detail?.portfolioRecord.source ?? '', Validators.required],
+    solutionType: [{ value: this.activeId(this.detail?.portfolioRecord.solutionTypeReference), disabled: this.catalogState().phase !== 'ready' }, Validators.required],
+    source: [{ value: this.activeId(this.detail?.portfolioRecord.sourceReference), disabled: this.catalogState().phase !== 'ready' }, Validators.required],
     responsible: [this.detail?.portfolioRecord.responsible ?? '', Validators.required],
-    responsibleUnits: [this.detail?.portfolioRecord.responsibleUnits ?? '', Validators.required],
-    peiObjective: [this.detail?.portfolioRecord.peiObjective ?? ''],
-    poiActivity: [this.detail?.portfolioRecord.poiActivity ?? ''],
+    responsibleUnits: [{ value: this.detail?.portfolioRecord.responsibleUnitReferences?.find((item) => item.active)?.id?.toString() ?? '', disabled: this.unitsState().phase !== 'ready' }, Validators.required],
+    peiObjective: [{ value: this.activeId(this.detail?.portfolioRecord.peiObjectiveReference), disabled: this.catalogState().phase !== 'ready' }],
+    poiActivity: [{ value: this.activeId(this.detail?.portfolioRecord.poiActivityReference), disabled: this.catalogState().phase !== 'ready' }],
     description: [this.detail?.portfolioRecord.description ?? '', [Validators.required, Validators.maxLength(1000)]],
     keyResults: ['', Validators.maxLength(1000)],
     note: ['', Validators.maxLength(600)],
     digitalComponent: [this.detail?.portfolioRecord.digitalComponent ?? '', Validators.required],
   });
+
+  constructor() {
+    effect(() => {
+      const catalogsReady = this.catalogState().phase === 'ready';
+      const unitsReady = this.unitsState().phase === 'ready';
+      this.syncDisabled(this.form.controls.solutionType, !catalogsReady);
+      this.syncDisabled(this.form.controls.source, !catalogsReady);
+      this.syncDisabled(this.form.controls.peiObjective, !catalogsReady);
+      this.syncDisabled(this.form.controls.poiActivity, !catalogsReady);
+      this.syncDisabled(this.form.controls.responsibleUnits, !unitsReady);
+      const catalogs = this.catalogState().value;
+      this.reconcile(this.form.controls.solutionType, catalogs.solutionTypes);
+      this.reconcile(this.form.controls.source, catalogs.sources);
+      this.reconcile(this.form.controls.peiObjective, catalogs.peiObjectives);
+      this.reconcile(this.form.controls.poiActivity, catalogs.poiActivities);
+      this.reconcile(this.form.controls.responsibleUnits, this.units());
+    });
+  }
 
   scrollTo(sectionId: string): void {
     this.elementRef.nativeElement.querySelector(`#${sectionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -62,7 +86,7 @@ export class DerivedProjectFormComponent {
 
   openReview(): void {
     this.form.markAllAsTouched();
-    if (this.form.invalid) {
+    if (!this.dependenciesReady() || this.form.invalid) {
       this.snackBar.open('Completa los campos requeridos antes de revisar el proyecto.', 'Cerrar', { duration: 4000 });
       return;
     }
@@ -70,7 +94,7 @@ export class DerivedProjectFormComponent {
   }
 
   async registerProject(): Promise<void> {
-    if (this.submitting()) return;
+    if (this.submitting() || !this.dependenciesReady()) return;
     this.submitting.set(true);
     try {
       const record = await Promise.resolve(this.repository.registerDerivedProject(this.buildInput()));
@@ -91,16 +115,38 @@ export class DerivedProjectFormComponent {
       code: this.provisionalCode,
       startDate: value.startDate,
       name: value.name,
-      solutionType: value.solutionType as DerivedProjectInput['solutionType'],
-      source: value.source,
+      solutionTypeId: Number(value.solutionType),
+      sourceId: Number(value.source),
       responsible: value.responsible,
-      responsibleUnits: value.responsibleUnits,
-      peiObjective: value.peiObjective,
-      poiActivity: value.poiActivity,
+      organizationalUnitId: Number(value.responsibleUnits),
+      peiObjectiveId: value.peiObjective ? Number(value.peiObjective) : undefined,
+      poiActivityId: value.poiActivity ? Number(value.poiActivity) : undefined,
       description: value.description,
       keyResults: value.keyResults,
       note: value.note,
       digitalComponent: value.digitalComponent as DerivedProjectInput['digitalComponent'],
     };
+  }
+
+  private activeId(option: { id: number; active: boolean } | null | undefined): string {
+    return option?.active ? String(option.id) : '';
+  }
+
+  private reconcile(control: { value: string; setErrors(errors: Record<string, boolean> | null): void }, options: Array<{ id: number; active: boolean }>): void {
+    if (!control.value) return;
+    if (!options.some((option) => option.id === Number(control.value) && option.active)) control.setErrors({ unavailable: true });
+    else if ((control as { errors?: Record<string, boolean> | null }).errors?.['unavailable']) control.setErrors(null);
+  }
+
+  private dependenciesReady(): boolean {
+    const catalogs = this.catalogState();
+    const units = this.unitsState();
+    return catalogs.phase === 'ready' && catalogs.value.solutionTypes.length > 0 && catalogs.value.sources.length > 0
+      && units.phase === 'ready' && units.value.length > 0;
+  }
+
+  private syncDisabled(control: AbstractControl, disabled: boolean): void {
+    if (disabled && control.enabled) control.disable({ emitEvent: false });
+    else if (!disabled && control.disabled) control.enable({ emitEvent: false });
   }
 }

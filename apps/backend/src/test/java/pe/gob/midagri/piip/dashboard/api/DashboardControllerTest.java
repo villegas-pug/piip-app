@@ -27,9 +27,8 @@ import pe.gob.midagri.piip.organization.persistence.InstitutionEntity;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
-import pe.gob.midagri.piip.portfolio.domain.SolutionType;
-import pe.gob.midagri.piip.portfolio.domain.SourceOrigin;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
+import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
 import pe.gob.midagri.piip.work.domain.TaskPriority;
 import pe.gob.midagri.piip.work.domain.TaskStatus;
@@ -112,9 +111,7 @@ class DashboardControllerTest {
         ReflectionTestUtils.setField(institution, "id", institutionId);
         ExecutingUnitEntity unit = new ExecutingUnitEntity(institution, "UE-" + unitId, "Unidad Ejecutora");
         ReflectionTestUtils.setField(unit, "id", unitId);
-        PortfolioRecordEntity record = PortfolioRecordEntity.initiative(code, unit, "Iniciativa", SolutionType.TO_BE_DEFINED,
-            SourceOrigin.OTHER, LocalDate.now(), "Responsable", null, null, "Descripción", null,
-            DigitalComponent.NO, "subject");
+        PortfolioRecordEntity record = PortfolioRecordTestBuilder.transientReferences().initiative(code, unit, "Iniciativa");
         WorkTaskEntity task = new WorkTaskEntity(record, TaskType.REGISTER_DECISION, "Decidir", assigned,
             TaskPriority.HIGH, LocalDate.now().plusDays(1), "TEST");
         ReflectionTestUtils.setField(task, "id", id);

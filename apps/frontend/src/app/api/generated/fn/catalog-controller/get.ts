@@ -7,27 +7,24 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
+import { CatalogBundleResponse } from '../../models/catalog-bundle-response';
 
-export interface Catalogs$Params {
+export interface Get$Params {
 }
 
-export function catalogs(http: HttpClient, rootUrl: string, params?: Catalogs$Params, context?: HttpContext): Observable<StrictHttpResponse<{
-[key: string]: Array<string>;
-}>> {
-  const rb = new RequestBuilder(rootUrl, catalogs.PATH, 'get');
+export function get(http: HttpClient, rootUrl: string, params?: Get$Params, context?: HttpContext): Observable<StrictHttpResponse<CatalogBundleResponse>> {
+  const rb = new RequestBuilder(rootUrl, get.PATH, 'get');
   if (params) {
   }
 
   return http.request(
-    rb.build({ responseType: 'blob', accept: '*/*', context })
+    rb.build({ responseType: 'json', accept: 'application/json', context })
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<{
-      [key: string]: Array<string>;
-      }>;
+      return r as StrictHttpResponse<CatalogBundleResponse>;
     })
   );
 }
 
-catalogs.PATH = '/catalogs';
+get.PATH = '/catalogs';

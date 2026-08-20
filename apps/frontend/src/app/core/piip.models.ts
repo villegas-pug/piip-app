@@ -23,6 +23,41 @@ export interface RoleScope {
 
 export type PiipRecordType = 'Iniciativa' | 'Proyecto';
 
+export interface PersistentCatalogOption {
+  id: number;
+  code: string;
+  name: string;
+  displayOrder: number;
+  active: boolean;
+}
+
+export interface TechnicalCatalogOption {
+  code: 'INITIATIVE' | 'PROJECT';
+  name: PiipRecordType;
+  displayOrder: number;
+  active: boolean;
+}
+
+export type HistoricalCatalogReference = PersistentCatalogOption;
+
+export interface CatalogBundle {
+  recordTypes: TechnicalCatalogOption[];
+  solutionTypes: PersistentCatalogOption[];
+  sources: PersistentCatalogOption[];
+  peiObjectives: PersistentCatalogOption[];
+  poiActivities: PersistentCatalogOption[];
+  documentTypes: PersistentCatalogOption[];
+}
+
+export type ResourcePhase = 'idle' | 'loading' | 'ready' | 'error';
+
+export interface ResourceState<T> {
+  phase: ResourcePhase;
+  value: T;
+  error: string | null;
+  requestId: number;
+}
+
 export type ProjectOriginMode = 'DERIVED_FROM_INITIATIVE' | 'PREEXISTING';
 
 export type ProjectOrigin =
@@ -55,6 +90,12 @@ export interface PiipPortfolioRecord {
   projectManagementDocumentation: string;
   finalClosureReport: string;
   executingUnitId?: number;
+  recordTypeReference?: TechnicalCatalogOption;
+  solutionTypeReference?: HistoricalCatalogReference;
+  sourceReference?: HistoricalCatalogReference;
+  peiObjectiveReference?: HistoricalCatalogReference | null;
+  poiActivityReference?: HistoricalCatalogReference | null;
+  responsibleUnitReferences?: OrganizationalUnit[];
 }
 
 export interface InitiativeRecord {
@@ -67,6 +108,8 @@ export interface InitiativeRecord {
   status: PiipStatus;
   updatedAt: string;
   executingUnitId?: number;
+  sourceReference?: HistoricalCatalogReference;
+  organizationalUnits?: OrganizationalUnit[];
 }
 
 export interface ProjectRecord {
@@ -79,17 +122,18 @@ export interface ProjectRecord {
   status: PiipStatus;
   digitalComponent: 'Si' | 'No';
   executingUnitId?: number;
+  organizationalUnits?: OrganizationalUnit[];
 }
 
 export interface PreexistingProjectInput {
   code: string;
   name: string;
   startDate: string;
-  source: string;
+  sourceId: number;
   responsible: string;
-  responsibleUnits: string;
-  peiObjective: string;
-  poiActivity: string;
+  organizationalUnitId: number;
+  peiObjectiveId?: number;
+  poiActivityId?: number;
   description: string;
   keyResults: string;
   note: string;
@@ -106,12 +150,12 @@ export interface InitiativeInput {
   code: string;
   startDate: string;
   name: string;
-  solutionType: PiipPortfolioRecord['solutionType'];
-  source: string;
+  solutionTypeId: number;
+  sourceId: number;
   responsible: string;
-  responsibleUnits: string;
-  peiObjective: string;
-  poiActivity: string;
+  organizationalUnitId: number;
+  peiObjectiveId?: number;
+  poiActivityId?: number;
   description: string;
   note: string;
   digitalComponent: PiipPortfolioRecord['digitalComponent'];
@@ -142,12 +186,12 @@ export interface DerivedProjectInput {
   code: string;
   startDate: string;
   name: string;
-  solutionType: PiipPortfolioRecord['solutionType'];
-  source: string;
+  solutionTypeId: number;
+  sourceId: number;
   responsible: string;
-  responsibleUnits: string;
-  peiObjective: string;
-  poiActivity: string;
+  organizationalUnitId: number;
+  peiObjectiveId?: number;
+  poiActivityId?: number;
   description: string;
   keyResults: string;
   note: string;
@@ -170,6 +214,8 @@ export interface ProjectDetail {
 
 export interface DocumentRecord {
   type?: DocumentType;
+  documentTypeId?: number;
+  documentType?: HistoricalCatalogReference;
   name: string;
   required: boolean;
   filename: string | null;
@@ -216,6 +262,7 @@ export interface DocumentDossierSummary {
   notApplicableCount: number;
   lastActivity: string;
   executingUnitId?: number;
+  organizationalUnits?: OrganizationalUnit[];
 }
 
 export interface AuditEvent {
@@ -292,6 +339,8 @@ export interface OrganizationalUnit {
   name: string;
   acronym: string;
   parentId: number | null;
+  executingUnitId: number;
+  active: boolean;
 }
 
 export interface DashboardSummary {
@@ -347,6 +396,7 @@ export interface NotificationItem {
 
 export interface DocumentAttachment {
   type: DocumentType;
+  documentTypeId: number;
   mode: 'FILE' | 'NOT_APPLICABLE' | 'PENDING';
   file?: File;
 }

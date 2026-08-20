@@ -9,10 +9,10 @@ export interface PreexistingProjectRequest {
   keyResults?: string;
   name: string;
   note?: string;
-  peiObjective?: string;
-  poiActivity?: string;
+  peiObjectiveId?: number;
+  poiActivityId?: number;
   responsible: string;
   responsibleUnits: Array<ResponsibleUnitInput>;
-  source: 'INITIATIVE_SHEET' | 'INTERNAL_CONTEST' | 'OPEN_INNOVATION' | 'MANAGEMENT_PROPOSAL' | 'OTHER' | 'CALL';
+  sourceId: number;
   startDate: string;
 }

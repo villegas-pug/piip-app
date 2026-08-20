@@ -29,4 +29,20 @@ describe('ProjectDetailComponent', () => {
     const fixture = TestBed.createComponent(ProjectDetailComponent);
     expect(fixture.componentInstance.transitionOptions()).toEqual([]);
   });
+
+  it('muestra referencias PEI y POI resueltas e identifica las históricas inactivas', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.portfolioRecords.update((records) => records.map((record) => record.code === 'P-005-2026' ? {
+      ...record,
+      peiObjectiveReference: { id: 20, code: 'PEI-02', name: 'Objetivo del proyecto', displayOrder: 1, active: true },
+      poiActivityReference: { id: 30, code: 'POI-02', name: 'Actividad anterior', displayOrder: 1, active: false },
+    } : record));
+    const fixture = TestBed.createComponent(ProjectDetailComponent);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('PEI-02 — Objetivo del proyecto');
+    expect(text).toContain('POI-02 — Actividad anterior');
+    expect(text).toContain('Inactivo');
+  });
 });

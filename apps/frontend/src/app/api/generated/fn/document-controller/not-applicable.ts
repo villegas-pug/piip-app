@@ -11,7 +11,7 @@ import { NotApplicableRequest } from '../../models/not-applicable-request';
 
 export interface NotApplicable$Params {
   recordCode: string;
-  type: 'PUBLIC_INNOVATION_INITIATIVE_SHEET' | 'INITIATIVE_TECHNICAL_OPINION' | 'FORMAL_APPROVAL_DECISION' | 'FINAL_PRODUCT_APPROVAL' | 'PROJECT_MANAGEMENT_DOCUMENTATION' | 'FINAL_CLOSURE_REPORT';
+  documentTypeId: number;
       body: NotApplicableRequest
 }
 
@@ -19,7 +19,7 @@ export function notApplicable(http: HttpClient, rootUrl: string, params: NotAppl
   const rb = new RequestBuilder(rootUrl, notApplicable.PATH, 'put');
   if (params) {
     rb.path('recordCode', params.recordCode, {});
-    rb.path('type', params.type, {});
+    rb.path('documentTypeId', params.documentTypeId, {});
     rb.body(params.body, 'application/json');
   }
 
@@ -33,4 +33,4 @@ export function notApplicable(http: HttpClient, rootUrl: string, params: NotAppl
   );
 }
 
-notApplicable.PATH = '/portfolio-records/{recordCode}/documents/{type}/not-applicable';
+notApplicable.PATH = '/portfolio-records/{recordCode}/documents/{documentTypeId}/not-applicable';

@@ -20,6 +20,7 @@ Cada tarea usa:
 - **[US#] / [FR-###]**: toda tarea se vincula con al menos una historia o requisito de la spec.
 - La descripción incluye una ruta real del monorepo; no se aceptan ubicaciones genéricas.
 - `[X]` se utiliza solo después de obtener evidencia de que el cambio fue realizado.
+- Toda excepción constitucional para DML inicial o reset destructivo de auditoría incluye tareas explícitas de guardias fail-closed, prohibición productiva, allowlist y verificación del alcance eliminado.
 
 ## Evidencia de baseline — no ejecutable
 

@@ -15,8 +15,6 @@ export interface Initiatives$Params {
   executingUnitId?: number;
   page?: number;
   size?: number;
-  sort?: string;
-  direction?: string;
 }
 
 export function initiatives(http: HttpClient, rootUrl: string, params?: Initiatives$Params, context?: HttpContext): Observable<StrictHttpResponse<PageResponsePortfolioRecordResponse>> {
@@ -27,12 +25,10 @@ export function initiatives(http: HttpClient, rootUrl: string, params?: Initiati
     rb.query('executingUnitId', params.executingUnitId, {});
     rb.query('page', params.page, {});
     rb.query('size', params.size, {});
-    rb.query('sort', params.sort, {});
-    rb.query('direction', params.direction, {});
   }
 
   return http.request(
-    rb.build({ responseType: 'blob', accept: '*/*', context })
+    rb.build({ responseType: 'json', accept: 'application/json', context })
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {

@@ -114,8 +114,9 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
 
     const records = repository.homePortfolio().content;
-    const statusTags = Array.from(fixture.nativeElement.querySelectorAll<HTMLElement>('.status-tag'));
-    const chartStatuses = Array.from(fixture.nativeElement.querySelectorAll<HTMLElement>('.chart-status'));
+    const host = fixture.nativeElement as HTMLElement;
+    const statusTags = Array.from(host.querySelectorAll<HTMLElement>('.status-tag'));
+    const chartStatuses = Array.from(host.querySelectorAll<HTMLElement>('.chart-status'));
 
     expect(statusTags).toHaveLength(records.length);
     records.forEach((record, index) => {
@@ -220,7 +221,8 @@ describe('DashboardComponent', () => {
 
       const search = fixture.nativeElement.querySelector('.search-field') as HTMLElement;
       const clear = search.querySelector('.search-clear') as HTMLButtonElement;
-      const filterLabels = Array.from(fixture.nativeElement.querySelectorAll<HTMLElement>('.filter-label')).map((label) => label.textContent?.trim());
+      const host = fixture.nativeElement as HTMLElement;
+      const filterLabels = Array.from(host.querySelectorAll<HTMLElement>('.filter-label')).map((label) => label.textContent?.trim());
       expect(filterLabels).toEqual(['Buscar por código o nombre', 'Tipo', 'Estado']);
       expect(search.textContent).toContain('Buscar por código o nombre');
       expect(search.querySelector('input')?.getAttribute('placeholder')).toBe('Código o nombre');

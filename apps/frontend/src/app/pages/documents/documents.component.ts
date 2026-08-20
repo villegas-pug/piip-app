@@ -6,7 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { summarizeDocumentDossier } from '../../core/piip-mock.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { DocumentRecord, DocumentStage, DocumentType, PiipRecordType, PiipStatus } from '../../core/piip.models';
+import { DocumentRecord, DocumentStage, PiipRecordType, PiipStatus } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 
@@ -32,19 +32,13 @@ export class DocumentsComponent {
   readonly repository = inject(PIIP_REPOSITORY);
   readonly collapsedStages = signal<Set<string>>(new Set());
   readonly uploadOpen = signal(false);
-  readonly uploadType = signal<DocumentType>('PUBLIC_INNOVATION_INITIATIVE_SHEET');
+  readonly uploadType = signal<number | null>(null);
   readonly uploadFile = signal<File | null>(null);
   readonly pendingOperation = signal<PendingDocumentOperation | null>(null);
   readonly stagePageIndexes = signal<Record<string, number>>({});
   readonly operationPending = computed(() => this.pendingOperation() !== null);
-  readonly documentTypes: { type: DocumentType; label: string }[] = [
-    { type: 'PUBLIC_INNOVATION_INITIATIVE_SHEET', label: 'Ficha de Iniciativa de Innovación Pública' },
-    { type: 'INITIATIVE_TECHNICAL_OPINION', label: 'Informe de opinión técnica de evaluación de iniciativa' },
-    { type: 'FORMAL_APPROVAL_DECISION', label: 'Documento formal de decisión de aprobación' },
-    { type: 'FINAL_PRODUCT_APPROVAL', label: 'Documento formal de aprobación de producto final' },
-    { type: 'PROJECT_MANAGEMENT_DOCUMENTATION', label: 'Documentación de la gestión del proyecto' },
-    { type: 'FINAL_CLOSURE_REPORT', label: 'Informe final de cierre' },
-  ];
+  readonly catalogState = this.repository.catalogs;
+  readonly documentTypes = computed(() => this.catalogState().value.documentTypes);
   readonly code = computed(() => this.routeParamMap().get('code') ?? '');
   readonly recordType = computed<PiipRecordType>(() => this.routeData()['recordType'] === 'Proyecto' ? 'Proyecto' : 'Iniciativa');
   readonly dossier = computed(() => this.repository.getDocumentDossier(this.recordType(), this.code()));
@@ -93,7 +87,8 @@ export class DocumentsComponent {
   }
 
   selectUploadType(event: Event): void {
-    this.uploadType.set((event.target as HTMLSelectElement).value as DocumentType);
+    const value = Number((event.target as HTMLSelectElement).value);
+    this.uploadType.set(Number.isFinite(value) && value > 0 ? value : null);
   }
 
   stagePageIndex(stage: DocumentStage): number {
@@ -128,10 +123,11 @@ export class DocumentsComponent {
 
   async upload(): Promise<void> {
     const file = this.uploadFile();
-    if (!file || this.operationPending() || !this.canAdministerRecord()) return;
-    this.pendingOperation.set({ kind: 'upload', key: this.uploadType() });
+    const documentTypeId = this.uploadType();
+    if (!file || !documentTypeId || this.operationPending() || !this.canAdministerRecord()) return;
+    this.pendingOperation.set({ kind: 'upload', key: String(documentTypeId) });
     try {
-      await Promise.resolve(this.repository.uploadDocument(this.code(), this.uploadType(), file));
+      await Promise.resolve(this.repository.uploadDocument(this.code(), documentTypeId, file));
       this.closeUploadPanel();
       this.snackBar.open('Documento cargado correctamente.', 'Cerrar', { duration: 3000 });
     } catch (error) {
@@ -167,10 +163,10 @@ export class DocumentsComponent {
   }
 
   async markNotApplicable(document: DocumentRecord): Promise<void> {
-    if (!document.type || this.operationPending() || !this.canAdministerRecord()) return;
+    if (!document.documentTypeId || this.operationPending() || !this.canAdministerRecord()) return;
     this.pendingOperation.set({ kind: 'not-applicable', key: this.operationKey(document) });
     try {
-      await Promise.resolve(this.repository.markDocumentNotApplicable(this.code(), document.type, 'Marcado desde el expediente PIIP'));
+      await Promise.resolve(this.repository.markDocumentNotApplicable(this.code(), document.documentTypeId, 'Marcado desde el expediente PIIP'));
       this.snackBar.open('Documento marcado como No aplica.', 'Cerrar', { duration: 3000 });
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible actualizar el documento.', 'Cerrar', { duration: 4000 });

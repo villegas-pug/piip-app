@@ -38,4 +38,38 @@ describe('DocumentsInboxComponent', () => {
     component.filters.patchValue({ search: 'I-200-2026' });
     expect(component.currentPage()).toBe(0);
   });
+
+  it('mantiene exclusivamente búsqueda, Tipo de registro, estado y Unidad Orgánica', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const target = { ...repository.getDocumentDossierSummaries()[0], organizationalUnits: [repository.organizationalUnits()[0]] };
+    vi.spyOn(repository, 'getDocumentDossierSummaries').mockReturnValue([target]);
+    const fixture = TestBed.createComponent(DocumentsInboxComponent);
+    fixture.componentInstance.filters.patchValue({
+      search: target.code,
+      recordType: target.recordType,
+      status: target.status,
+      unit: String(target.organizationalUnits[0]?.id),
+    });
+
+    expect(Object.keys(fixture.componentInstance.filters.getRawValue()).sort()).toEqual(['recordType', 'search', 'status', 'unit']);
+    expect(fixture.componentInstance.filteredDossiers().map((item) => item.code)).toEqual([target.code]);
+  });
+
+  it('presenta carga, vacío y error para las opciones de catálogo', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(DocumentsInboxComponent);
+    repository.catalogs.set({ phase: 'loading', value: repository.catalogs().value, error: null, requestId: 2 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Cargando opciones de filtro');
+
+    repository.organizationalUnits.set([]);
+    repository.catalogs.set({ phase: 'ready', value: { ...repository.catalogs().value, recordTypes: [] }, error: null, requestId: 3 });
+    repository.organizationalUnitsState.set({ phase: 'ready', value: [], error: null, requestId: 3 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No hay opciones activas');
+
+    repository.catalogs.set({ phase: 'error', value: repository.catalogs().value, error: 'Catálogo no disponible', requestId: 4 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Catálogo no disponible');
+  });
 });

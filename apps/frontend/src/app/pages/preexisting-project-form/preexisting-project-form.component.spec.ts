@@ -24,7 +24,7 @@ describe('PreexistingProjectFormComponent', () => {
     expect(form.getRawValue()).toEqual(expect.objectContaining({
       recordType: 'Proyecto',
       originCode: 'NA',
-      solutionType: 'No aplica',
+      solutionType: 'Definido por el backend',
       status: 'Proyecto en ejecución',
       technicalOpinionMode: 'NOT_APPLICABLE',
       formalApprovalMode: 'NOT_APPLICABLE',
@@ -39,5 +39,33 @@ describe('PreexistingProjectFormComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Acceso restringido');
     expect(fixture.nativeElement.textContent).not.toContain('Revisar registro');
+  });
+
+  it('usa IDs canónicos y conserva la identidad de proyecto preexistente', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const register = vi.spyOn(repository, 'registerPreexistingProject').mockResolvedValue(repository.portfolioRecords().find((item) => item.code === 'P-005-2026')!);
+    const fixture = TestBed.createComponent(PreexistingProjectFormComponent);
+    fixture.componentInstance.form.patchValue({
+      startDate: '2026-08-20', name: 'Proyecto preexistente', source: '10', responsible: 'Responsable',
+      responsibleUnits: '101', peiObjective: '20', poiActivity: '30', description: 'Descripción', digitalComponent: 'No',
+    });
+
+    await fixture.componentInstance.registerProject();
+
+    expect(fixture.componentInstance.form.getRawValue()).toEqual(expect.objectContaining({ recordType: 'Proyecto', originCode: 'NA' }));
+    expect(register).toHaveBeenCalledWith(expect.objectContaining({ sourceId: 10, organizationalUnitId: 101, peiObjectiveId: 20, poiActivityId: 30 }));
+  });
+
+  it('presenta vacío y error de Unidades Orgánicas sin fallback local', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(PreexistingProjectFormComponent);
+    repository.organizationalUnits.set([]);
+    repository.organizationalUnitsState.set({ phase: 'ready', value: [], error: null, requestId: 2 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No hay Unidades Orgánicas disponibles');
+
+    repository.organizationalUnitsState.set({ phase: 'error', value: [], error: 'Unidades no disponibles', requestId: 3 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Unidades no disponibles');
   });
 });

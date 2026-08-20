@@ -26,6 +26,8 @@ class OpenApiGenerationTest {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body())
             .contains("/initiatives", "/projects/derived", "/portfolio-records/{recordCode}/documents",
+                "/catalogs", "CatalogBundleResponse", "PersistentCatalogItemResponse", "TechnicalCatalogItemResponse",
+                "solutionTypeId", "sourceId", "peiObjectiveId", "poiActivityId", "documentTypeId",
                 "/admin/users/administrable-scopes", "/initiatives/{code}/status-transitions",
                 "/projects/{code}/status-transitions", "InitiativeStatusTransitionRequest",
                 "ProjectStatusTransitionRequest")
@@ -33,6 +35,7 @@ class OpenApiGenerationTest {
             .contains("roleScopes", "RoleScopeResponse", "executingUnitId", "AdministrableScopeResponse",
                 "AdministrableExecutingUnitResponse", "institutionWideAllowed")
             .doesNotContain("/admin/users/{userId}/status");
+        assertThat(response.body()).doesNotContain("\"name\":\"type\",\"in\":\"path\"", "\"name\":\"sort\"", "\"name\":\"direction\"");
         assertThat(response.body())
             .contains("/dashboard/portfolio", "HomePortfolioResponse", "HomePortfolioItemResponse",
                 "PortfolioStatusCountResponse", "executingUnitTotalElements", "statusCounts",

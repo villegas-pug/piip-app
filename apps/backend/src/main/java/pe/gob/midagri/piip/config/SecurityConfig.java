@@ -15,6 +15,7 @@ import pe.gob.midagri.piip.identity.api.LocalAuthorityFilter;
 import java.util.List;
 
 @Configuration
+@Profile("!test-reset")
 @EnableMethodSecurity
 public class SecurityConfig {
     @Bean

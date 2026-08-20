@@ -18,10 +18,10 @@ import pe.gob.midagri.piip.organization.persistence.InstitutionRepository;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
-import pe.gob.midagri.piip.portfolio.domain.SolutionType;
-import pe.gob.midagri.piip.portfolio.domain.SourceOrigin;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.catalogs.persistence.*;
+import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -32,6 +32,9 @@ class DashboardPortfolioQueryRepositoryTest {
     @Autowired ExecutingUnitRepository executingUnits;
     @Autowired PortfolioRecordRepository records;
     @Autowired EntityManager entityManager;
+    @Autowired CatalogRepository catalogs;
+    @Autowired CatalogItemRepository catalogItems;
+    private PortfolioRecordTestBuilder fixtures;
 
     @Test
     void filtersOneUnitAndReconcilesPositiveStatusCounts() {
@@ -60,9 +63,7 @@ class DashboardPortfolioQueryRepositoryTest {
         PortfolioRecordEntity first = initiative("INI-FILTER-1", unit, "Nombre alfa");
         PortfolioRecordEntity approved = initiative("INI-FILTER-2", unit, "Nombre beta");
         approved.approve();
-        PortfolioRecordEntity project = records.save(PortfolioRecordEntity.derivedProject("PRY-FILTER-1", approved,
-            "Proyecto gamma", SolutionType.TO_BE_DEFINED, SourceOrigin.OTHER, LocalDate.of(2026, 1, 3),
-            "Responsable", null, null, "Descripción", "Resultados", null, DigitalComponent.NO, "subject"));
+        PortfolioRecordEntity project = records.save(fixtures().derivedProject("PRY-FILTER-1", approved, "Proyecto gamma"));
         ReflectionTestUtils.setField(first, "updatedAt", Instant.parse("2026-08-18T10:00:00Z"));
         ReflectionTestUtils.setField(approved, "updatedAt", Instant.parse("2026-08-18T11:00:00Z"));
         ReflectionTestUtils.setField(project, "updatedAt", Instant.parse("2026-08-18T12:00:00Z"));
@@ -99,8 +100,10 @@ class DashboardPortfolioQueryRepositoryTest {
     }
 
     private PortfolioRecordEntity initiative(String code, ExecutingUnitEntity unit, String name) {
-        return records.save(PortfolioRecordEntity.initiative(code, unit, name, SolutionType.TO_BE_DEFINED,
-            SourceOrigin.OTHER, LocalDate.of(2026, 1, 1), "Responsable", null, null, "Descripción", null,
-            DigitalComponent.NO, "subject"));
+        return records.save(fixtures().initiative(code, unit, name));
+    }
+    private PortfolioRecordTestBuilder fixtures() {
+        if (fixtures == null) fixtures = PortfolioRecordTestBuilder.persistedReferences(catalogs, catalogItems, "dashboard");
+        return fixtures;
     }
 }

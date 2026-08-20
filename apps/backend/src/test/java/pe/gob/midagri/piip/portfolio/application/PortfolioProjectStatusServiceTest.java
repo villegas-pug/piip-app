@@ -20,6 +20,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import pe.gob.midagri.piip.audit.application.AuditService;
 import pe.gob.midagri.piip.documents.persistence.DocumentRepository;
+import pe.gob.midagri.piip.documents.persistence.DocumentTypeRepository;
+import pe.gob.midagri.piip.catalogs.application.CatalogReferenceService;
+import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 import pe.gob.midagri.piip.identity.application.LocalAccessContext;
 import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
 import pe.gob.midagri.piip.identity.application.RoleScopeGrant;
@@ -32,7 +35,6 @@ import pe.gob.midagri.piip.organization.persistence.OrganizationalUnitRepository
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ProjectStatusTransitionRequest;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
-import pe.gob.midagri.piip.portfolio.domain.SourceOrigin;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
@@ -53,13 +55,15 @@ class PortfolioProjectStatusServiceTest {
     @Mock CodeGeneratorService codes;
     @Mock LocalAuthorizationService authorization;
     @Mock AuditService audit;
+    @Mock CatalogReferenceService catalogReferences;
+    @Mock DocumentTypeRepository documentTypes;
     private PortfolioService service;
 
     @BeforeEach
     void setUp() {
         service = new PortfolioService(records, responsibleUnits, executingUnits, organizationalUnits, users, tasks,
             notifications, documents, codes, authorization, audit,
-            Clock.fixed(Instant.parse("2026-08-18T23:30:00Z"), ZoneId.of("America/Lima")));
+            Clock.fixed(Instant.parse("2026-08-18T23:30:00Z"), ZoneId.of("America/Lima")), catalogReferences, documentTypes);
         lenient().when(responsibleUnits.findByRecordIdOrderByDisplayOrder(any())).thenReturn(List.of());
     }
 
@@ -97,8 +101,7 @@ class PortfolioProjectStatusServiceTest {
         ReflectionTestUtils.setField(institution, "id", 100L);
         ExecutingUnitEntity unit = new ExecutingUnitEntity(institution, "UE-001", "Unidad Ejecutora");
         ReflectionTestUtils.setField(unit, "id", unitId);
-        PortfolioRecordEntity project = PortfolioRecordEntity.preexistingProject("P-001-2026", unit, "Proyecto", SourceOrigin.OTHER,
-            LocalDate.of(2026, 8, 1), "Responsable", null, null, "Descripción", null, null, DigitalComponent.NO, "subject");
+        PortfolioRecordEntity project = PortfolioRecordTestBuilder.transientReferences().preexistingProject("P-001-2026", unit, "Proyecto");
         ReflectionTestUtils.setField(project, "id", id);
         return project;
     }

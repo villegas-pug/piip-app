@@ -4,8 +4,8 @@ import { presentAuditEvent } from './audit-event.presenter';
 describe('presentAuditEvent', () => {
   const baseEvent: AuditEvent = {
     recordCode: 'I-001-2026', timestamp: '31/07/2026\n12:44', event: 'DOCUMENTO_CARGADO', user: 'Ana Analista',
-    email: 'ana@midagri.gob.pe', observation: '{"tipo":"INITIATIVE_TECHNICAL_OPINION","version":1}', actorSubject: 'subject-ana',
-    rawDetail: '{"tipo":"INITIATIVE_TECHNICAL_OPINION","version":1}', icon: 'history',
+    email: 'ana@midagri.gob.pe', observation: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Informe de opinión técnica de evaluación de iniciativa","version":1}', actorSubject: 'subject-ana',
+    rawDetail: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Informe de opinión técnica de evaluación de iniciativa","version":1}', icon: 'history',
   };
 
   it('creates a functional summary while preserving the original technical JSON', () => {
@@ -13,7 +13,10 @@ describe('presentAuditEvent', () => {
 
     expect(event.eventLabel).toBe('Documento cargado');
     expect(event.observation).toBe('Se cargó Informe de opinión técnica de evaluación de iniciativa, versión 1.');
-    expect(event.detailFields).toEqual(expect.arrayContaining([{ label: 'Tipo documental', value: 'Informe de opinión técnica de evaluación de iniciativa' }]));
+    expect(event.detailFields).toEqual(expect.arrayContaining([
+      { label: 'Código de tipo documental', value: 'INITIATIVE_TECHNICAL_OPINION' },
+      { label: 'Tipo documental', value: 'Informe de opinión técnica de evaluación de iniciativa' },
+    ]));
     expect(event.technicalDetail).toContain('"INITIATIVE_TECHNICAL_OPINION"');
   });
 
@@ -52,5 +55,17 @@ describe('presentAuditEvent', () => {
       { label: 'Estado anterior', value: 'Proyecto en ejecución' },
       { label: 'Estado nuevo', value: 'Finalizado' },
     ]));
+  });
+
+  it('presenta el snapshot documental recibido sin sustituirlo por un mapa local', () => {
+    const event = presentAuditEvent({
+      ...baseEvent,
+      observation: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Nombre histórico recibido del backend","version":4}',
+      rawDetail: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Nombre histórico recibido del backend","version":4}',
+    });
+
+    expect(event.observation).toBe('Se cargó Nombre histórico recibido del backend, versión 4.');
+    expect(event.detailFields).toContainEqual({ label: 'Tipo documental', value: 'Nombre histórico recibido del backend' });
+    expect(event.technicalDetail).toContain('Nombre histórico recibido del backend');
   });
 });

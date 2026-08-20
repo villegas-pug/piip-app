@@ -39,7 +39,7 @@
         <div class="form-grid four">
           <label class="field disabled"><span>Tipo de registro</span><input formControlName="recordType" /><small>Valor del catálogo Excel.</small></label>
           <label class="field disabled"><span>Código de origen</span><input formControlName="originCode" /><small>Sin iniciativa predecesora.</small></label>
-          <label class="field disabled"><span>Tipo de solución</span><input formControlName="solutionType" /><small>Valor del catálogo Excel.</small></label>
+          <label class="field disabled"><span>Tipo de solución</span><input formControlName="solutionType" /><small>El backend resuelve la referencia técnica aplicable al proyecto preexistente.</small></label>
           <label class="field disabled"><span>Estado inicial</span><input formControlName="status" /><small>Estado oficial del Excel.</small></label>
         </div>
       </article>
@@ -49,9 +49,9 @@
         <div class="form-grid three">
           <label class="field"><span>Nombre de iniciativa o proyecto *</span><input formControlName="name" placeholder="Ingresar nombre oficial del proyecto" />@if (form.controls.name.touched && form.controls.name.invalid) {<small class="error">Ingresa el nombre del proyecto.</small>}</label>
           <label class="field"><span>Fecha de inicio *</span><input type="date" formControlName="startDate" />@if (form.controls.startDate.touched && form.controls.startDate.invalid) {<small class="error">Ingresa la fecha real de inicio.</small>}</label>
-          <label class="field"><span>Fuente u origen *</span><select formControlName="source"><option value="">Seleccionar fuente u origen</option>@for (option of catalogs.sources; track option) {<option [value]="option">{{ option }}</option>}</select></label>
+          <label class="field"><span>Fuente u origen *</span><select formControlName="source"><option value="">Seleccionar fuente u origen</option>@for (option of catalogState().value.sources; track option.id) {<option [value]="option.id">{{ option.name }}</option>}</select></label>
           <label class="field"><span>Responsable *</span><input formControlName="responsible" placeholder="Nombre del responsable actual" /></label>
-          <label class="field"><span>Unidades responsables *</span><select formControlName="responsibleUnits"><option value="">Seleccionar unidad</option>@for (unit of units(); track unit) {<option [value]="unit">{{ unit }}</option>}</select><small>Unidad orgánica del ámbito activo; no constituye un catálogo del Excel.</small></label>
+          <label class="field"><span>Unidades responsables *</span><select formControlName="responsibleUnits"><option value="">Seleccionar unidad</option>@for (unit of units(); track unit.id) {<option [value]="unit.id">{{ unit.acronym || unit.name }}</option>}</select>@if (unitsState().phase === 'error') {<small class="error" role="alert">{{ unitsState().error }} <button type="button" (click)="repository.reloadOrganizationalUnits()">Reintentar</button></small>} @else if (unitsState().phase === 'ready' && !units().length) {<small>No hay Unidades Orgánicas disponibles.</small>}</label>
           <label class="field"><span>Componente Digital *</span><select formControlName="digitalComponent"><option value="">Seleccionar</option>@for (option of catalogs.digitalComponents; track option) {<option [value]="option">{{ option }}</option>}</select></label>
           <label class="field span-3"><span>Descripción *</span><textarea formControlName="description" placeholder="Describe el problema, alcance y situación actual del proyecto."></textarea><small>{{ form.controls.description.value.length }}/1000 caracteres</small></label>
           <label class="field span-2"><span>Resultados clave</span><textarea formControlName="keyResults" placeholder="Resume resultados, beneficios o productos alcanzados hasta la fecha."></textarea><small>{{ form.controls.keyResults.value.length }}/1000 caracteres</small></label>
@@ -62,8 +62,8 @@
       <article class="panel form-section" id="alignment">
         <header><h3>03 / Alineamiento institucional</h3><p>Relación declarada con los instrumentos institucionales vigentes.</p></header>
         <div class="form-grid two">
-          <label class="field"><span>Objetivo PEI</span><input formControlName="peiObjective" placeholder="Ingresar objetivo PEI relacionado" /><small>Campo libre según la estructura del Excel.</small></label>
-          <label class="field"><span>Actividad POI</span><input formControlName="poiActivity" placeholder="Ingresar actividad POI relacionada" /><small>Campo libre según la estructura del Excel.</small></label>
+          <label class="field"><span>Objetivo PEI</span><select formControlName="peiObjective"><option value="">Sin selección</option>@for (option of catalogState().value.peiObjectives; track option.id) {<option [value]="option.id">{{ option.name }}</option>}</select></label>
+          <label class="field"><span>Actividad POI</span><select formControlName="poiActivity"><option value="">Sin selección</option>@for (option of catalogState().value.poiActivities; track option.id) {<option [value]="option.id">{{ option.name }}</option>}</select></label>
         </div>
       </article>
 
@@ -100,6 +100,7 @@
       </article>
 
       <footer class="form-footer">
+        @if (form.controls.source.errors?.['unavailable'] || form.controls.peiObjective.errors?.['unavailable'] || form.controls.poiActivity.errors?.['unavailable'] || form.controls.responsibleUnits.errors?.['unavailable']) {<p class="error" role="alert">La opción seleccionada ya no está disponible. Elige una opción vigente.</p>}
         <p><mat-icon>info_outline</mat-icon>Los campos con * corresponden a las validaciones actuales de incorporación.</p>
         <div><a class="secondary-button" routerLink="/proyectos">Cancelar</a><button class="secondary-button" type="button" (click)="saveDraft()">Guardar borrador</button><button class="primary-button" type="submit">Revisar registro</button></div>
       </footer>
@@ -110,6 +111,7 @@
         <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="review-title" [attr.aria-busy]="submitting()" (click)="$event.stopPropagation()">
           <header><span><mat-icon>fact_check</mat-icon></span><div><p>REVISIÓN FINAL</p><h2 id="review-title">Registrar proyecto preexistente</h2></div><button class="icon-action" type="button" aria-label="Cerrar revisión" [disabled]="submitting()" (click)="reviewOpen.set(false)"><mat-icon>close</mat-icon></button></header>
           <div class="review-warning"><mat-icon>account_tree</mat-icon><div><strong>Sin iniciativa predecesora</strong><span>El proyecto se incorporará directamente al portafolio con código de origen `NA`.</span></div></div>
+          @if (form.controls.source.errors?.['unavailable'] || form.controls.peiObjective.errors?.['unavailable'] || form.controls.poiActivity.errors?.['unavailable'] || form.controls.responsibleUnits.errors?.['unavailable']) {<p class="error" role="alert">La opción seleccionada ya no está disponible. Elige una opción vigente.</p>}
           <div class="review-summary"><p><span>Código</span><strong>{{ provisionalCode }}</strong></p><p><span>Nombre</span><strong>{{ form.controls.name.value }}</strong></p><p><span>Responsable</span><strong>{{ form.controls.responsible.value }}</strong></p><p><span>Unidad</span><strong>{{ form.controls.responsibleUnits.value }}</strong></p><p><span>Estado oficial</span><strong>Proyecto en ejecución</strong></p></div>
           <div class="review-info"><mat-icon>info</mat-icon>La etiqueta `Preexistente` es informativa y no agrega un estado al catálogo oficial.</div>
           <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="reviewOpen.set(false)">Volver a editar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="registerProject()">@if (submitting()) {<mat-icon class="button-spinner">progress_activity</mat-icon>Registrando...} @else {Registrar proyecto}</button></footer>

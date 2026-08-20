@@ -24,7 +24,10 @@
             <div><dt>Origen</dt><dd>{{ detail.project.originMode === 'DERIVED_FROM_INITIATIVE' ? 'Proyecto derivado' : 'Proyecto preexistente' }}</dd></div>
             <div><dt>Iniciativa de origen</dt><dd>@if (detail.originInitiative) {<a [routerLink]="['/iniciativas', detail.originInitiative.code]">{{ detail.originInitiative.code }}</a>} @else {NA}</dd></div>
             <div><dt>Fecha de inicio</dt><dd>{{ detail.portfolioRecord.startDate }}</dd></div>
-            <div><dt>Tipo de solución</dt><dd>{{ detail.portfolioRecord.solutionType }}</dd></div>
+            <div><dt>Tipo de solución</dt><dd>@if (detail.portfolioRecord.solutionTypeReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else { {{ detail.portfolioRecord.solutionType }} }</dd></div>
+            <div><dt>Fuente u origen</dt><dd>@if (detail.portfolioRecord.sourceReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else { {{ detail.portfolioRecord.source }} }</dd></div>
+            <div class="wide"><dt>Objetivo PEI</dt><dd>@if (detail.portfolioRecord.peiObjectiveReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else {Sin información registrada}</dd></div>
+            <div class="wide"><dt>Actividad POI</dt><dd>@if (detail.portfolioRecord.poiActivityReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else {Sin información registrada}</dd></div>
             <div><dt>Componente digital</dt><dd>{{ detail.portfolioRecord.digitalComponent }}</dd></div>
             <div class="wide"><dt>Descripción</dt><dd>{{ detail.portfolioRecord.description }}</dd></div>
             <div class="wide"><dt>Nota</dt><dd>{{ detail.portfolioRecord.note || 'Sin nota registrada' }}</dd></div>

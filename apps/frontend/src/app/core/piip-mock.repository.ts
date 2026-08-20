@@ -23,6 +23,7 @@ import {
   UserRole,
   WorkItem,
   HomePortfolioQuery, HomePortfolioResult, HomePortfolioItem, HomePortfolioStatusCount, NotificationItem, PiipStatus,
+  CatalogBundle, OrganizationalUnit, ResourceState,
 } from './piip.models';
 import { PiipRepository } from './piip.repository';
 
@@ -42,7 +43,11 @@ export class PiipMockRepository extends PiipRepository {
     institutionWideAllowed: true,
     executingUnits: [{ id: 1, code: 'UE-DEMO', name: 'Unidad Ejecutora de demostración' }],
   }]);
-  readonly organizationalUnits = signal([]);
+  readonly catalogs = signal<ResourceState<CatalogBundle>>({ phase: 'ready', value: mockCatalogBundle(), error: null, requestId: 1 });
+  readonly organizationalUnits = signal<OrganizationalUnit[]>([
+    { id: 101, code: 'UO-DEMO', name: 'Unidad Orgánica de demostración', acronym: 'UO', parentId: null, executingUnitId: 1, active: true },
+  ]);
+  readonly organizationalUnitsState = signal<ResourceState<OrganizationalUnit[]>>({ phase: 'ready', value: this.organizationalUnits(), error: null, requestId: 1 });
   readonly selectedExecutingUnitId = signal<number | null>(1);
   readonly role = computed(() => this.effectiveRoleForExecutingUnit(this.selectedExecutingUnitId()));
   readonly loading = signal(false);
@@ -62,7 +67,7 @@ export class PiipMockRepository extends PiipRepository {
   readonly notificationsLoading = signal(false);
   readonly notificationsError = signal<string | null>(null);
 
-  readonly portfolioRecords = signal<PiipPortfolioRecord[]>([
+  readonly portfolioRecords = signal<PiipPortfolioRecord[]>(([
     {
       recordType: 'Iniciativa', code: 'I-024-2026', originCode: 'NA',
       name: 'Mejoramiento del servicio de riego tecnificado en el valle de Ica',
@@ -112,14 +117,14 @@ export class PiipMockRepository extends PiipRepository {
       finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '',
       executingUnitId: 1,
     },
-  ]);
+  ] satisfies PiipPortfolioRecord[]).map(enrichMockRecord));
 
   readonly workItems = signal<WorkItem[]>([
     { id: 1, code: 'I-024-2026', action: 'Registrar decision', priority: 'Alta', assignedTo: 'DGIA', dueDate: '27/05/2026', alert: 'PROXIMA', version: 0 },
     { id: 2, code: 'I-019-2026', action: 'Revisar informe tecnico', priority: 'Media', assignedTo: 'DIPNA', dueDate: '30/05/2026', alert: 'EN_PLAZO', version: 0 },
   ]);
 
-  readonly initiatives = signal<InitiativeRecord[]>([
+  readonly initiatives = signal<InitiativeRecord[]>(([
     {
       code: 'I-024-2026',
       name: 'Mejoramiento del servicio de riego tecnificado en el valle de Ica',
@@ -153,9 +158,9 @@ export class PiipMockRepository extends PiipRepository {
       updatedAt: '15/05/2026 09:30',
       executingUnitId: 1,
     },
-  ]);
+  ] satisfies InitiativeRecord[]).map(enrichMockInitiative));
 
-  readonly projects = signal<ProjectRecord[]>([
+  readonly projects = signal<ProjectRecord[]>(([
     { code: 'P-003-2026', name: 'Plataforma de Innovación Agraria Sostenible', originCode: 'I-012-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'DIPNA', responsible: 'María Quintana', status: 'Proyecto en ejecución', digitalComponent: 'Si' },
     { code: 'P-004-2026', name: 'Sistema de Información de Riego', originCode: 'I-010-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'DGA', responsible: 'Luis Calderón', status: 'Producto aprobado', digitalComponent: 'Si' },
     { code: 'P-005-2026', name: 'Red de Estaciones Agrometeorológicas', originCode: 'NA', originMode: 'PREEXISTING', unit: 'DCLIMA', responsible: 'Carmen Rojas', status: 'Proyecto en ejecución', digitalComponent: 'Si' },
@@ -164,7 +169,7 @@ export class PiipMockRepository extends PiipRepository {
     { code: 'P-008-2026', name: 'Gestión de Suelos Degradados', originCode: 'NA', originMode: 'PREEXISTING', unit: 'DGIA', responsible: 'Miguel Torres', status: 'Proyecto en ejecución', digitalComponent: 'No' },
     { code: 'P-009-2026', name: 'Sanidad Vegetal con Monitoreo Digital', originCode: 'I-011-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'SENASA', responsible: 'Elena Paredes', status: 'Producto aprobado', digitalComponent: 'Si' },
     { code: 'P-010-2026', name: 'Módulo de Seguros Agrarios', originCode: 'NA', originMode: 'PREEXISTING', unit: 'DGA', responsible: 'Ricardo Salazar', status: 'Suspendido', digitalComponent: 'No' },
-  ]);
+  ] satisfies ProjectRecord[]).map(enrichMockProject));
 
   readonly documentDossiers = signal<DocumentDossier[]>([
     {
@@ -268,6 +273,8 @@ export class PiipMockRepository extends PiipRepository {
   initialize(): void {}
   refreshAll(): void {}
   refreshAuthorizationContext(): void {}
+  reloadCatalogs(): void {}
+  reloadOrganizationalUnits(): void {}
   loadAdministrableScopes(): void {}
   clearError(): void { this.lastError.set(null); }
   canReadExecutingUnit(executingUnitId: number | null | undefined): boolean { return this.hasGrantForExecutingUnit(executingUnitId); }
@@ -439,20 +446,24 @@ export class PiipMockRepository extends PiipRepository {
 
   registerInitiative(input: InitiativeInput): PiipPortfolioRecord {
     this.assertAdministrator('El perfil Consulta externa no puede registrar iniciativas.');
+    const solutionType = this.catalogName('solutionTypes', input.solutionTypeId);
+    const source = this.catalogName('sources', input.sourceId);
+    const unit = this.unitName(input.organizationalUnitId);
     const record: PiipPortfolioRecord = {
       recordType: 'Iniciativa', code: input.code, originCode: 'NA', name: input.name,
-      solutionType: input.solutionType, source: input.source, startDate: input.startDate,
-      responsible: input.responsible, peiObjective: input.peiObjective, poiActivity: input.poiActivity,
-      responsibleUnits: input.responsibleUnits, description: input.description, keyResults: '', note: input.note,
+      solutionType: solutionType as PiipPortfolioRecord['solutionType'], source, startDate: input.startDate,
+      responsible: input.responsible, peiObjective: this.optionalCatalogName('peiObjectives', input.peiObjectiveId), poiActivity: this.optionalCatalogName('poiActivities', input.poiActivityId),
+      responsibleUnits: unit, description: input.description, keyResults: '', note: input.note,
       status: 'Presentado', finalProductType: 'NA', digitalComponent: input.digitalComponent, closingDate: '',
       technicalOpinionReport: '', formalApprovalDecision: '', finalProductApprovalDocument: '',
       projectManagementDocumentation: '', finalClosureReport: '',
     };
-    this.portfolioRecords.update((records) => [record, ...records]);
-    this.initiatives.update((items) => [{ code: input.code, name: input.name, source: input.source,
-      responsible: input.responsible, role: '', unit: input.responsibleUnits, status: 'Presentado',
-      updatedAt: formatDateTime(new Date()) }, ...items]);
-    return record;
+    const structuredRecord = enrichMockRecord(record);
+    this.portfolioRecords.update((records) => [structuredRecord, ...records]);
+    this.initiatives.update((items) => [enrichMockInitiative({ code: input.code, name: input.name, source,
+      responsible: input.responsible, role: '', unit, status: 'Presentado',
+      updatedAt: formatDateTime(new Date()) }), ...items]);
+    return structuredRecord;
   }
 
   transitionInitiativeStatus(input: InitiativeStatusTransitionInput): PiipPortfolioRecord {
@@ -500,11 +511,12 @@ export class PiipMockRepository extends PiipRepository {
     }
 
     const originCode = resolveProjectOriginCode({ mode: 'DERIVED_FROM_INITIATIVE', initiativeCode: input.initiativeCode });
+    const unit = this.unitName(input.organizationalUnitId);
     const portfolioRecord: PiipPortfolioRecord = {
       recordType: 'Proyecto', code: input.code, originCode, name: input.name,
-      solutionType: input.solutionType, source: input.source, startDate: input.startDate,
-      responsible: input.responsible, peiObjective: input.peiObjective, poiActivity: input.poiActivity,
-      responsibleUnits: input.responsibleUnits, description: input.description, keyResults: input.keyResults,
+      solutionType: this.catalogName('solutionTypes', input.solutionTypeId) as PiipPortfolioRecord['solutionType'], source: this.catalogName('sources', input.sourceId), startDate: input.startDate,
+      responsible: input.responsible, peiObjective: this.optionalCatalogName('peiObjectives', input.peiObjectiveId), poiActivity: this.optionalCatalogName('poiActivities', input.poiActivityId),
+      responsibleUnits: unit, description: input.description, keyResults: input.keyResults,
       note: input.note, status: 'Proyecto en ejecución', finalProductType: 'NA',
       digitalComponent: input.digitalComponent, closingDate: '', technicalOpinionReport: '',
       formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '',
@@ -512,13 +524,14 @@ export class PiipMockRepository extends PiipRepository {
     };
     const project: ProjectRecord = {
       code: input.code, name: input.name, originCode, originMode: 'DERIVED_FROM_INITIATIVE',
-      unit: input.responsibleUnits, responsible: input.responsible, status: 'Proyecto en ejecución',
+      unit, responsible: input.responsible, status: 'Proyecto en ejecución',
       digitalComponent: input.digitalComponent,
     };
 
-    this.portfolioRecords.update((records) => [portfolioRecord, ...records]);
-    this.projects.update((projects) => [project, ...projects]);
-    this.documentDossiers.update((dossiers) => [createDerivedProjectDocumentDossier(input), ...dossiers]);
+    const structuredRecord = enrichMockRecord(portfolioRecord);
+    this.portfolioRecords.update((records) => [structuredRecord, ...records]);
+    this.projects.update((projects) => [enrichMockProject(project), ...projects]);
+    this.documentDossiers.update((dossiers) => [createDerivedProjectDocumentDossier(input, unit), ...dossiers]);
     this.auditEvents.update((events) => [
       {
         recordCode: input.code,
@@ -531,25 +544,26 @@ export class PiipMockRepository extends PiipRepository {
       },
       ...events,
     ]);
-    return portfolioRecord;
+    return structuredRecord;
   }
 
   registerPreexistingProject(input: PreexistingProjectInput): PiipPortfolioRecord {
     this.assertAdministrator('El perfil Consulta externa no puede registrar proyectos.');
 
     const originCode = resolveProjectOriginCode({ mode: 'PREEXISTING', initiativeCode: 'NA' });
+    const unit = this.unitName(input.organizationalUnitId);
     const portfolioRecord: PiipPortfolioRecord = {
       recordType: 'Proyecto',
       code: input.code,
       originCode,
       name: input.name,
       solutionType: 'No aplica',
-      source: input.source,
+      source: this.catalogName('sources', input.sourceId),
       startDate: input.startDate,
       responsible: input.responsible,
-      peiObjective: input.peiObjective,
-      poiActivity: input.poiActivity,
-      responsibleUnits: input.responsibleUnits,
+      peiObjective: this.optionalCatalogName('peiObjectives', input.peiObjectiveId),
+      poiActivity: this.optionalCatalogName('poiActivities', input.poiActivityId),
+      responsibleUnits: unit,
       description: input.description,
       keyResults: input.keyResults,
       note: input.note,
@@ -564,21 +578,22 @@ export class PiipMockRepository extends PiipRepository {
       finalClosureReport: input.finalClosureReport,
     };
 
-    this.portfolioRecords.update((records) => [portfolioRecord, ...records]);
+    const structuredRecord = enrichMockRecord(portfolioRecord);
+    this.portfolioRecords.update((records) => [structuredRecord, ...records]);
     this.projects.update((projects) => [
-      {
+      enrichMockProject({
         code: input.code,
         name: input.name,
         originCode,
         originMode: 'PREEXISTING',
-        unit: input.responsibleUnits,
+        unit,
         responsible: input.responsible,
         status: 'Proyecto en ejecución',
         digitalComponent: input.digitalComponent,
-      },
+      }),
       ...projects,
     ]);
-    this.documentDossiers.update((dossiers) => [createPreexistingDocumentDossier(input), ...dossiers]);
+    this.documentDossiers.update((dossiers) => [createPreexistingDocumentDossier(input, unit), ...dossiers]);
     this.auditEvents.update((events) => [
       {
         recordCode: input.code,
@@ -591,7 +606,7 @@ export class PiipMockRepository extends PiipRepository {
       },
       ...events,
     ]);
-    return portfolioRecord;
+    return structuredRecord;
   }
 
   uploadDocument(): void {}
@@ -604,6 +619,18 @@ export class PiipMockRepository extends PiipRepository {
 
   private assertAdministrator(message: string): void {
     if (this.role() !== 'Administrador PIIP') throw new Error(message);
+  }
+
+  private catalogName(key: 'solutionTypes' | 'sources', id: number): string {
+    return this.catalogs().value[key].find((item) => item.id === id)?.name ?? '';
+  }
+
+  private optionalCatalogName(key: 'peiObjectives' | 'poiActivities', id?: number): string {
+    return id === undefined ? '' : this.catalogs().value[key].find((item) => item.id === id)?.name ?? '';
+  }
+
+  private unitName(id: number): string {
+    return this.organizationalUnits().find((item) => item.id === id)?.name ?? '';
   }
 
   private hasGrantForExecutingUnit(executingUnitId: number | null | undefined, role?: 'ADMINISTRADOR_PIIP' | 'CONSULTA_EXTERNA'): boolean {
@@ -649,12 +676,12 @@ function createPreexistingProjectDocument(name: string, value: string): Document
   };
 }
 
-function createPreexistingDocumentDossier(input: PreexistingProjectInput): DocumentDossier {
+function createPreexistingDocumentDossier(input: PreexistingProjectInput, unit: string): DocumentDossier {
   return {
     recordType: 'Proyecto',
     code: input.code,
     name: input.name,
-    unit: input.responsibleUnits,
+    unit,
     status: 'Proyecto en ejecución',
     lastActivity: new Intl.DateTimeFormat('es-PE', { dateStyle: 'short', timeStyle: 'short' }).format(new Date()),
     stages: [
@@ -670,9 +697,9 @@ function createPreexistingDocumentDossier(input: PreexistingProjectInput): Docum
   };
 }
 
-function createDerivedProjectDocumentDossier(input: DerivedProjectInput): DocumentDossier {
+function createDerivedProjectDocumentDossier(input: DerivedProjectInput, unit: string): DocumentDossier {
   return {
-    recordType: 'Proyecto', code: input.code, name: input.name, unit: input.responsibleUnits,
+    recordType: 'Proyecto', code: input.code, name: input.name, unit,
     status: 'Proyecto en ejecución', lastActivity: formatDateTime(new Date()),
     stages: [
       { title: 'Documentos del proyecto', records: [
@@ -690,6 +717,57 @@ function formatDateTime(date: Date): string {
 
 function formatAuditTimestamp(date: Date): string {
   return new Intl.DateTimeFormat('es-PE', { dateStyle: 'short', timeStyle: 'medium' }).format(date).replace(', ', '\n');
+}
+
+function mockCatalogBundle(): CatalogBundle {
+  const option = (id: number, code: string, name: string, displayOrder: number) => ({ id, code, name, displayOrder, active: true });
+  return {
+    recordTypes: [
+      { code: 'INITIATIVE', name: 'Iniciativa', displayOrder: 1, active: true },
+      { code: 'PROJECT', name: 'Proyecto', displayOrder: 2, active: true },
+    ],
+    solutionTypes: [option(1, 'POTENTIAL_OR_ADAPTABLE', 'Solución potencial o adaptable', 1), option(2, 'TO_BE_DEFINED', 'Solución por definir', 2), option(3, 'NOT_APPLICABLE', 'No aplica', 3)],
+    sources: [option(10, 'INITIATIVE_SHEET', 'Ficha de iniciativa de innovación pública', 1), option(11, 'INTERNAL_CONTEST', 'Concurso interno', 2), option(12, 'OPEN_INNOVATION', 'Innovación abierta', 3), option(13, 'MANAGEMENT_PROPOSAL', 'Propuesta de jefatura o directivos', 4), option(14, 'OTHER', 'Otros', 5), option(15, 'CALL', 'Convocatoria', 6)],
+    peiObjectives: [option(20, 'PEI-001', 'Fortalecer la gestión institucional orientada a resultados.', 1)],
+    poiActivities: [option(30, 'POI-001', 'Ejecutar acciones de mejora de procesos institucionales.', 1)],
+    documentTypes: [
+      option(40, 'PUBLIC_INNOVATION_INITIATIVE_SHEET', 'Ficha de Iniciativa de Innovación Pública', 1),
+      option(41, 'INITIATIVE_TECHNICAL_OPINION', 'Informe de opinión técnica de evaluación de iniciativa', 2),
+      option(42, 'FORMAL_APPROVAL_DECISION', 'Documento formal de decisión de aprobación', 3),
+      option(43, 'FINAL_PRODUCT_APPROVAL', 'Documento formal de aprobación de producto final', 4),
+      option(44, 'PROJECT_MANAGEMENT_DOCUMENTATION', 'Documentación de la gestión del proyecto', 5),
+      option(45, 'FINAL_CLOSURE_REPORT', 'Informe final de cierre', 6),
+    ],
+  };
+}
+
+function enrichMockRecord(record: PiipPortfolioRecord): PiipPortfolioRecord {
+  const catalogs = mockCatalogBundle();
+  const solutionTypeReference = catalogs.solutionTypes.find((item) => item.name === record.solutionType);
+  const sourceReference = catalogs.sources.find((item) => item.name === record.source);
+  const organizationalUnit: OrganizationalUnit = { id: 101, code: 'UO-DEMO', name: record.responsibleUnits, acronym: record.responsibleUnits, parentId: null, executingUnitId: 1, active: true };
+  return {
+    ...record,
+    recordTypeReference: catalogs.recordTypes.find((item) => item.name === record.recordType),
+    solutionTypeReference,
+    sourceReference,
+    peiObjectiveReference: record.peiObjective ? catalogs.peiObjectives[0] : null,
+    poiActivityReference: record.poiActivity ? catalogs.poiActivities[0] : null,
+    responsibleUnitReferences: [organizationalUnit],
+  };
+}
+
+function enrichMockInitiative(initiative: InitiativeRecord): InitiativeRecord {
+  const sourceReference = mockCatalogBundle().sources.find((item) => item.name === initiative.source);
+  return { ...initiative, sourceReference, organizationalUnits: [mockUnit(initiative.unit)] };
+}
+
+function enrichMockProject(project: ProjectRecord): ProjectRecord {
+  return { ...project, organizationalUnits: [mockUnit(project.unit)] };
+}
+
+function mockUnit(name: string): OrganizationalUnit {
+  return { id: 101, code: 'UO-DEMO', name, acronym: name, parentId: null, executingUnitId: 1, active: true };
 }
 
 function mockUpdatedAt(record: PiipPortfolioRecord, initiatives: InitiativeRecord[], dossiers: DocumentDossier[]): string {

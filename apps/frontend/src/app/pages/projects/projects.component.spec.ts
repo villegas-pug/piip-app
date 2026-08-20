@@ -105,4 +105,31 @@ describe('ProjectsComponent', () => {
     const openLink = fixture.nativeElement.querySelector('tbody tr a.secondary-button') as HTMLAnchorElement;
     expect(openLink.getAttribute('href')).toBe('/proyectos/P-003-2026');
   });
+
+  it('filtra por la identidad resuelta de Unidad Orgánica y conserva los filtros existentes', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const target = repository.projects()[0];
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.componentInstance.filters.patchValue({ unit: String(target.organizationalUnits?.[0]?.id) });
+
+    expect(fixture.componentInstance.filteredProjects().map((item) => item.code)).toContain(target.code);
+    expect(Object.keys(fixture.componentInstance.filters.getRawValue()).sort()).toEqual(['digital', 'search', 'status', 'unit']);
+  });
+
+  it('presenta carga, vacío y error de Unidades Orgánicas', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    repository.organizationalUnitsState.set({ phase: 'loading', value: [], error: null, requestId: 2 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Cargando Unidades Orgánicas');
+
+    repository.organizationalUnits.set([]);
+    repository.organizationalUnitsState.set({ phase: 'ready', value: [], error: null, requestId: 3 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No hay Unidades Orgánicas activas');
+
+    repository.organizationalUnitsState.set({ phase: 'error', value: [], error: 'Unidades no disponibles', requestId: 4 });
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Unidades no disponibles');
+  });
 });

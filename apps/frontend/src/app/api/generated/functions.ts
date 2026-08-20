@@ -71,8 +71,8 @@ export type { Summary$Params as Summary$Params } from './fn/dashboard-controller
 export { summary as summary } from './fn/dashboard-controller/summary';
 export type { Portfolio$Params as Portfolio$Params } from './fn/dashboard-controller/portfolio';
 export { portfolio as portfolio } from './fn/dashboard-controller/portfolio';
-export type { Catalogs$Params as Catalogs$Params } from './fn/catalog-controller/catalogs';
-export { catalogs as catalogs } from './fn/catalog-controller/catalogs';
+export type { Get$Params as Get$Params } from './fn/catalog-controller/get';
+export { get as get } from './fn/catalog-controller/get';
 export type { Events$Params as Events$Params } from './fn/audit-controller/events';
 export { events as events } from './fn/audit-controller/events';
 export type { Accesses$Params as Accesses$Params } from './fn/audit-controller/accesses';

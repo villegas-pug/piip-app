@@ -1,4 +1,4 @@
-import { AuditEvent, DocumentType } from '../../core/piip.models';
+import { AuditEvent } from '../../core/piip.models';
 
 export interface AuditDetailField {
   label: string;
@@ -32,18 +32,9 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 const DETAIL_LABELS: Record<string, string> = {
-  tipo: 'Tipo documental', version: 'Versión', versionId: 'Versión', estado: 'Estado', estadoAnterior: 'Estado anterior', estadoNuevo: 'Estado nuevo', observacion: 'Observación',
+  tipo: 'Tipo documental', tipoCodigo: 'Código de tipo documental', tipoNombre: 'Tipo documental', version: 'Versión', versionId: 'Versión', estado: 'Estado', estadoAnterior: 'Estado anterior', estadoNuevo: 'Estado nuevo', observacion: 'Observación',
   registro: 'Expediente', motivo: 'Motivo', iniciativaOrigen: 'Iniciativa de origen', origen: 'Origen',
   asignadoA: 'Asignado a', rol: 'Rol', institucion: 'Institución', unidadEjecutora: 'Unidad Ejecutora', unidadEjecutoraId: 'Unidad Ejecutora', resultado: 'Resultado',
-};
-
-const DOCUMENT_LABELS: Record<DocumentType, string> = {
-  PUBLIC_INNOVATION_INITIATIVE_SHEET: 'Ficha de Iniciativa de Innovación Pública',
-  INITIATIVE_TECHNICAL_OPINION: 'Informe de opinión técnica de evaluación de iniciativa',
-  FORMAL_APPROVAL_DECISION: 'Documento formal de decisión de aprobación',
-  FINAL_PRODUCT_APPROVAL: 'Documento formal de aprobación de producto final',
-  PROJECT_MANAGEMENT_DOCUMENTATION: 'Documentación de la gestión del proyecto',
-  FINAL_CLOSURE_REPORT: 'Informe final de cierre',
 };
 
 type AuditDetail = Record<string, unknown>;
@@ -61,7 +52,7 @@ export function presentAuditEvent(event: AuditEvent): PresentedAuditEvent {
 }
 
 function summarize(event: string, detail: AuditDetail): string {
-  const documentType = presentValue('tipo', detail['tipo']);
+  const documentType = presentValue('tipoNombre', detail['tipoNombre'] ?? detail['tipo']);
   const version = detail['version'] ?? detail['versionId'];
   const record = presentValue('registro', detail['registro']);
   switch (event) {
@@ -107,7 +98,6 @@ function formatTechnicalDetail(value: string): string {
 
 function presentValue(key: string, value: unknown): string {
   if (value == null || value === '') return 'No registrado';
-  if (key === 'tipo' && typeof value === 'string' && value in DOCUMENT_LABELS) return DOCUMENT_LABELS[value as DocumentType];
   return String(value);
 }
 

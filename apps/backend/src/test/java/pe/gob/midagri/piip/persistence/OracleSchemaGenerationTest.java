@@ -33,8 +33,16 @@ class OracleSchemaGenerationTest {
         assertThat(DDL).exists();
         assertThat(read(DDL)).containsIgnoringCase("create table REGISTRO_PORTAFOLIO")
             .containsIgnoringCase("create table USUARIO_ROL_AMBITO")
+            .containsIgnoringCase("create table CATALOGO")
+            .containsIgnoringCase("create table CATALOGO_ITEM")
+            .containsIgnoringCase("create table TIPO_DOCUMENTO")
+            .containsIgnoringCase("ID_TIPO_SOLUCION")
+            .containsIgnoringCase("ID_FUENTE_ORIGEN")
+            .containsIgnoringCase("ID_TIPO_DOCUMENTO")
+            .doesNotContainIgnoringCase(" TIPO_SOLUCION varchar")
+            .doesNotContainIgnoringCase(" FUENTE_ORIGEN varchar")
             .doesNotContain("INSERT INTO");
-        assertThat(read(DDL).lines().filter(line -> line.startsWith("create table ")).count()).isEqualTo(16);
+        assertThat(read(DDL).lines().filter(line -> line.startsWith("create table ")).count()).isEqualTo(19);
     }
 
     private String read(Path path) {

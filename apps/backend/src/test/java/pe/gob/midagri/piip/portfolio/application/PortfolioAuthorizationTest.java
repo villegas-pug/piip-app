@@ -17,6 +17,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 import pe.gob.midagri.piip.audit.application.AuditService;
 import pe.gob.midagri.piip.documents.persistence.DocumentRepository;
+import pe.gob.midagri.piip.documents.persistence.DocumentTypeRepository;
+import pe.gob.midagri.piip.catalogs.application.CatalogReferenceService;
+import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 import pe.gob.midagri.piip.identity.application.LocalAccessContext;
 import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
 import pe.gob.midagri.piip.identity.application.RoleScopeGrant;
@@ -31,8 +34,6 @@ import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ResponsibleUnitInput;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
-import pe.gob.midagri.piip.portfolio.domain.SolutionType;
-import pe.gob.midagri.piip.portfolio.domain.SourceOrigin;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
@@ -52,12 +53,14 @@ class PortfolioAuthorizationTest {
     @Mock CodeGeneratorService codes;
     @Mock LocalAuthorizationService authorization;
     @Mock AuditService audit;
+    @Mock CatalogReferenceService catalogReferences;
+    @Mock DocumentTypeRepository documentTypes;
     private PortfolioService service;
 
     @BeforeEach
     void setUp() {
         service = new PortfolioService(records, responsibleUnits, executingUnits, organizationalUnits, users, tasks,
-            notifications, documents, codes, authorization, audit);
+            notifications, documents, codes, authorization, audit, catalogReferences, documentTypes);
     }
 
     @Test
@@ -83,8 +86,8 @@ class PortfolioAuthorizationTest {
         InitiativeCreateRequest request = new InitiativeCreateRequest(
             100L,
             "Iniciativa UE-001",
-            SolutionType.TO_BE_DEFINED,
-            SourceOrigin.OTHER,
+            11L,
+            12L,
             LocalDate.now(),
             "Responsable",
             null,
@@ -92,7 +95,7 @@ class PortfolioAuthorizationTest {
             "Descripción",
             null,
             DigitalComponent.NO,
-            List.of(new ResponsibleUnitInput(null, "Unidad responsable")));
+            List.of(new ResponsibleUnitInput(13L)));
 
         assertThatThrownBy(() -> service.createInitiative(request))
             .isInstanceOf(AccessDeniedException.class);
@@ -105,9 +108,7 @@ class PortfolioAuthorizationTest {
         ReflectionTestUtils.setField(institution, "id", institutionId);
         ExecutingUnitEntity unit = new ExecutingUnitEntity(institution, "UE-" + unitId, "Unidad Ejecutora");
         ReflectionTestUtils.setField(unit, "id", unitId);
-        PortfolioRecordEntity record = PortfolioRecordEntity.initiative(code, unit, "Iniciativa", SolutionType.TO_BE_DEFINED,
-            SourceOrigin.OTHER, LocalDate.now(), "Responsable", null, null, "Descripción", null,
-            DigitalComponent.NO, "subject");
+        PortfolioRecordEntity record = PortfolioRecordTestBuilder.transientReferences().initiative(code, unit, "Iniciativa");
         ReflectionTestUtils.setField(record, "id", unitId.equals(100L) ? 1L : 2L);
         record.approve();
         return record;

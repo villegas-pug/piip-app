@@ -44,6 +44,8 @@ export class DashboardComponent implements OnDestroy {
   readonly notificationsExpanded = signal(false);
   readonly statusDistributionExpanded = signal(true);
   readonly activeUnit = computed(() => this.repository.executingUnits().find((unit) => unit.id === this.repository.selectedExecutingUnitId()));
+  readonly catalogState = this.repository.catalogs;
+  readonly recordTypes = computed(() => this.catalogState().value.recordTypes);
   readonly statusOptions = computed<readonly PiipStatus[]>(() => {
     const type = this.query().type;
     if (type === 'Iniciativa') return INITIATIVE_STATUSES;
