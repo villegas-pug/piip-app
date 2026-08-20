@@ -1,25 +1,31 @@
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { PiipMockRepository } from '../../core/piip-mock.repository';
-import { AuditEvent, PiipPortfolioRecord } from '../../core/piip.models';
-import { PiipRepository } from '../../core/piip.repository';
+import { AuditEvent } from '../../core/piip.models';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
+import { InitiativeApprovalDialogComponent } from './initiative-approval-dialog.component';
 import { InitiativeDetailComponent } from './initiative-detail.component';
+import { InitiativeStatusTransitionDialogComponent } from './initiative-status-transition-dialog.component';
 
 describe('InitiativeDetailComponent', () => {
   let approvalAction = false;
+  const open = vi.fn();
   const paramMap = convertToParamMap({ code: 'I-024-2026' });
 
   beforeEach(async () => {
     approvalAction = false;
+    open.mockReset();
+    open.mockReturnValue({ afterClosed: () => of(undefined) });
     await TestBed.configureTestingModule({
       imports: [InitiativeDetailComponent],
       providers: [
         provideRouter([]),
         PiipMockRepository,
         { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository },
+        { provide: MatDialog, useValue: { open } },
         { provide: MatSnackBar, useValue: { open: vi.fn() } },
         { provide: ActivatedRoute, useValue: {
           paramMap: of(paramMap),
@@ -32,7 +38,7 @@ describe('InitiativeDetailComponent', () => {
     }).compileComponents();
   });
 
-  it('opens the approval dialog from the action button and closes it', () => {
+  it('abre el diálogo de aprobación desde la acción preservando contexto y accesibilidad', () => {
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
     fixture.detectChanges();
     const nativeElement = fixture.nativeElement as HTMLElement;
@@ -41,14 +47,16 @@ describe('InitiativeDetailComponent', () => {
       .find((button) => button.textContent?.includes('Registrar aprobación'));
     if (!approvalButton) throw new Error('No se encontró el botón de aprobación.');
     approvalButton.click();
-    fixture.detectChanges();
 
-    expect(nativeElement.querySelector('[role="dialog"]')).not.toBeNull();
-
-    nativeElement.querySelector<HTMLButtonElement>('[aria-label="Cerrar"]')?.click();
-    fixture.detectChanges();
-
-    expect(nativeElement.querySelector('[role="dialog"]')).toBeNull();
+    expect(open).toHaveBeenCalledWith(InitiativeApprovalDialogComponent, expect.objectContaining({
+      width: '600px',
+      maxWidth: 'calc(100vw - 24px)',
+      maxHeight: '90dvh',
+      restoreFocus: true,
+      panelClass: 'initiative-review-dialog-panel',
+      backdropClass: 'initiative-review-dialog-backdrop',
+      data: expect.objectContaining({ initiativeCode: 'I-024-2026', currentStatus: 'Presentado' }),
+    }));
   });
 
   it('conserves the approval action and the real initiative status before derivation', () => {
@@ -65,52 +73,8 @@ describe('InitiativeDetailComponent', () => {
     approvalAction = true;
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
     fixture.detectChanges();
-    const nativeElement = fixture.nativeElement as HTMLElement;
 
-    expect(nativeElement.querySelector('[role="dialog"]')).not.toBeNull();
-  });
-
-  it('shows the approval submission state until the operation completes', async () => {
-    const mockRepository = TestBed.inject(PiipMockRepository);
-    const repository = TestBed.inject(PIIP_REPOSITORY) as PiipRepository;
-    const approvedRecord = mockRepository.portfolioRecords().find((record) => record.code === 'I-024-2026');
-    if (!approvedRecord) throw new Error('No se encontró la iniciativa de prueba.');
-
-    let resolveApproval!: (record: PiipPortfolioRecord) => void;
-    const pendingApproval = new Promise<PiipPortfolioRecord>((resolve) => { resolveApproval = resolve; });
-    vi.spyOn(repository, 'approveInitiative').mockReturnValue(pendingApproval);
-
-    const fixture = TestBed.createComponent(InitiativeDetailComponent);
-    fixture.detectChanges();
-    const nativeElement = fixture.nativeElement as HTMLElement;
-    const approvalButton = Array.from(nativeElement.querySelectorAll('button'))
-      .find((button) => button.textContent?.includes('Registrar aprobación'));
-    if (!approvalButton) throw new Error('No se encontró el botón de aprobación.');
-    approvalButton.click();
-    fixture.detectChanges();
-
-    const confirmButton = Array.from(nativeElement.querySelectorAll<HTMLButtonElement>('.approval-dialog footer button'))
-      .find((button) => button.textContent?.includes('Confirmar aprobación'));
-    if (!confirmButton) throw new Error('No se encontró el botón de confirmación.');
-    confirmButton.click();
-    fixture.detectChanges();
-
-    const approvalDialog = nativeElement.querySelector<HTMLElement>('.approval-dialog');
-    expect(approvalDialog?.getAttribute('aria-busy')).toBe('true');
-    expect(approvalDialog?.textContent).toContain('Registrando...');
-    expect(approvalDialog?.querySelector('mat-icon.button-spinner')?.textContent?.trim()).toBe('progress_activity');
-    expect(confirmButton.disabled).toBe(true);
-    expect(nativeElement.querySelector<HTMLButtonElement>('[aria-label="Cerrar"]')?.disabled).toBe(true);
-    expect(Array.from(nativeElement.querySelectorAll<HTMLButtonElement>('.approval-dialog footer button'))
-      .find((button) => button.textContent?.includes('Cancelar'))?.disabled).toBe(true);
-
-    resolveApproval(approvedRecord);
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(nativeElement.querySelector('.approval-dialog')).toBeNull();
-    expect(nativeElement.querySelector('.success-dialog')).not.toBeNull();
-    expect(nativeElement.textContent).toContain('Iniciativa aprobada');
+    expect(open).toHaveBeenCalledWith(InitiativeApprovalDialogComponent, expect.any(Object));
   });
 
   it('hides approval when Administrator and record coverage come from different grants', () => {
@@ -150,7 +114,7 @@ describe('InitiativeDetailComponent', () => {
     expect(nativeElement.textContent).not.toContain('Registrar aprobación');
   });
 
-  it('preserves the received descending events and renders their presented copy chronologically', () => {
+  it('resume los eventos más recientes y prioriza el nombre documental', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const receivedEvents: AuditEvent[] = [
       {
@@ -167,43 +131,65 @@ describe('InitiativeDetailComponent', () => {
     fixture.detectChanges();
 
     expect(repository.auditEvents()).toEqual(receivedEvents);
-    expect(fixture.componentInstance.descendingAuditEvents()).toEqual(receivedEvents);
     expect(fixture.componentInstance.timeline().map((event) => event.source.event)).toEqual([
-      'INICIATIVA_REGISTRADA',
       'DOCUMENTO_CARGADO',
+      'INICIATIVA_REGISTRADA',
     ]);
+    expect(fixture.componentInstance.recentTimeline()).toHaveLength(2);
     const timeline = fixture.nativeElement.querySelector('.timeline') as HTMLElement;
+    expect(timeline.querySelectorAll('.activity-item')).toHaveLength(2);
     expect(timeline.textContent).toContain('Iniciativa registrada');
     expect(timeline.textContent).toContain('Estado inicial: Presentado.');
     expect(timeline.textContent).toContain('Documento cargado');
     expect(timeline.textContent).toContain('Se cargó Informe de opinión técnica de evaluación de iniciativa, versión 1.');
+    expect(timeline.textContent).toContain('Informe_tecnico_I-024-2026.pdf');
     expect(timeline.textContent).not.toContain('INITIATIVE_TECHNICAL_OPINION');
+    expect(fixture.nativeElement.querySelector('.activity-link')?.getAttribute('href')).toBe('/auditoria?record=I-024-2026');
   });
 
-  it('offers only archive and inadmissible actions for an unlinked presented initiative', () => {
+  it('ofrece solo los destinos de iniciativa en un diálogo genérico', () => {
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
     fixture.detectChanges();
     expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual(['Iniciativa archivada', 'No Admisible']);
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Iniciativa archivada');
-    expect(text).toContain('No Admisible');
-    expect(text).not.toContain('Producto aprobado');
-    expect(text).not.toContain('No Aplicable');
+    fixture.componentInstance.openStatusDialog();
+
+    expect(open).toHaveBeenCalledWith(InitiativeStatusTransitionDialogComponent, expect.objectContaining({
+      data: {
+        initiativeCode: 'I-024-2026',
+        currentStatus: 'Presentado',
+        options: ['Iniciativa archivada', 'No Admisible'],
+      },
+    }));
   });
 
-  it('allows archiving an approved unlinked initiative but no terminal action afterwards', async () => {
+  it('conserva archivo como único destino de una iniciativa aprobada sin proyecto', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
     repository.portfolioRecords.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
     fixture.detectChanges();
     expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual(['Iniciativa archivada']);
-    await fixture.componentInstance.transitionStatus();
-    expect(repository.getInitiativeDetail('I-024-2026')?.initiative.status).toBe('Iniciativa aprobada');
-    fixture.componentInstance.openStatusTransition('Iniciativa archivada');
-    await fixture.componentInstance.transitionStatus();
-    expect(repository.getInitiativeDetail('I-024-2026')?.initiative.status).toBe('Iniciativa archivada');
-    expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual([]);
+    fixture.componentInstance.openStatusDialog();
+    expect(open).toHaveBeenCalledWith(InitiativeStatusTransitionDialogComponent, expect.objectContaining({
+      data: {
+        initiativeCode: 'I-024-2026',
+        currentStatus: 'Iniciativa aprobada',
+        options: ['Iniciativa archivada'],
+      },
+    }));
+  });
+
+  it('presenta estado, fecha y Unidad Ejecutora en formato humano', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([{ id: 1, code: 'UE-001', name: 'Unidad Ejecutora Demo', institutionId: 1 }]);
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Unidad Ejecutora Demo');
+    expect(text).toContain('20/05/2026');
+    expect(fixture.nativeElement.querySelector('.status-tag')?.getAttribute('data-tone')).toBe('pending');
+    expect(fixture.nativeElement.querySelector('.status-tag mat-icon')?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('muestra código, nombre y estado activo de las referencias PEI y POI', () => {

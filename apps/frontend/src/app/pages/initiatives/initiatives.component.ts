@@ -9,22 +9,7 @@ import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PiipStatus } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
-
-type StatusTone = 'pending' | 'success' | 'progress' | 'neutral' | 'warning' | 'danger';
-
-interface StatusVisual {
-  readonly icon: string;
-  readonly tone: StatusTone;
-}
-
-const STATUS_VISUALS: Readonly<Record<string, StatusVisual>> = {
-  Presentado: { icon: 'schedule', tone: 'pending' },
-  'Iniciativa aprobada': { icon: 'check_circle', tone: 'success' },
-  'Iniciativa archivada': { icon: 'archive', tone: 'neutral' },
-  'No Admisible': { icon: 'cancel', tone: 'danger' },
-};
-
-const FALLBACK_STATUS_VISUAL: StatusVisual = { icon: 'circle', tone: 'neutral' };
+import { initiativeStatusVisual, type InitiativeStatusVisual } from './initiative-status-visual';
 
 @Component({
   selector: 'app-initiatives',
@@ -78,7 +63,7 @@ export class InitiativesComponent {
     this.filters.reset({ search: '', status: 'Todos', source: 'Todos', unit: 'Todas', date: '' });
   }
 
-  statusVisual(status: PiipStatus): StatusVisual { return STATUS_VISUALS[status] ?? FALLBACK_STATUS_VISUAL; }
+  statusVisual(status: PiipStatus): InitiativeStatusVisual { return initiativeStatusVisual(status); }
 
   private syncSourceFilterDisabled(disabled: boolean): void {
     const control = this.filters.controls.source;

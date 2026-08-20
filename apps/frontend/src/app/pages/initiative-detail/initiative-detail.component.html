@@ -1,146 +1,116 @@
-<section class="page detail-page">
+<section class="page detail-page" [attr.aria-labelledby]="detail() ? 'initiative-detail-title' : null">
   @if (detail(); as detail) {
-    <nav class="breadcrumbs" aria-label="Ruta de navegación"><a routerLink="/iniciativas">Iniciativas</a><mat-icon>chevron_right</mat-icon><span>{{ detail.initiative.code }}</span></nav>
+    <nav class="breadcrumbs" aria-label="Ruta de navegación"><a routerLink="/iniciativas">Iniciativas</a><mat-icon aria-hidden="true">chevron_right</mat-icon><span aria-current="page">{{ detail.initiative.code }}</span></nav>
 
     <header class="detail-hero panel">
       <div class="hero-main">
-        <span class="record-kicker">INICIATIVA · {{ detail.initiative.code }}</span>
-        <h2>{{ detail.initiative.name }}</h2>
-        <p>{{ detail.portfolioRecord.description }}</p>
-        <span class="status" [class]="statusClass(detail.initiative.status)">{{ detail.initiative.status }}</span>
+        <div class="hero-meta"><span class="record-kicker">INICIATIVA</span><span class="code-chip">{{ detail.initiative.code }}</span></div>
+        <h2 id="initiative-detail-title">{{ detail.initiative.name }}</h2>
+        <p class="hero-description">{{ detail.portfolioRecord.description }}</p>
+        <span class="status-tag" [attr.data-tone]="statusVisual(detail.initiative.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(detail.initiative.status).icon }}</mat-icon><span>{{ detail.initiative.status }}</span></span>
       </div>
       <div class="hero-actions">
-        <a class="secondary-button" [routerLink]="['/iniciativas', detail.initiative.code, 'documentos']"><mat-icon>description</mat-icon>{{ canAdministerRecord() ? 'Gestionar documentos' : 'Ver documentos' }}</a>
-        @if (canAdministerRecord() && detail.initiative.status === 'Presentado' && !detail.derivedProject) {
-          <button class="primary-button" type="button" (click)="openApproval()"><mat-icon>verified</mat-icon>Registrar aprobación</button>
-        }
-        @if (canAdministerRecord() && initiativeTransitionOptions().length && !detail.derivedProject) {
-          @for (target of initiativeTransitionOptions(); track target) {
-            <button class="secondary-button" type="button" (click)="openStatusTransition(target)"><mat-icon>{{ target === 'No Admisible' ? 'block' : 'archive' }}</mat-icon>{{ target }}</button>
-          }
-        }
+        <a class="secondary-button" [routerLink]="['/iniciativas', detail.initiative.code, 'documentos']"><mat-icon aria-hidden="true">description</mat-icon>{{ canAdministerRecord() ? 'Gestionar documentos' : 'Ver documentos' }}</a>
+        @if (canAdministerRecord() && detail.initiative.status === 'Presentado' && !detail.derivedProject) {<button class="primary-button" type="button" (click)="openApproval()"><mat-icon aria-hidden="true">verified</mat-icon>Registrar aprobación</button>}
+        @if (canAdministerRecord() && initiativeTransitionOptions().length && !detail.derivedProject) {<button class="secondary-button" type="button" (click)="openStatusDialog()"><mat-icon aria-hidden="true">swap_horiz</mat-icon>Cambiar estado</button>}
         @if (canAdministerRecord() && detail.initiative.status === 'Iniciativa aprobada') {
-          @if (detail.derivedProject; as project) {
-            <a class="primary-button" [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon>account_tree</mat-icon>Ver proyecto {{ project.code }}</a>
-          } @else {
-            <a class="primary-button gold" [routerLink]="['/proyectos/nuevo/derivado', detail.initiative.code]"><mat-icon>account_tree</mat-icon>Crear proyecto</a>
-          }
+          @if (detail.derivedProject; as project) {<a class="primary-button" [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon aria-hidden="true">account_tree</mat-icon>Ver proyecto {{ project.code }}</a>} @else {<a class="primary-button gold" [routerLink]="['/proyectos/nuevo/derivado', detail.initiative.code]"><mat-icon aria-hidden="true">account_tree</mat-icon>Crear proyecto</a>}
         }
       </div>
     </header>
 
     <div class="detail-grid">
-      <main>
-        <article class="panel detail-card">
-          <header><span><mat-icon>assignment</mat-icon></span><div><h3>Datos generales</h3><p>Información registrada en los campos operativos del Excel.</p></div></header>
-          <dl class="data-grid">
-            <div><dt>Tipo de registro</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div>
-            <div><dt>Código de origen</dt><dd>{{ detail.portfolioRecord.originCode }}</dd></div>
-            <div><dt>Fecha de inicio</dt><dd>{{ detail.portfolioRecord.startDate }}</dd></div>
-            <div><dt>Tipo de solución</dt><dd>@if (detail.portfolioRecord.solutionTypeReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else { {{ detail.portfolioRecord.solutionType }} }</dd></div>
-            <div><dt>Fuente u origen</dt><dd>@if (detail.portfolioRecord.sourceReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else { {{ detail.portfolioRecord.source }} }</dd></div>
-            <div><dt>Componente Digital</dt><dd>{{ detail.portfolioRecord.digitalComponent }}</dd></div>
-            <div class="wide"><dt>Descripción</dt><dd>{{ detail.portfolioRecord.description }}</dd></div>
-            <div class="wide"><dt>Nota</dt><dd>{{ detail.portfolioRecord.note || 'Sin nota registrada' }}</dd></div>
-          </dl>
+        <article class="panel detail-card information-card">
+          <header class="card-header"><span class="card-icon"><mat-icon aria-hidden="true">assignment</mat-icon></span><div><h3>Información de la iniciativa</h3><p>Datos registrados y alineamiento institucional.</p></div></header>
+
+          <section class="detail-group" aria-labelledby="initiative-identification-title">
+            <h4 id="initiative-identification-title">Identificación</h4>
+            <dl class="data-grid">
+              <div><dt>Tipo de registro</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div>
+              <div><dt>Código de origen</dt><dd>{{ detail.portfolioRecord.originCode }}</dd></div>
+              <div><dt>Fecha de inicio</dt><dd><time [attr.datetime]="detail.portfolioRecord.startDate">{{ formatDate(detail.portfolioRecord.startDate) }}</time></dd></div>
+            </dl>
+          </section>
+
+          <section class="detail-group" aria-labelledby="initiative-classification-title">
+            <h4 id="initiative-classification-title">Clasificación</h4>
+            <dl class="data-grid">
+              <div><dt>Tipo de solución</dt><dd>@if (detail.portfolioRecord.solutionTypeReference; as value) {<span>{{ value.name }}</span><small class="catalog-code">{{ value.code }}@if (!value.active) {<b> · Inactivo</b>}</small>} @else { {{ detail.portfolioRecord.solutionType }} }</dd></div>
+              <div><dt>Fuente u origen</dt><dd>@if (detail.portfolioRecord.sourceReference; as value) {<span>{{ value.name }}</span><small class="catalog-code">{{ value.code }}@if (!value.active) {<b> · Inactivo</b>}</small>} @else { {{ detail.portfolioRecord.source }} }</dd></div>
+              <div><dt>Componente digital</dt><dd><span class="value-badge" [class.is-positive]="detail.portfolioRecord.digitalComponent === 'Si'">{{ detail.portfolioRecord.digitalComponent }}</span></dd></div>
+            </dl>
+          </section>
+
+          <section class="detail-group" aria-labelledby="initiative-alignment-title">
+            <h4 id="initiative-alignment-title">Alineamiento institucional</h4>
+            <dl class="data-grid">
+              <div class="wide"><dt>Objetivo PEI</dt><dd>@if (detail.portfolioRecord.peiObjectiveReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) {<small class="catalog-code"><b>Inactivo</b></small>}} @else {Sin información registrada}</dd></div>
+              <div class="wide"><dt>Actividad POI</dt><dd>@if (detail.portfolioRecord.poiActivityReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) {<small class="catalog-code"><b>Inactivo</b></small>}} @else {Sin información registrada}</dd></div>
+            </dl>
+          </section>
+
         </article>
 
-        <article class="panel detail-card">
-          <header><span><mat-icon>groups</mat-icon></span><div><h3>Responsable y alineamiento</h3><p>Responsabilidad declarada y relación con PEI y POI.</p></div></header>
+        <aside class="context-column">
+        <article class="panel detail-card tracking-card">
+          <header class="card-header"><span class="card-icon"><mat-icon aria-hidden="true">groups</mat-icon></span><div><h3>Seguimiento</h3><p>Responsabilidad, resultados y cierre.</p></div></header>
           <dl class="data-grid">
             <div><dt>Responsable</dt><dd>{{ detail.portfolioRecord.responsible }}</dd></div>
-            <div><dt>Unidades responsables</dt><dd>{{ detail.portfolioRecord.responsibleUnits }}</dd></div>
-            <div class="wide"><dt>Objetivo PEI</dt><dd>@if (detail.portfolioRecord.peiObjectiveReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else {Sin información registrada}</dd></div>
-            <div class="wide"><dt>Actividad POI</dt><dd>@if (detail.portfolioRecord.poiActivityReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) { <b>Inactivo</b>}} @else {Sin información registrada}</dd></div>
+            <div><dt>Unidad Ejecutora</dt><dd>@if (executingUnit(); as unit) {<span>{{ unit.code }} — {{ unit.name }}</span>} @else {No registrada}</dd></div>
+            <div><dt>Unidades responsables</dt><dd>{{ responsibleUnitsLabel() }}</dd></div>
+            <div><dt>Resultados clave</dt><dd>{{ detail.portfolioRecord.keyResults || 'Sin información registrada' }}</dd></div>
+            <div><dt>Producto final aprobado</dt><dd>{{ detail.portfolioRecord.finalProductType }}</dd></div>
+            <div><dt>Fecha de cierre</dt><dd>@if (detail.portfolioRecord.closingDate) {<time [attr.datetime]="detail.portfolioRecord.closingDate">{{ formatDate(detail.portfolioRecord.closingDate) }}</time>} @else {Sin fecha registrada}</dd></div>
+            <div><dt>Nota</dt><dd>{{ detail.portfolioRecord.note || 'Sin nota registrada' }}</dd></div>
           </dl>
         </article>
 
-        <article class="panel detail-card">
-          <header><span><mat-icon>flag</mat-icon></span><div><h3>Resultados y cierre</h3><p>Campos operativos que se completan cuando corresponda al ciclo del registro.</p></div></header>
-          <dl class="data-grid">
-            <div class="wide"><dt>Resultados clave</dt><dd>{{ detail.portfolioRecord.keyResults || 'Sin información registrada' }}</dd></div>
-            <div><dt>Tipo de producto final aprobado</dt><dd>{{ detail.portfolioRecord.finalProductType }}</dd></div>
-            <div><dt>Fecha de cierre</dt><dd>{{ detail.portfolioRecord.closingDate || 'Sin fecha registrada' }}</dd></div>
-          </dl>
-        </article>
-
-        <article class="panel detail-card">
-          <header><span><mat-icon>history</mat-icon></span><div><h3>Línea de tiempo</h3><p>Eventos de auditoría asociados al código del registro.</p></div></header>
-          <div class="timeline">
-            @for (event of timeline(); track event.source.timestamp + event.source.event) {
-              <section><span><mat-icon>{{ event.source.icon }}</mat-icon></span><div><strong>{{ event.eventLabel }}</strong><p>{{ event.observation }}</p><small>{{ event.source.timestamp }} · {{ event.source.user }}</small></div></section>
-            } @empty {
-              <p class="empty-timeline">No existen eventos asociados a esta iniciativa.</p>
-            }
+        <article class="panel detail-card documents-card">
+          <header class="card-header"><span class="card-icon"><mat-icon aria-hidden="true">description</mat-icon></span><div><h3>Documentos</h3><p>Estado actual del expediente documental.</p></div></header>
+          <div class="document-list">
+            @for (document of dossierDocuments(); track document.documentType?.code ?? document.type ?? document.name) {
+              <div class="document-item" [attr.data-state]="document.state">
+                <mat-icon aria-hidden="true">{{ document.state === 'Cargado' ? 'check_circle' : document.state === 'No aplica' ? 'do_not_disturb_on' : 'schedule' }}</mat-icon>
+                <span><strong>{{ document.name }}</strong><small>{{ document.filename || document.state }}</small></span>
+              </div>
+            } @empty {<p class="empty-documents">No hay posiciones documentales registradas.</p>}
           </div>
-        </article>
-      </main>
-
-      <aside>
-        <article class="panel decision-card">
-          <span class="record-kicker">EVALUACIÓN Y DECISIÓN</span>
-          <h3>Disponibilidad documental</h3>
-          <p>Estos documentos informan la revisión, pero no bloquean la aprobación en esta versión.</p>
-          @for (document of approvalDocuments(); track document.name) {
-            <div class="document-check" [class.complete]="document.state === 'Cargado'"><mat-icon>{{ document.state === 'Cargado' ? 'check_circle' : 'schedule' }}</mat-icon><span><strong>{{ document.name }}</strong><small>{{ document.filename || 'Pendiente de carga' }}</small></span></div>
-          }
-          <a class="text-button" [routerLink]="['/iniciativas', detail.initiative.code, 'documentos']">Abrir expediente documental <mat-icon>chevron_right</mat-icon></a>
+          <a class="text-button document-link" [routerLink]="['/iniciativas', detail.initiative.code, 'documentos']">Abrir expediente documental <mat-icon aria-hidden="true">chevron_right</mat-icon></a>
         </article>
 
-        <article class="panel relation-card">
-          <span class="record-kicker">TRAZABILIDAD</span>
-          <h3>Proyecto derivado</h3>
+        <article class="panel detail-card relation-card">
+          <header class="card-header"><span class="card-icon"><mat-icon aria-hidden="true">account_tree</mat-icon></span><div><h3>Proyecto derivado</h3><p>Trazabilidad con el proyecto originado.</p></div></header>
           @if (detail.derivedProject; as project) {
-            <strong>{{ project.code }}</strong><p>{{ project.name }}</p><span class="status running">{{ project.status }}</span>
-            <p class="linked-project-lock" role="status"><mat-icon>lock</mat-icon>La iniciativa conserva <strong>Iniciativa aprobada</strong> y sus acciones de cambio de estado están bloqueadas porque ya existe un proyecto vinculado.</p>
+            <a class="derived-project-code" [routerLink]="['/proyectos', project.code]">{{ project.code }}</a>
+            <p class="derived-project-name">{{ project.name }}</p>
+            <span class="status-tag" [attr.data-tone]="derivedProjectStatusVisual(project.status).tone"><mat-icon aria-hidden="true">{{ derivedProjectStatusVisual(project.status).icon }}</mat-icon><span>{{ project.status }}</span></span>
+            <p class="linked-project-lock" role="status"><mat-icon aria-hidden="true">lock</mat-icon><span>Las acciones de cambio de estado están bloqueadas porque ya existe un proyecto vinculado.</span></p>
           } @else if (detail.initiative.status === 'Iniciativa aprobada') {
-            <mat-icon>account_tree</mat-icon><p>La iniciativa está habilitada para originar un proyecto.</p>
+            <p class="relation-message"><mat-icon aria-hidden="true">account_tree</mat-icon><span>La iniciativa está habilitada para originar un proyecto.</span></p>
+            @if (canAdministerRecord()) {<a class="primary-button gold relation-action" [routerLink]="['/proyectos/nuevo/derivado', detail.initiative.code]">Crear proyecto</a>}
           } @else {
-            <mat-icon>lock_clock</mat-icon><p>La creación se habilita cuando la iniciativa esté aprobada.</p>
+            <p class="relation-message"><mat-icon aria-hidden="true">lock_clock</mat-icon><span>La creación se habilita cuando la iniciativa esté aprobada.</span></p>
           }
         </article>
+        </aside>
 
-        @if (repository.hasAnyAdministratorScope()) {
-          <a class="audit-link panel" routerLink="/auditoria" [queryParams]="{ record: detail.initiative.code }"><mat-icon>shield</mat-icon><span><strong>Consultar auditoría</strong><small>Eventos filtrados por {{ detail.initiative.code }}</small></span><mat-icon>chevron_right</mat-icon></a>
-        }
-      </aside>
+        <article class="panel detail-card activity-card">
+          <header class="card-header"><span class="card-icon"><mat-icon aria-hidden="true">history</mat-icon></span><div><h3>Actividad reciente</h3><p>Resumen de los tres eventos más recientes asociados a la iniciativa.</p></div></header>
+          <div class="timeline">
+            @for (event of recentTimeline(); track event.source.timestamp + event.source.event + $index) {
+              <section class="activity-item" [attr.data-kind]="activityKind(event)">
+                <span class="activity-icon"><mat-icon aria-hidden="true">{{ activityIcon(event) }}</mat-icon></span>
+                <div>
+                  @if (activityDocumentName(event, detail); as documentName) {<p class="activity-document">{{ documentName }}</p><span class="activity-label activity-metadata">{{ event.eventLabel }}</span><p class="activity-summary">{{ event.observation }}</p>} @else {<span class="activity-label">{{ event.eventLabel }}</span><p class="activity-summary">{{ event.observation }}</p>}
+                  <small><time>{{ event.source.timestamp }}</time> · {{ event.source.user }}</small>
+                </div>
+              </section>
+            } @empty {<p class="empty-timeline">No existen eventos asociados a esta iniciativa.</p>}
+          </div>
+          @if (repository.hasAnyAdministratorScope()) {<a class="text-button activity-link" routerLink="/auditoria" [queryParams]="{ record: detail.initiative.code }"><mat-icon aria-hidden="true">history</mat-icon>Ver historial completo</a>}
+        </article>
     </div>
-
-    @if (decisionOpen() && canAdministerRecord() && detail.initiative.status === 'Presentado') {
-      <div class="review-backdrop" (click)="submitting() ? null : decisionOpen.set(false)">
-        <section class="review-dialog approval-dialog" role="dialog" aria-modal="true" aria-labelledby="approval-title" [attr.aria-busy]="submitting()" (click)="$event.stopPropagation()">
-          <header><span><mat-icon>verified</mat-icon></span><div><p>REGISTRAR DECISIÓN</p><h2 id="approval-title">Aprobar iniciativa</h2></div><button class="icon-action" type="button" aria-label="Cerrar" [disabled]="submitting()" (click)="decisionOpen.set(false)"><mat-icon>close</mat-icon></button></header>
-          <div class="transition"><span>Presentado</span><mat-icon>arrow_forward</mat-icon><strong>Iniciativa aprobada</strong></div>
-          @if (missingApprovalDocuments().length) {
-            <div class="nonblocking-warning"><mat-icon>warning_amber</mat-icon><div><strong>Documentación pendiente</strong><p>Faltan {{ missingApprovalDocuments().length }} documento(s). El Excel no establece su obligatoriedad como condición automática, por lo que puedes continuar.</p></div></div>
-          }
-          <div class="review-summary"><p><span>Código</span><strong>{{ detail.initiative.code }}</strong></p><p><span>Nombre</span><strong>{{ detail.initiative.name }}</strong></p></div>
-          <form [formGroup]="decisionForm" class="approval-form"><label class="field"><span>Observación para auditoría</span><textarea formControlName="observation" maxlength="600" placeholder="Comentario opcional sobre la aprobación"></textarea><small>Esta observación no modifica el campo Nota del Excel.</small></label></form>
-          <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="decisionOpen.set(false)">Cancelar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="approve()"><mat-icon [class.button-spinner]="submitting()">{{ submitting() ? 'progress_activity' : 'verified' }}</mat-icon>{{ submitting() ? 'Registrando...' : 'Confirmar aprobación' }}</button></footer>
-        </section>
-      </div>
-    }
-
-    @if (transitionTarget(); as target) {
-      <div class="review-backdrop" (click)="submitting() ? null : transitionTarget.set(null)">
-        <section class="review-dialog approval-dialog" role="dialog" aria-modal="true" aria-labelledby="status-transition-title" [attr.aria-busy]="submitting()" (click)="$event.stopPropagation()">
-          <header><span><mat-icon>{{ target === 'No Admisible' ? 'block' : 'archive' }}</mat-icon></span><div><p>CAMBIAR ESTADO</p><h2 id="status-transition-title">{{ target }}</h2></div><button class="icon-action" type="button" aria-label="Cerrar" [disabled]="submitting()" (click)="transitionTarget.set(null)"><mat-icon>close</mat-icon></button></header>
-          <div class="transition"><span>{{ detail.initiative.status }}</span><mat-icon>arrow_forward</mat-icon><strong>{{ target }}</strong></div>
-          <form [formGroup]="decisionForm" class="approval-form"><label class="field"><span>Observación para auditoría</span><textarea formControlName="observation" maxlength="1000" placeholder="Comentario opcional sobre el cambio"></textarea></label></form>
-          <footer><button class="secondary-button" type="button" [disabled]="submitting()" (click)="transitionTarget.set(null)">Cancelar</button><button class="primary-button" type="button" [disabled]="submitting()" (click)="transitionStatus()">Confirmar cambio</button></footer>
-        </section>
-      </div>
-    }
-
-    @if (approvalComplete()) {
-      <div class="review-backdrop">
-        <section class="review-dialog success-dialog" role="dialog" aria-modal="true" aria-labelledby="success-title">
-          <div class="success-icon"><mat-icon>check_circle</mat-icon></div><h2 id="success-title">Iniciativa aprobada</h2><p>La iniciativa mantiene su registro y ahora puede originar un proyecto independiente.</p>
-          <div class="success-actions"><button class="secondary-button" type="button" (click)="approvalComplete.set(false)">Volver al detalle</button>@if (canAdministerRecord()) {<a class="primary-button gold" [routerLink]="['/proyectos/nuevo/derivado', detail.initiative.code]"><mat-icon>account_tree</mat-icon>Crear proyecto ahora</a>}</div>
-        </section>
-      </div>
-    }
   } @else {
-    <article class="panel missing-detail"><mat-icon>search_off</mat-icon><h2>Iniciativa no encontrada</h2><p>No existe información para el código <strong>{{ code() || 'solicitado' }}</strong>.</p><a class="primary-button" routerLink="/iniciativas"><mat-icon>arrow_back</mat-icon>Volver a iniciativas</a></article>
+    <article class="panel missing-detail"><mat-icon aria-hidden="true">search_off</mat-icon><h2>Iniciativa no encontrada</h2><p>No existe información para el código <strong>{{ code() || 'solicitado' }}</strong>.</p><a class="primary-button" routerLink="/iniciativas"><mat-icon aria-hidden="true">arrow_back</mat-icon>Volver a iniciativas</a></article>
   }
 </section>

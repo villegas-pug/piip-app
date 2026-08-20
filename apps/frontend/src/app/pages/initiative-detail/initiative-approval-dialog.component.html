@@ -1,0 +1,66 @@
+<section class="decision-dialog" aria-labelledby="initiative-approval-dialog-title" [attr.aria-busy]="submitting()">
+  @if (approved()) {
+    <div class="success-state" role="status" aria-live="polite">
+      <span class="success-icon"><mat-icon aria-hidden="true">check_circle</mat-icon></span>
+      <p>DECISIÓN REGISTRADA</p>
+      <h2 id="initiative-approval-dialog-title">Iniciativa aprobada</h2>
+      <span class="dialog-code">{{ data.initiativeCode }}</span>
+      <p class="success-copy">La iniciativa conserva su expediente y ahora puede originar un proyecto derivado.</p>
+      <div class="success-actions">
+        <button class="secondary-button" type="button" (click)="close()">Volver al detalle</button>
+        <a class="primary-button gold" [routerLink]="['/proyectos/nuevo/derivado', data.initiativeCode]" [mat-dialog-close]="{ approved: true }"><mat-icon aria-hidden="true">account_tree</mat-icon>Crear proyecto ahora</a>
+      </div>
+    </div>
+  } @else {
+    <header class="decision-dialog-header">
+      <span class="dialog-icon"><mat-icon aria-hidden="true">verified</mat-icon></span>
+      <div>
+        <p>REGISTRAR DECISIÓN</p>
+        <h2 id="initiative-approval-dialog-title">Aprobar iniciativa</h2>
+        <span class="dialog-code">{{ data.initiativeCode }}</span>
+      </div>
+      <button class="icon-action" type="button" aria-label="Cerrar aprobación" [disabled]="submitting()" (click)="close()"><mat-icon aria-hidden="true">close</mat-icon></button>
+    </header>
+
+    <div class="decision-dialog-content">
+      <div class="status-transition-summary">
+        <span>Cambio de estado</span>
+        <div class="status-transition-value">
+          <span class="status-tag" [attr.data-tone]="statusVisual(data.currentStatus).tone"><mat-icon aria-hidden="true">{{ statusVisual(data.currentStatus).icon }}</mat-icon><span>{{ data.currentStatus }}</span></span>
+          <mat-icon class="transition-arrow" aria-hidden="true">arrow_forward</mat-icon>
+          <span class="status-tag" [attr.data-tone]="statusVisual('Iniciativa aprobada').tone"><mat-icon aria-hidden="true">{{ statusVisual('Iniciativa aprobada').icon }}</mat-icon><span>Iniciativa aprobada</span></span>
+        </div>
+      </div>
+
+      <dl class="record-summary">
+        <div><dt>Código</dt><dd>{{ data.initiativeCode }}</dd></div>
+        <div><dt>Iniciativa</dt><dd>{{ data.initiativeName }}</dd></div>
+      </dl>
+
+      @if (missingDocuments().length) {
+        <div class="document-warning" role="note">
+          <mat-icon aria-hidden="true">warning_amber</mat-icon>
+          <div>
+            <strong>Documentación pendiente</strong>
+            <p>Hay {{ missingDocuments().length }} documento(s) pendiente(s). Esta advertencia es informativa y no bloquea la aprobación.</p>
+            <ul>@for (document of missingDocuments(); track document.name) {<li>{{ document.name }}</li>}</ul>
+          </div>
+        </div>
+      }
+
+      <form [formGroup]="approvalForm" (ngSubmit)="approve()">
+        <label class="field">
+          <span>Observación para auditoría <small>(opcional)</small></span>
+          <textarea formControlName="observation" maxlength="600" placeholder="Comentario opcional sobre la aprobación"></textarea>
+          <span class="field-help">Esta observación no modifica la Nota de la iniciativa.</span>
+          <small class="character-count">{{ observationLength() }}/600</small>
+        </label>
+        @if (error(); as message) {<p class="dialog-error" role="alert"><mat-icon aria-hidden="true">error_outline</mat-icon>{{ message }}</p>}
+        <footer>
+          <button class="secondary-button" type="button" [disabled]="submitting()" (click)="close()">Cancelar</button>
+          <button class="primary-button" type="submit" [disabled]="submitting()"><mat-icon [class.button-spinner]="submitting()" aria-hidden="true">{{ submitting() ? 'progress_activity' : 'verified' }}</mat-icon>{{ submitting() ? 'Registrando...' : 'Confirmar aprobación' }}</button>
+        </footer>
+      </form>
+    </div>
+  }
+</section>
