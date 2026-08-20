@@ -2,16 +2,20 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { PiipMockRepository } from '../../core/piip-mock.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { ProjectDetailComponent } from './project-detail.component';
 
 describe('ProjectDetailComponent', () => {
+  const open = vi.fn();
+
   beforeEach(async () => {
+    open.mockReset();
     await TestBed.configureTestingModule({
       imports: [ProjectDetailComponent],
-      providers: [provideRouter([]), PiipMockRepository, { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository }, { provide: MatSnackBar, useValue: { open: vi.fn() } }, { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ code: 'P-005-2026' })), snapshot: { paramMap: convertToParamMap({ code: 'P-005-2026' }) } } }],
+      providers: [provideRouter([]), PiipMockRepository, { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository }, { provide: MatDialog, useValue: { open } }, { provide: MatSnackBar, useValue: { open: vi.fn() } }, { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ code: 'P-005-2026' })), snapshot: { paramMap: convertToParamMap({ code: 'P-005-2026' }) } } }],
     }).compileComponents();
   });
 
@@ -44,5 +48,66 @@ describe('ProjectDetailComponent', () => {
     expect(text).toContain('PEI-02 — Objetivo del proyecto');
     expect(text).toContain('POI-02 — Actividad anterior');
     expect(text).toContain('Inactivo');
+  });
+
+  it('presenta el estado, fecha y Unidad Ejecutora en formato humano', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([{ id: 1, code: 'UE-001', name: 'Unidad Ejecutora Demo', institutionId: 1 }]);
+    const fixture = TestBed.createComponent(ProjectDetailComponent);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Unidad Ejecutora Demo');
+    expect(text).toContain('12/02/2026');
+    expect(fixture.nativeElement.querySelector('.status-tag')?.getAttribute('data-tone')).toBe('progress');
+    expect(fixture.nativeElement.querySelector('.status-tag mat-icon')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('abre un diálogo con los destinos permitidos y restaura el flujo al cerrarlo', async () => {
+    open.mockReturnValue({ afterClosed: () => of({ targetStatus: 'Producto aprobado' }) });
+    const fixture = TestBed.createComponent(ProjectDetailComponent);
+    fixture.componentInstance.openStatusDialog();
+    await Promise.resolve();
+
+    expect(open).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({
+      maxWidth: 'calc(100vw - 24px)',
+      maxHeight: '90dvh',
+      restoreFocus: true,
+      data: expect.objectContaining({
+        projectCode: 'P-005-2026',
+        currentStatus: 'Proyecto en ejecución',
+        options: ['Producto aprobado', 'Producto no aprobado', 'Suspendido', 'Cancelado'],
+      }),
+    }));
+  });
+
+  it('resume solo los tres eventos más recientes y conserva el enlace al historial', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.auditEvents.set(Array.from({ length: 5 }, (_, index) => ({
+      recordCode: 'P-005-2026', timestamp: `20/08/26, 8:${20 + index} a. m.`, event: index === 0 ? 'ESTADO_PROYECTO_CAMBIADO' : 'DOCUMENTO_CARGADO',
+      user: 'Administrador PIIP', email: 'admin@example.pe', observation: `Evento ${index}`, icon: 'history',
+    })));
+    const fixture = TestBed.createComponent(ProjectDetailComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.recentTimeline()).toHaveLength(3);
+    expect(fixture.nativeElement.querySelectorAll('.activity-item')).toHaveLength(3);
+    expect(fixture.nativeElement.querySelector('.activity-link')?.getAttribute('href')).toBe('/auditoria?record=P-005-2026');
+  });
+
+  it('prioriza el nombre del archivo documental y conserva el evento como metadata', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.auditEvents.set([{
+      recordCode: 'P-005-2026', timestamp: '20/08/2026, 8:20 a. m.', event: 'DOCUMENTO_CARGADO',
+      user: 'Administrador PIIP', email: 'admin@example.pe',
+      rawDetail: JSON.stringify({ tipoCodigo: 'PROJECT_MANAGEMENT_DOCUMENTATION', tipoNombre: 'Documentación de la gestión del proyecto', version: 1 }),
+      observation: '', icon: 'history',
+    }]);
+    const fixture = TestBed.createComponent(ProjectDetailComponent);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Gestion_Proyecto_P-005-2026.pdf');
+    expect(text).toContain('Documento cargado');
   });
 });

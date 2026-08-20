@@ -15,24 +15,7 @@ import {
   ProjectRegistrationDialogResult,
   ProjectRegistrationDialogView,
 } from './project-registration-dialog.component';
-
-type StatusTone = 'pending' | 'success' | 'progress' | 'neutral' | 'warning' | 'danger';
-
-interface StatusVisual {
-  readonly icon: string;
-  readonly tone: StatusTone;
-}
-
-const STATUS_VISUALS: Readonly<Record<string, StatusVisual>> = {
-  'Producto aprobado': { icon: 'check_circle', tone: 'success' },
-  Finalizado: { icon: 'check_circle', tone: 'success' },
-  'Proyecto en ejecución': { icon: 'play_circle', tone: 'progress' },
-  Suspendido: { icon: 'pause_circle', tone: 'warning' },
-  'Producto no aprobado': { icon: 'cancel', tone: 'danger' },
-  Cancelado: { icon: 'cancel', tone: 'danger' },
-};
-
-const FALLBACK_STATUS_VISUAL: StatusVisual = { icon: 'circle', tone: 'neutral' };
+import { projectStatusVisual, type ProjectStatusVisual } from './project-status-visual';
 
 @Component({
   selector: 'app-projects',
@@ -105,5 +88,5 @@ export class ProjectsComponent {
     return this.repository.canAdministerExecutingUnit(project.executingUnitId);
   }
 
-  statusVisual(status: PiipStatus | string): StatusVisual { return STATUS_VISUALS[status] ?? FALLBACK_STATUS_VISUAL; }
+  statusVisual(status: PiipStatus | string): ProjectStatusVisual { return projectStatusVisual(status); }
 }

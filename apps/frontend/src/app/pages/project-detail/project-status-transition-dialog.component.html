@@ -1,0 +1,48 @@
+<section class="status-dialog" aria-labelledby="project-status-dialog-title" [attr.aria-busy]="submitting()">
+  <header class="status-dialog-header">
+    <span class="dialog-icon"><mat-icon aria-hidden="true">swap_horiz</mat-icon></span>
+    <div>
+      <p>CAMBIO DE ESTADO</p>
+      <h2 id="project-status-dialog-title">Actualizar estado del proyecto</h2>
+      <span class="dialog-code">{{ data.projectCode }}</span>
+    </div>
+    <button class="icon-action" type="button" aria-label="Cerrar cambio de estado" [disabled]="submitting()" (click)="close()"><mat-icon aria-hidden="true">close</mat-icon></button>
+  </header>
+
+  <div class="status-dialog-content">
+    <div class="status-transition-summary">
+      <span>Estado actual</span>
+      <div class="status-transition-value">
+        <span class="status-tag" [attr.data-tone]="statusVisual(data.currentStatus).tone"><mat-icon aria-hidden="true">{{ statusVisual(data.currentStatus).icon }}</mat-icon><span>{{ data.currentStatus }}</span></span>
+        <mat-icon class="transition-arrow" aria-hidden="true">arrow_forward</mat-icon>
+        @if (selectedTarget(); as target) {<span class="status-tag" [attr.data-tone]="statusVisual(target).tone"><mat-icon aria-hidden="true">{{ statusVisual(target).icon }}</mat-icon><span>{{ target }}</span></span>} @else {<span class="status-selection-label">Selecciona el nuevo estado</span>}
+      </div>
+    </div>
+
+    <fieldset class="state-options">
+      <legend>Destinos disponibles</legend>
+      <div class="state-option-list">
+        @for (target of data.options; track target) {
+          <button class="state-option" type="button" [class.is-selected]="selectedTarget() === target" [attr.data-tone]="statusVisual(target).tone" [attr.aria-pressed]="selectedTarget() === target" (click)="selectTarget(target)">
+            <mat-icon aria-hidden="true">{{ statusVisual(target).icon }}</mat-icon>
+            <span>{{ target }}</span>
+            @if (selectedTarget() === target) {<mat-icon class="selection-icon" aria-hidden="true">check</mat-icon>}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <form [formGroup]="transitionForm" (ngSubmit)="confirm()">
+      <label class="field">
+        <span>Observación para auditoría <small>(opcional)</small></span>
+        <textarea formControlName="observation" maxlength="1000" placeholder="Comentario opcional sobre el cambio"></textarea>
+        <small class="character-count">{{ observationLength() }}/1000</small>
+      </label>
+      @if (error(); as message) {<p class="dialog-error" role="alert"><mat-icon aria-hidden="true">error_outline</mat-icon>{{ message }}</p>}
+      <footer>
+        <button class="secondary-button" type="button" [disabled]="submitting()" (click)="close()">Cancelar</button>
+        <button class="primary-button" type="submit" [disabled]="!selectedTarget() || submitting()"><mat-icon aria-hidden="true">{{ submitting() ? 'progress_activity' : 'check' }}</mat-icon>{{ submitting() ? 'Guardando...' : (selectedTarget() ? 'Cambiar a ' + selectedTarget() : 'Confirmar cambio') }}</button>
+      </footer>
+    </form>
+  </div>
+</section>
