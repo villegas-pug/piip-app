@@ -46,7 +46,7 @@
                 <td><span class="clamp" [title]="initiative.source">{{ initiative.source }}</span></td>
                 <td>{{ initiative.responsible }}<small>{{ initiative.role }}</small></td>
                 <td>{{ initiative.unit }}</td>
-                <td><span class="status" [class]="statusClass(initiative.status)">{{ initiative.status }}</span></td>
+                <td><span class="status-tag" [attr.data-tone]="statusVisual(initiative.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(initiative.status).icon }}</mat-icon><span>{{ initiative.status }}</span></span></td>
                 <td>{{ initiative.updatedAt }}</td>
                 <td>
                   <span class="row-actions">

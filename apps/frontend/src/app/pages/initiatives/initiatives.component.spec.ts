@@ -40,6 +40,33 @@ describe('InitiativesComponent pagination', () => {
     expect(nativeElement.textContent).not.toContain('Cambiar estado');
   });
 
+  it('renders initiative states with the canonical icon, tone and accessible text', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const template = repository.initiatives()[0];
+    const expected = [
+      ['Presentado', 'schedule', 'pending'],
+      ['Iniciativa aprobada', 'check_circle', 'success'],
+      ['Iniciativa archivada', 'archive', 'neutral'],
+      ['No Admisible', 'cancel', 'danger'],
+    ] as const;
+    repository.initiatives.set(expected.map(([status], index) => ({ ...template, code: `I-STATUS-${index}-2026`, status })));
+
+    const fixture = TestBed.createComponent(InitiativesComponent);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const statusTags = Array.from(host.querySelectorAll<HTMLElement>('.status-tag'));
+
+    expect(statusTags).toHaveLength(expected.length);
+    expected.forEach(([status, icon, tone], index) => {
+      const tag = statusTags[index]!;
+      expect(tag.getAttribute('data-tone')).toBe(tone);
+      expect(tag.textContent).toContain(status);
+      expect(tag.querySelector('mat-icon')?.getAttribute('aria-hidden')).toBe('true');
+      expect(tag.querySelector('mat-icon')?.textContent?.trim()).toBe(icon);
+    });
+    expect(host.textContent).not.toContain('Proyecto en ejecución');
+  });
+
   it('filtra por referencias resueltas de fuente y Unidad Orgánica conservando los filtros vigentes', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const target = repository.initiatives()[0];
