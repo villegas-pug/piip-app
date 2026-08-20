@@ -16,6 +16,11 @@ import { InitiativeStatusTransitionDialogComponent, type InitiativeStatusTransit
 const TECHNICAL_REPORT = 'Informe de opinión técnica de evaluación de iniciativa';
 const FORMAL_DECISION = 'Documento formal de decisión de aprobación';
 
+interface ActivityStatusChange {
+  readonly previous: InitiativeStatus;
+  readonly current: InitiativeStatus;
+}
+
 @Component({
   selector: 'app-initiative-detail',
   imports: [RouterLink, MatIconModule],
@@ -153,7 +158,20 @@ export class InitiativeDetailComponent {
   activityInitialStatus(event: PresentedAuditEvent): InitiativeStatus | null {
     if (event.source.event !== 'INICIATIVA_REGISTRADA') return null;
     const status = event.detailFields.find((field) => field.label === 'Estado')?.value;
-    return INITIATIVE_STATUSES.includes(status as InitiativeStatus) ? status as InitiativeStatus : null;
+    return this.isInitiativeStatus(status) ? status : null;
+  }
+
+  activityStatusChange(event: PresentedAuditEvent): ActivityStatusChange | null {
+    if (event.source.event !== 'ESTADO_INICIATIVA_CAMBIADO') return null;
+    const previous = event.detailFields.find((field) => field.label === 'Estado anterior')?.value;
+    const current = event.detailFields.find((field) => field.label === 'Estado nuevo')?.value;
+    if (!this.isInitiativeStatus(previous) || !this.isInitiativeStatus(current)) return null;
+    return { previous, current };
+  }
+
+  activityStatusChangeObservation(event: PresentedAuditEvent): string | null {
+    const observation = event.detailFields.find((field) => field.label === 'Observación')?.value;
+    return observation && observation !== 'No registrado' ? observation : null;
   }
 
   formatDate(value: string): string {
@@ -163,5 +181,9 @@ export class InitiativeDetailComponent {
 
   private findDocument(name: string): DocumentRecord | undefined {
     return this.detail()?.dossier?.stages.flatMap((stage) => stage.records).find((document) => document.name === name);
+  }
+
+  private isInitiativeStatus(value: string | undefined): value is InitiativeStatus {
+    return value !== undefined && INITIATIVE_STATUSES.includes(value as InitiativeStatus);
   }
 }

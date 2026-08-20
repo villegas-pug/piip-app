@@ -56,7 +56,9 @@
 .activity-document { overflow-wrap: anywhere; color: var(--piip-green-900); font-weight: 600; }
 .activity-metadata { color: var(--piip-muted); font-size: 12px; }
 .activity-status-row { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 7px 10px; margin-top: 7px; }
+.activity-status-change { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 7px; }
 .activity-status-label { color: var(--piip-muted); font-size: 12px; font-weight: 600; }
+.activity-status-arrow { width: 18px; height: 18px; flex: 0 0 18px; color: var(--piip-muted); font-size: 18px; line-height: 18px; }
 .activity-item small { display: block; margin-top: 6px; color: var(--piip-muted); font-size: 12px; white-space: pre-line; }
 .activity-link { margin-top: 3px; padding-left: 0; }
 .activity-link mat-icon { width: 18px; height: 18px; font-size: 18px; }
@@ -85,6 +87,7 @@
   .hero-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
   .hero-actions .primary-button, .hero-actions .secondary-button { width: 100%; }
   .activity-status-row { align-items: flex-start; }
+  .activity-status-change { align-items: flex-start; }
   .detail-card { padding: 18px; }
   .data-grid { grid-template-columns: 1fr; gap: 14px; }
   .data-grid .wide { grid-column: auto; }

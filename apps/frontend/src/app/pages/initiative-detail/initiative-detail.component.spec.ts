@@ -168,6 +168,52 @@ describe('InitiativeDetailComponent', () => {
     }));
   });
 
+  it('presenta los cambios de estado como etiquetas semánticas y conserva la observación', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.auditEvents.set([{
+      recordCode: 'I-024-2026', timestamp: '20/05/2026\n10:28:19', event: 'ESTADO_INICIATIVA_CAMBIADO', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
+      observation: '{"estadoAnterior":"Presentado","estadoNuevo":"No Admisible","observacion":"Revisión documental concluida."}',
+      rawDetail: '{"estadoAnterior":"Presentado","estadoNuevo":"No Admisible","observacion":"Revisión documental concluida."}', icon: 'swap_horiz',
+    }]);
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+
+    const timeline = fixture.nativeElement.querySelector('.timeline') as HTMLElement;
+    const change = timeline.querySelector('.activity-status-change') as HTMLElement;
+    const tags = Array.from(change.querySelectorAll('.status-tag'));
+
+    expect(change.textContent).toContain('De');
+    expect(change.textContent).toContain('A');
+    expect(tags.map((tag) => tag.querySelector('span')?.textContent?.trim())).toEqual(['Presentado', 'No Admisible']);
+    expect(tags.map((tag) => tag.getAttribute('data-tone'))).toEqual(['pending', 'danger']);
+    expect(tags.map((tag) => tag.querySelector('mat-icon')?.getAttribute('aria-hidden'))).toEqual(['true', 'true']);
+    expect(tags.map((tag) => tag.querySelector('mat-icon')?.textContent?.trim())).toEqual(['schedule', 'cancel']);
+    expect(change.querySelector('.activity-status-arrow')?.getAttribute('aria-hidden')).toBe('true');
+    expect(timeline.textContent).not.toContain('La iniciativa cambió de Presentado a No Admisible.');
+    expect(timeline.textContent).toContain('Observación: Revisión documental concluida.');
+  });
+
+  it('usa el resumen textual cuando faltan o no se reconocen estados', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.auditEvents.set([
+      {
+        recordCode: 'I-024-2026', timestamp: '20/05/2026\n10:28:19', event: 'ESTADO_INICIATIVA_CAMBIADO', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
+        observation: '{"estadoAnterior":"Presentado","estadoNuevo":"ESTADO_DESCONOCIDO"}', rawDetail: '{"estadoAnterior":"Presentado","estadoNuevo":"ESTADO_DESCONOCIDO"}', icon: 'swap_horiz',
+      },
+      {
+        recordCode: 'I-024-2026', timestamp: '20/05/2026\n10:27:19', event: 'ESTADO_INICIATIVA_CAMBIADO', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
+        observation: '{"estadoAnterior":"Presentado"}', rawDetail: '{"estadoAnterior":"Presentado"}', icon: 'swap_horiz',
+      },
+    ]);
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+
+    const timeline = fixture.nativeElement.querySelector('.timeline') as HTMLElement;
+    expect(timeline.querySelectorAll('.activity-status-change')).toHaveLength(0);
+    expect(timeline.textContent).toContain('La iniciativa cambió de Presentado a ESTADO_DESCONOCIDO.');
+    expect(timeline.textContent).toContain('La iniciativa cambió de Presentado a No registrado.');
+  });
+
   it('conserva archivo como único destino de una iniciativa aprobada sin proyecto', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));

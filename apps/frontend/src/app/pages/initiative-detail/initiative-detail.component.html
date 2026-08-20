@@ -111,7 +111,18 @@
                         <span class="status-tag" [attr.data-tone]="statusVisual(initialStatus).tone"><mat-icon aria-hidden="true">{{ statusVisual(initialStatus).icon }}</mat-icon><span>{{ initialStatus }}</span></span>
                       </div>
                     } @else {
-                      <p class="activity-summary">{{ event.observation }}</p>
+                      @if (activityStatusChange(event); as statusChange) {
+                        <div class="activity-status-change" role="group" aria-label="Cambio de estado">
+                          <span class="activity-status-label">De</span>
+                          <span class="status-tag" [attr.data-tone]="statusVisual(statusChange.previous).tone"><mat-icon aria-hidden="true">{{ statusVisual(statusChange.previous).icon }}</mat-icon><span>{{ statusChange.previous }}</span></span>
+                          <mat-icon class="activity-status-arrow" aria-hidden="true">arrow_forward</mat-icon>
+                          <span class="activity-status-label">A</span>
+                          <span class="status-tag" [attr.data-tone]="statusVisual(statusChange.current).tone"><mat-icon aria-hidden="true">{{ statusVisual(statusChange.current).icon }}</mat-icon><span>{{ statusChange.current }}</span></span>
+                        </div>
+                        @if (activityStatusChangeObservation(event); as observation) {<p class="activity-summary">Observación: {{ observation }}</p>}
+                      } @else {
+                        <p class="activity-summary">{{ event.observation }}</p>
+                      }
                     }
                   }
                   <small><time>{{ event.source.timestamp }}</time> · {{ event.source.user }}</small>
