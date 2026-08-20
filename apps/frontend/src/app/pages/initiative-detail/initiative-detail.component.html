@@ -35,8 +35,8 @@
           <section class="detail-group" aria-labelledby="initiative-classification-title">
             <h4 id="initiative-classification-title">Clasificación</h4>
             <dl class="data-grid">
-              <div><dt>Tipo de solución</dt><dd>@if (detail.portfolioRecord.solutionTypeReference; as value) {<span>{{ value.name }}</span><small class="catalog-code">{{ value.code }}@if (!value.active) {<b> · Inactivo</b>}</small>} @else { {{ detail.portfolioRecord.solutionType }} }</dd></div>
-              <div><dt>Fuente u origen</dt><dd>@if (detail.portfolioRecord.sourceReference; as value) {<span>{{ value.name }}</span><small class="catalog-code">{{ value.code }}@if (!value.active) {<b> · Inactivo</b>}</small>} @else { {{ detail.portfolioRecord.source }} }</dd></div>
+              <div><dt>Tipo de solución</dt><dd>@if (detail.portfolioRecord.solutionTypeReference; as value) {<span>{{ value.name }}</span>@if (!value.active) {<small class="reference-state">Inactivo</small>}} @else { {{ detail.portfolioRecord.solutionType }} }</dd></div>
+              <div><dt>Fuente u origen</dt><dd>@if (detail.portfolioRecord.sourceReference; as value) {<span>{{ value.name }}</span>@if (!value.active) {<small class="reference-state">Inactivo</small>}} @else { {{ detail.portfolioRecord.source }} }</dd></div>
               <div><dt>Componente digital</dt><dd><span class="value-badge" [class.is-positive]="detail.portfolioRecord.digitalComponent === 'Si'">{{ detail.portfolioRecord.digitalComponent }}</span></dd></div>
             </dl>
           </section>
@@ -44,8 +44,8 @@
           <section class="detail-group" aria-labelledby="initiative-alignment-title">
             <h4 id="initiative-alignment-title">Alineamiento institucional</h4>
             <dl class="data-grid">
-              <div class="wide"><dt>Objetivo PEI</dt><dd>@if (detail.portfolioRecord.peiObjectiveReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) {<small class="catalog-code"><b>Inactivo</b></small>}} @else {Sin información registrada}</dd></div>
-              <div class="wide"><dt>Actividad POI</dt><dd>@if (detail.portfolioRecord.poiActivityReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) {<small class="catalog-code"><b>Inactivo</b></small>}} @else {Sin información registrada}</dd></div>
+              <div class="wide"><dt>Objetivo PEI</dt><dd>@if (detail.portfolioRecord.peiObjectiveReference; as value) {<span>{{ value.name }}</span>@if (!value.active) {<small class="reference-state">Inactivo</small>}} @else {Sin información registrada}</dd></div>
+              <div class="wide"><dt>Actividad POI</dt><dd>@if (detail.portfolioRecord.poiActivityReference; as value) {<span>{{ value.name }}</span>@if (!value.active) {<small class="reference-state">Inactivo</small>}} @else {Sin información registrada}</dd></div>
             </dl>
           </section>
 
@@ -56,7 +56,7 @@
           <header class="card-header"><span class="card-icon"><mat-icon aria-hidden="true">groups</mat-icon></span><div><h3>Seguimiento</h3><p>Responsabilidad, resultados y cierre.</p></div></header>
           <dl class="data-grid">
             <div><dt>Responsable</dt><dd>{{ detail.portfolioRecord.responsible }}</dd></div>
-            <div><dt>Unidad Ejecutora</dt><dd>@if (executingUnit(); as unit) {<span>{{ unit.code }} — {{ unit.name }}</span>} @else {No registrada}</dd></div>
+            <div><dt>Unidad Ejecutora</dt><dd>@if (executingUnit(); as unit) {<span>{{ unit.name }}</span>} @else {No registrada}</dd></div>
             <div><dt>Unidades responsables</dt><dd>{{ responsibleUnitsLabel() }}</dd></div>
             <div><dt>Resultados clave</dt><dd>{{ detail.portfolioRecord.keyResults || 'Sin información registrada' }}</dd></div>
             <div><dt>Producto final aprobado</dt><dd>{{ detail.portfolioRecord.finalProductType }}</dd></div>
@@ -101,7 +101,19 @@
               <section class="activity-item" [attr.data-kind]="activityKind(event)">
                 <span class="activity-icon"><mat-icon aria-hidden="true">{{ activityIcon(event) }}</mat-icon></span>
                 <div>
-                  @if (activityDocumentName(event, detail); as documentName) {<p class="activity-document">{{ documentName }}</p><span class="activity-label activity-metadata">{{ event.eventLabel }}</span><p class="activity-summary">{{ event.observation }}</p>} @else {<span class="activity-label">{{ event.eventLabel }}</span><p class="activity-summary">{{ event.observation }}</p>}
+                  @if (activityDocumentName(event, detail); as documentName) {
+                    <p class="activity-document">{{ documentName }}</p><span class="activity-label activity-metadata">{{ event.eventLabel }}</span><p class="activity-summary">{{ event.observation }}</p>
+                  } @else {
+                    <span class="activity-label">{{ event.eventLabel }}</span>
+                    @if (activityInitialStatus(event); as initialStatus) {
+                      <div class="activity-status-row">
+                        <span class="activity-status-label">Estado inicial</span>
+                        <span class="status-tag" [attr.data-tone]="statusVisual(initialStatus).tone"><mat-icon aria-hidden="true">{{ statusVisual(initialStatus).icon }}</mat-icon><span>{{ initialStatus }}</span></span>
+                      </div>
+                    } @else {
+                      <p class="activity-summary">{{ event.observation }}</p>
+                    }
+                  }
                   <small><time>{{ event.source.timestamp }}</time> · {{ event.source.user }}</small>
                 </div>
               </section>

@@ -4,7 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { INITIATIVE_STATUS_TRANSITIONS, type InitiativeStatus } from '../../core/piip.catalogs';
+import { INITIATIVE_STATUSES, INITIATIVE_STATUS_TRANSITIONS, type InitiativeStatus } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import type { DocumentRecord, InitiativeDetail, PiipStatus } from '../../core/piip.models';
 import { presentAuditEvent, type PresentedAuditEvent } from '../audit/audit-event.presenter';
@@ -57,7 +57,7 @@ export class InitiativeDetailComponent {
     const record = this.detail()?.portfolioRecord;
     const references = record?.responsibleUnitReferences ?? [];
     if (references.length) {
-      return references.map((unit) => unit.acronym ? `${unit.acronym} — ${unit.name}` : unit.name).join(', ');
+      return references.map((unit) => unit.name).join(', ');
     }
     return record?.responsibleUnits || 'Sin información registrada';
   });
@@ -148,6 +148,12 @@ export class InitiativeDetailComponent {
       if (document?.filename) return document.filename;
     }
     return null;
+  }
+
+  activityInitialStatus(event: PresentedAuditEvent): InitiativeStatus | null {
+    if (event.source.event !== 'INICIATIVA_REGISTRADA') return null;
+    const status = event.detailFields.find((field) => field.label === 'Estado')?.value;
+    return INITIATIVE_STATUSES.includes(status as InitiativeStatus) ? status as InitiativeStatus : null;
   }
 
   formatDate(value: string): string {

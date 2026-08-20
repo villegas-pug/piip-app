@@ -37,8 +37,7 @@
 .data-grid .wide { grid-column: 1 / -1; }
 .data-grid dt { color: var(--piip-muted); font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
 .data-grid dd { min-width: 0; margin: 4px 0 0; overflow-wrap: anywhere; line-height: 1.4; }
-.catalog-code { display: block; margin-top: 3px; color: var(--piip-muted); font-size: 12px; }
-.catalog-code b { color: #8f5b00; }
+.reference-state { display: block; width: fit-content; margin-top: 5px; padding: 2px 7px; border-radius: 4px; color: #8f5b00; background: #fff0d5; font-size: 11px; font-weight: 700; line-height: 1.4; }
 .value-badge { display: inline-flex; min-height: 25px; align-items: center; padding: 3px 9px; border-radius: 5px; color: #59635e; background: #ecefed; font-size: 13px; font-weight: 600; }
 .value-badge.is-positive { color: #126342; background: #e3f1e7; }
 .tracking-card .data-grid { grid-template-columns: 1fr; }
@@ -56,6 +55,8 @@
 .activity-summary, .activity-document { margin: 4px 0 0; line-height: 1.4; }
 .activity-document { overflow-wrap: anywhere; color: var(--piip-green-900); font-weight: 600; }
 .activity-metadata { color: var(--piip-muted); font-size: 12px; }
+.activity-status-row { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 7px 10px; margin-top: 7px; }
+.activity-status-label { color: var(--piip-muted); font-size: 12px; font-weight: 600; }
 .activity-item small { display: block; margin-top: 6px; color: var(--piip-muted); font-size: 12px; white-space: pre-line; }
 .activity-link { margin-top: 3px; padding-left: 0; }
 .activity-link mat-icon { width: 18px; height: 18px; font-size: 18px; }
@@ -83,6 +84,7 @@
   .detail-hero { flex-direction: column; gap: 18px; padding: 20px 18px; }
   .hero-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
   .hero-actions .primary-button, .hero-actions .secondary-button { width: 100%; }
+  .activity-status-row { align-items: flex-start; }
   .detail-card { padding: 18px; }
   .data-grid { grid-template-columns: 1fr; gap: 14px; }
   .data-grid .wide { grid-column: auto; }

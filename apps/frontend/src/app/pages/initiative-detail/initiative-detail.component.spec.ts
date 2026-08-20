@@ -139,7 +139,13 @@ describe('InitiativeDetailComponent', () => {
     const timeline = fixture.nativeElement.querySelector('.timeline') as HTMLElement;
     expect(timeline.querySelectorAll('.activity-item')).toHaveLength(2);
     expect(timeline.textContent).toContain('Iniciativa registrada');
-    expect(timeline.textContent).toContain('Estado inicial: Presentado.');
+    expect(timeline.textContent).toContain('Estado inicial');
+    expect(timeline.textContent).not.toContain('Estado inicial: Presentado.');
+    const initialStatus = timeline.querySelector('.activity-status-row .status-tag');
+    expect(initialStatus?.textContent).toContain('Presentado');
+    expect(initialStatus?.getAttribute('data-tone')).toBe('pending');
+    expect(initialStatus?.querySelector('mat-icon')?.textContent).toContain('schedule');
+    expect(initialStatus?.querySelector('mat-icon')?.getAttribute('aria-hidden')).toBe('true');
     expect(timeline.textContent).toContain('Documento cargado');
     expect(timeline.textContent).toContain('Se cargó Informe de opinión técnica de evaluación de iniciativa, versión 1.');
     expect(timeline.textContent).toContain('Informe_tecnico_I-024-2026.pdf');
@@ -179,7 +185,7 @@ describe('InitiativeDetailComponent', () => {
     }));
   });
 
-  it('presenta estado, fecha y Unidad Ejecutora en formato humano', () => {
+  it('presenta estado, fecha y Unidad Ejecutora en formato humano sin duplicar su código', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.executingUnits.set([{ id: 1, code: 'UE-001', name: 'Unidad Ejecutora Demo', institutionId: 1 }]);
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
@@ -187,12 +193,13 @@ describe('InitiativeDetailComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
     expect(text).toContain('Unidad Ejecutora Demo');
+    expect(text).not.toContain('UE-001 — Unidad Ejecutora Demo');
     expect(text).toContain('20/05/2026');
     expect(fixture.nativeElement.querySelector('.status-tag')?.getAttribute('data-tone')).toBe('pending');
     expect(fixture.nativeElement.querySelector('.status-tag mat-icon')?.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('muestra código, nombre y estado activo de las referencias PEI y POI', () => {
+  it('muestra nombres y estado histórico sin códigos técnicos', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.portfolioRecords.update((records) => records.map((record) => record.code === 'I-024-2026' ? {
       ...record,
@@ -203,8 +210,26 @@ describe('InitiativeDetailComponent', () => {
     fixture.detectChanges();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(text).toContain('PEI-01 — Objetivo PEI vigente');
-    expect(text).toContain('POI-01 — Actividad POI histórica');
+    expect(text).toContain('I-024-2026');
+    expect(text).toContain('NA');
+    expect(text).toContain('Objetivo PEI vigente');
+    expect(text).toContain('Actividad POI histórica');
+    expect(text).not.toContain('PEI-01');
+    expect(text).not.toContain('POI-01');
     expect(text).toContain('Inactivo');
+  });
+
+  it('conserva la observación cuando el evento registrado no contiene un estado de iniciativa válido', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.auditEvents.set([{
+      recordCode: 'I-024-2026', timestamp: '20/05/2026\n09:31:12', event: 'INICIATIVA_REGISTRADA', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
+      observation: '{}', rawDetail: '{}', icon: 'add',
+    }]);
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+    const timeline = fixture.nativeElement.querySelector('.timeline') as HTMLElement;
+
+    expect(timeline.textContent).toContain('Se registró la iniciativa.');
+    expect(timeline.querySelector('.activity-status-row')).toBeNull();
   });
 });
