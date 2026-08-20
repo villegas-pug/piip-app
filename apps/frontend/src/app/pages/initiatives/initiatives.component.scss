@@ -1,12 +1,27 @@
 .initiatives-page { max-width: 1294px; margin: 0 auto; }
 .page-heading .primary-button { text-decoration: none; }
 .content-grid { display: grid; grid-template-columns: minmax(0, 1fr) 197px; gap: 16px; }
-.filter-table-panel { min-width: 0; padding: 25px 15px 17px; }
-.filters { display: grid; grid-template-columns: 1.35fr .78fr 1fr .78fr .88fr auto; gap: 17px; align-items: end; padding: 0 16px 28px; }
-.input-icon { position: relative; display: block; }
-.input-icon input { padding-right: 38px; }
-.input-icon mat-icon { position: absolute; top: 12px; right: 10px; color: #323834; }
-.clear-top { align-self: end; height: 44px; white-space: nowrap; }
+.filter-table-panel { min-width: 0; padding: 20px 15px 17px; }
+.filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 0 14px 24px; }
+.filter-field { display: grid; min-width: 180px; flex: 0 1 190px; gap: 6px; padding: 8px 10px 10px; border: 1px solid #d8e7dc; border-radius: 9px; color: #293d34; background: var(--piip-mint-soft); }
+.filter-label { color: var(--piip-green-900); font-size: 13px; font-weight: 700; }
+.filter-control { display: flex; min-height: 48px; align-items: center; border: 1px solid var(--piip-border); border-radius: 7px; background: #fff; transition: border-color .15s ease, box-shadow .15s ease; }
+.filter-control:focus-within { border-color: var(--piip-green-700); box-shadow: 0 0 0 3px rgba(21, 112, 77, .1); }
+.search-field { min-width: min(360px, 100%); flex: 1 1 330px; }
+.search-control { gap: 8px; padding-left: 12px; }
+.search-control > mat-icon { flex: 0 0 22px; color: var(--piip-green-700); }
+.search-control input, .date-control input { width: 100%; min-width: 0; min-height: 46px; padding: 0; border: 0; outline: 0; color: inherit; background: transparent; font: inherit; }
+.select-control select { width: 100%; min-width: 0; min-height: 46px; padding: 0 12px; border: 0; outline: 0; color: inherit; background: transparent; }
+.source-field { flex-basis: 205px; }
+.date-field { flex-basis: 150px; }
+.date-control { min-width: 0; gap: 8px; overflow: hidden; padding: 0 10px; }
+.date-control input { flex: 1 1 0; width: 0; }
+.date-control input::-webkit-calendar-picker-indicator { width: 0; height: 0; margin: 0; padding: 0; opacity: 0; }
+.date-control > mat-icon { width: 20px; height: 20px; flex: 0 0 20px; color: var(--piip-green-700); font-size: 20px; line-height: 20px; }
+.clear-button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; align-self: end; gap: 7px; padding: 0 14px; border: 1px solid var(--piip-green-700); border-radius: 6px; color: var(--piip-green-800); background: #fff; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.clear-button:hover { border-color: var(--piip-green-800); background: var(--piip-mint-soft); }
+.clear-button:focus-visible { outline: 3px solid rgba(230, 169, 0, .35); outline-offset: 2px; }
+.clear-button mat-icon { width: 19px; height: 19px; font-size: 19px; }
 .result-meta { display: flex; align-items: center; gap: 17px; min-height: 50px; padding: 0 10px; font-size: 14px; }
 .filter-chip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 9px; border-radius: 4px; background: #f0f1f0; }
 .filter-chip button { border: 0; background: transparent; cursor: pointer; }
@@ -32,12 +47,18 @@ td small { display: block; color: #4e5651; }
 .summary-count { display: flex; justify-content: space-between; margin-top: 29px; padding: 22px 0; border-top: 1px solid var(--piip-border); }
 .filter-summary .text-button { width: 100%; }
 
-@media (max-width: 1230px) {
-  .filters { grid-template-columns: repeat(3, 1fr); }
-  .clear-top { justify-self: start; }
+@media (max-width: 1100px) {
+  .filters { display: grid; grid-template-columns: 1fr 1fr; }
+  .search-field { grid-column: 1 / -1; min-width: 0; }
+  .filter-field { width: 100%; min-width: 0; }
+  .clear-button { justify-self: start; }
 }
 @media (max-width: 860px) {
   .content-grid { grid-template-columns: 1fr; }
   .filter-summary { min-height: auto; }
-  .filters { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px) {
+  .filters { grid-template-columns: 1fr; }
+  .search-field { grid-column: auto; }
+  .clear-button { width: 100%; }
 }

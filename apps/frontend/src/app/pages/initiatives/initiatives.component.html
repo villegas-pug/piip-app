@@ -9,12 +9,27 @@
   <div class="content-grid">
     <article class="panel filter-table-panel">
       <form class="filters" [formGroup]="filters">
-        <label class="field search"><span>Buscar</span><span class="input-icon"><input formControlName="search" placeholder="Buscar por código o iniciativa" /><mat-icon>search</mat-icon></span></label>
-        <label class="field"><span>Estado</span><select formControlName="status"><option>Todos</option>@for (status of initiativeStatuses; track status) {<option [value]="status">{{ status }}</option>}</select></label>
-        <label class="field"><span>Fuente u origen</span><select formControlName="source"><option>Todos</option>@for (source of catalogState().value.sources; track source.id) {<option [value]="source.id">{{ source.name }}</option>}</select></label>
-        <label class="field"><span>Unidad responsable</span><select formControlName="unit"><option>Todas</option>@for (unit of units(); track unit.id) {<option [value]="unit.id">{{ unit.acronym || unit.name }}</option>}</select></label>
-        <label class="field"><span>Fecha</span><input type="date" formControlName="date" /></label>
-        <button class="text-button clear-top" type="button" (click)="resetFilters()"><mat-icon>filter_alt_off</mat-icon>Limpiar filtros</button>
+        <label class="filter-field search-field">
+          <span class="filter-label">Buscar</span>
+          <span class="filter-control search-control"><mat-icon aria-hidden="true">search</mat-icon><input formControlName="search" placeholder="Buscar por código o iniciativa" /></span>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Estado</span>
+          <span class="filter-control select-control"><select formControlName="status"><option>Todos</option>@for (status of initiativeStatuses; track status) {<option [value]="status">{{ status }}</option>}</select></span>
+        </label>
+        <label class="filter-field source-field">
+          <span class="filter-label">Fuente u origen</span>
+          <span class="filter-control select-control"><select formControlName="source"><option>Todos</option>@for (source of catalogState().value.sources; track source.id) {<option [value]="source.id">{{ source.name }}</option>}</select></span>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">Unidad responsable</span>
+          <span class="filter-control select-control"><select formControlName="unit"><option>Todas</option>@for (unit of units(); track unit.id) {<option [value]="unit.id">{{ unit.acronym || unit.name }}</option>}</select></span>
+        </label>
+        <label class="filter-field date-field">
+          <span class="filter-label">Fecha</span>
+          <span class="filter-control date-control"><mat-icon aria-hidden="true">calendar_today</mat-icon><input type="date" formControlName="date" /></span>
+        </label>
+        <button class="clear-button" type="button" (click)="resetFilters()"><mat-icon aria-hidden="true">filter_alt_off</mat-icon>Limpiar filtros</button>
       </form>
       @if (catalogState().phase === 'loading' || unitsState().phase === 'loading') {<p>Cargando opciones de filtro...</p>} @else if (catalogState().phase === 'error' || unitsState().phase === 'error') {<p role="alert">{{ catalogState().error || unitsState().error }} <button type="button" (click)="catalogState().phase === 'error' ? repository.reloadCatalogs() : repository.reloadOrganizationalUnits()">Reintentar</button></p>} @else if (!catalogState().value.sources.length || !units().length) {<p>No hay opciones activas para uno o más filtros.</p>}
 
