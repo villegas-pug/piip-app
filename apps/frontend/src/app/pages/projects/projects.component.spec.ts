@@ -99,6 +99,41 @@ describe('ProjectsComponent', () => {
     expect(nativeElement.textContent).not.toContain('Cambiar estado');
   });
 
+  it('renders project states with the dashboard icon, tone and accessible text pattern', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const template = repository.projects()[0];
+    const expected = [
+      ['Proyecto en ejecución', 'play_circle', 'progress'],
+      ['Producto aprobado', 'check_circle', 'success'],
+      ['Producto no aprobado', 'cancel', 'danger'],
+      ['Suspendido', 'pause_circle', 'warning'],
+      ['Cancelado', 'cancel', 'danger'],
+      ['Finalizado', 'check_circle', 'success'],
+    ] as const;
+    repository.projects.set(expected.map(([status], index) => ({ ...template, code: `P-STATUS-${index}-2026`, status })));
+
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const firstPageTags = Array.from(fixture.nativeElement.querySelectorAll<HTMLElement>('.status-tag'));
+
+    expect(firstPageTags).toHaveLength(5);
+    expected.slice(0, 5).forEach(([status, icon, tone], index) => {
+      const tag = firstPageTags[index]!;
+      expect(tag.getAttribute('data-tone')).toBe(tone);
+      expect(tag.textContent).toContain(status);
+      expect(tag.querySelector('mat-icon')?.getAttribute('aria-hidden')).toBe('true');
+      expect(tag.querySelector('mat-icon')?.textContent?.trim()).toBe(icon);
+    });
+
+    component.pageIndex.set(1);
+    fixture.detectChanges();
+    const lastTag = fixture.nativeElement.querySelector<HTMLElement>('.status-tag');
+    expect(lastTag?.getAttribute('data-tone')).toBe('success');
+    expect(lastTag?.textContent).toContain('Finalizado');
+    expect(component.statusVisual('Estado desconocido')).toEqual({ icon: 'circle', tone: 'neutral' });
+  });
+
   it('opens the general project detail and keeps documents as a separate menu option', () => {
     const fixture = TestBed.createComponent(ProjectsComponent);
     fixture.detectChanges();

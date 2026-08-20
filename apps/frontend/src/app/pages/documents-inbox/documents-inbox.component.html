@@ -33,7 +33,7 @@
               <td><strong class="code">{{ dossier.code }}</strong></td>
               <td class="dossier-name">{{ dossier.name }}</td>
               <td>{{ dossier.unit }}</td>
-              <td><span class="status" [class]="statusClass(dossier.status)">{{ dossier.status }}</span></td>
+              <td><span class="status-tag" [attr.data-tone]="statusVisual(dossier.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(dossier.status).icon }}</mat-icon><span>{{ dossier.status }}</span></span></td>
               <td><div class="document-counts"><span class="loaded-count"><b>{{ dossier.loadedCount }}</b> cargados</span><span class="pending-count"><b>{{ dossier.pendingCount }}</b> pendientes</span>@if (dossier.notApplicableCount) {<span class="na-count"><b>{{ dossier.notApplicableCount }}</b> no aplica</span>}</div></td>
               <td>{{ dossier.lastActivity }}</td>
               <td><a class="secondary-button" [routerLink]="dossierRoute(dossier)">Ver documentos <mat-icon>chevron_right</mat-icon></a></td>

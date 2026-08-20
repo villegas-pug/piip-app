@@ -16,6 +16,24 @@ import {
   ProjectRegistrationDialogView,
 } from './project-registration-dialog.component';
 
+type StatusTone = 'pending' | 'success' | 'progress' | 'neutral' | 'warning' | 'danger';
+
+interface StatusVisual {
+  readonly icon: string;
+  readonly tone: StatusTone;
+}
+
+const STATUS_VISUALS: Readonly<Record<string, StatusVisual>> = {
+  'Producto aprobado': { icon: 'check_circle', tone: 'success' },
+  Finalizado: { icon: 'check_circle', tone: 'success' },
+  'Proyecto en ejecución': { icon: 'play_circle', tone: 'progress' },
+  Suspendido: { icon: 'pause_circle', tone: 'warning' },
+  'Producto no aprobado': { icon: 'cancel', tone: 'danger' },
+  Cancelado: { icon: 'cancel', tone: 'danger' },
+};
+
+const FALLBACK_STATUS_VISUAL: StatusVisual = { icon: 'circle', tone: 'neutral' };
+
 @Component({
   selector: 'app-projects',
   imports: [ReactiveFormsModule, RouterLink, MatIconModule, MatMenuModule, PiipPaginationComponent],
@@ -87,12 +105,5 @@ export class ProjectsComponent {
     return this.repository.canAdministerExecutingUnit(project.executingUnitId);
   }
 
-  statusClass(status: PiipStatus): string {
-    if (status === 'Proyecto en ejecución') return 'running';
-    if (status === 'Producto aprobado') return 'product';
-    if (status === 'Suspendido') return 'suspended';
-    if (status === 'Finalizado') return 'finalized';
-    if (status === 'Cancelado') return 'cancelled';
-    return '';
-  }
+  statusVisual(status: PiipStatus | string): StatusVisual { return STATUS_VISUALS[status] ?? FALLBACK_STATUS_VISUAL; }
 }

@@ -9,6 +9,29 @@ import { DocumentDossierSummary, PiipStatus } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 
+type StatusTone = 'pending' | 'success' | 'progress' | 'neutral' | 'warning' | 'danger';
+
+interface StatusVisual {
+  readonly icon: string;
+  readonly tone: StatusTone;
+}
+
+const STATUS_VISUALS: Readonly<Record<string, StatusVisual>> = {
+  Presentado: { icon: 'schedule', tone: 'pending' },
+  'Iniciativa aprobada': { icon: 'check_circle', tone: 'success' },
+  'Producto aprobado': { icon: 'check_circle', tone: 'success' },
+  Finalizado: { icon: 'check_circle', tone: 'success' },
+  'Proyecto en ejecución': { icon: 'play_circle', tone: 'progress' },
+  'Iniciativa archivada': { icon: 'archive', tone: 'neutral' },
+  'No Aplicable': { icon: 'remove_circle_outline', tone: 'neutral' },
+  Suspendido: { icon: 'pause_circle', tone: 'warning' },
+  'Producto no aprobado': { icon: 'cancel', tone: 'danger' },
+  'No Admisible': { icon: 'cancel', tone: 'danger' },
+  Cancelado: { icon: 'cancel', tone: 'danger' },
+};
+
+const FALLBACK_STATUS_VISUAL: StatusVisual = { icon: 'circle', tone: 'neutral' };
+
 @Component({
   selector: 'app-documents-inbox',
   imports: [ReactiveFormsModule, RouterLink, MatIconModule, PiipPaginationComponent],
@@ -59,14 +82,5 @@ export class DocumentsInboxComponent {
     return ['/', segment, dossier.code, 'documentos'];
   }
 
-  statusClass(status: PiipStatus): string {
-    if (status === 'Iniciativa aprobada') return 'approved';
-    if (status === 'Proyecto en ejecución') return 'running';
-    if (status === 'Producto aprobado') return 'product';
-    if (status === 'Suspendido') return 'suspended';
-    if (status === 'Finalizado') return 'finalized';
-    if (status === 'Cancelado' || status === 'Iniciativa archivada') return 'archived';
-    if (status === 'No Admisible' || status === 'No Aplicable' || status === 'Producto no aprobado') return 'rejected';
-    return '';
-  }
+  statusVisual(status: PiipStatus): StatusVisual { return STATUS_VISUALS[status] ?? FALLBACK_STATUS_VISUAL; }
 }
