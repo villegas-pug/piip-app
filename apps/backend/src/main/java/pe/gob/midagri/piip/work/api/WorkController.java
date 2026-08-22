@@ -1,60 +1,57 @@
 package pe.gob.midagri.piip.work.api;
 
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDate;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.transaction.annotation.Transactional;
 import pe.gob.midagri.piip.audit.application.AuditService;
-import pe.gob.midagri.piip.identity.application.*;
-import pe.gob.midagri.piip.identity.domain.RoleCode;
-import pe.gob.midagri.piip.identity.persistence.*;
-import pe.gob.midagri.piip.shared.api.*;
-import pe.gob.midagri.piip.work.domain.*;
-import pe.gob.midagri.piip.work.persistence.*;
-import java.time.*;
-import java.util.*;
+import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
+import pe.gob.midagri.piip.identity.persistence.UserRepository;
+import pe.gob.midagri.piip.identity.persistence.UserRoleScopeRepository;
+import pe.gob.midagri.piip.shared.application.error.StaleVersionException;
+import pe.gob.midagri.piip.work.application.WorkTaskReadModels.TaskView;
+import pe.gob.midagri.piip.work.application.WorkTaskService;
+import pe.gob.midagri.piip.work.domain.TaskPriority;
+import pe.gob.midagri.piip.work.domain.TaskStatus;
+import pe.gob.midagri.piip.work.domain.TaskType;
+import pe.gob.midagri.piip.work.persistence.WorkTaskRepository;
 
 @RestController
 @RequestMapping("/work-tasks")
 public class WorkController {
-    private final WorkTaskRepository tasks; private final UserRepository users; private final UserRoleScopeRepository scopes;
-    private final LocalAuthorizationService authorization; private final AuditService audit;
-    public WorkController(WorkTaskRepository tasks, UserRepository users, UserRoleScopeRepository scopes, LocalAuthorizationService authorization, AuditService audit) {
-        this.tasks = tasks; this.users = users; this.scopes = scopes; this.authorization = authorization; this.audit = audit;
+    private final WorkTaskService service;
+
+    @Autowired
+    public WorkController(WorkTaskService service) { this.service = service; }
+
+    /** Constructor de compatibilidad para pruebas unitarias existentes. */
+    public WorkController(WorkTaskRepository tasks, UserRepository users, UserRoleScopeRepository ignoredScopes,
+            LocalAuthorizationService authorization, AuditService audit) {
+        this(new WorkTaskService(tasks, users, authorization, audit));
     }
 
-    @GetMapping @Transactional(readOnly = true)
-    public List<TaskResponse> pending() {
-        LocalAccessContext actor = authorization.require(RoleCode.ADMINISTRADOR_PIIP);
-        return tasks.findByAssignedUserIdAndStatusOrderByDueDateAsc(actor.userId(), TaskStatus.PENDING).stream()
-            .filter(task -> actor.coversExecutingUnit(RoleCode.ADMINISTRADOR_PIIP,
-                task.getRecord().getExecutingUnit().getId(), task.getRecord().getExecutingUnit().getInstitution().getId()))
-            .map(this::response).toList();
-    }
+    @GetMapping
+    public List<TaskResponse> pending() { return service.pending().stream().map(WorkController::response).toList(); }
 
-    @PutMapping("/{taskId}/complete") @ResponseStatus(HttpStatus.NO_CONTENT) @Transactional
+    @PutMapping("/{taskId}/complete")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void complete(@PathVariable("taskId") Long taskId, @RequestParam("version") long version) {
-        WorkTaskEntity task = task(taskId); LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, task.getRecord().getExecutingUnit().getId());
-        if (task.getVersion() != version) throw new StaleVersionException();
-        task.complete(); audit.event("TAREA_COMPLETADA", "TAREA_TRABAJO", taskId.toString(), Map.of("registro", task.getRecord().getCode()), actor.subject());
+        service.complete(taskId, version);
     }
 
-    @PutMapping("/{taskId}/assignee") @Transactional
+    @PutMapping("/{taskId}/assignee")
     public TaskResponse reassign(@PathVariable("taskId") Long taskId, @RequestBody ReassignRequest request) {
-        WorkTaskEntity task = task(taskId); LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, task.getRecord().getExecutingUnit().getId());
-        if (task.getVersion() != request.version()) throw new StaleVersionException();
-        UserEntity target = users.findByKeycloakSubject(request.userSubject()).orElseThrow(() -> new NotFoundException("Usuario inexistente"));
-        boolean allowed = scopes.findActiveBySubject(target.getKeycloakSubject(), Instant.now()).stream().anyMatch(scope ->
-            scope.getRole().getCode() == RoleCode.ADMINISTRADOR_PIIP
-                && scope.getInstitution().getId().equals(task.getRecord().getExecutingUnit().getInstitution().getId())
-                && (scope.getExecutingUnit() == null || scope.getExecutingUnit().getId().equals(task.getRecord().getExecutingUnit().getId())));
-        if (!allowed) throw new BusinessRuleException("El usuario no es administrador del mismo ámbito");
-        task.reassign(target); audit.event("TAREA_REASIGNADA", "TAREA_TRABAJO", taskId.toString(), Map.of("registro", task.getRecord().getCode(), "asignadoA", target.getKeycloakSubject()), actor.subject());
-        return response(task);
+        return response(service.reassign(taskId, request.userSubject(), request.version()));
     }
 
-    private WorkTaskEntity task(Long id) { return tasks.findById(id).orElseThrow(() -> new NotFoundException("Tarea inexistente")); }
-    private TaskResponse response(WorkTaskEntity task) { LocalDate today = LocalDate.now(); String alert = task.getDueDate() == null ? "SIN_PLAZO" : task.getDueDate().isBefore(today) ? "VENCIDA" : !task.getDueDate().isAfter(today.plusDays(3)) ? "PROXIMA" : "EN_PLAZO"; return new TaskResponse(task.getId(), task.getRecord().getCode(), task.getType(), task.getDescription(), task.getAssignedUser().getFullName(), task.getPriority(), task.getStatus(), task.getDueDate(), alert, task.getVersion()); }
+    private static TaskResponse response(TaskView value) {
+        return new TaskResponse(value.id(), value.recordCode(), value.type(), value.description(), value.assignedTo(),
+            value.priority(), value.status(), value.dueDate(), value.alert(), value.version());
+    }
+
     public record ReassignRequest(@NotNull String userSubject, @NotNull Long version) {}
-    public record TaskResponse(Long id, String recordCode, TaskType type, String description, String assignedTo, TaskPriority priority, TaskStatus status, LocalDate dueDate, String alert, long version) {}
+    public record TaskResponse(Long id, String recordCode, TaskType type, String description, String assignedTo,
+            TaskPriority priority, TaskStatus status, LocalDate dueDate, String alert, long version) {}
 }

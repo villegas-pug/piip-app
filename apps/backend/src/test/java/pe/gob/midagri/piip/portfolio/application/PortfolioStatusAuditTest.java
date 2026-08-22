@@ -56,7 +56,8 @@ import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class PortfolioStatusAuditTest {
     @MockitoBean JwtDecoder jwtDecoder;
-    @Autowired PortfolioService service;
+    @Autowired InitiativeApplicationService initiatives;
+    @Autowired ProjectApplicationService projects;
     @Autowired PortfolioRecordRepository records;
     @Autowired AuditEventRepository auditEvents;
     @Autowired InstitutionRepository institutions;
@@ -88,7 +89,7 @@ class PortfolioStatusAuditTest {
     void recordsTheRequiredJsonEvidenceForInitiativeTransition() throws Exception {
         PortfolioRecordEntity initiative = initiative();
 
-        service.transitionInitiativeStatus(initiative.getCode(),
+        initiatives.transitionInitiativeStatus(initiative.getCode(),
             new InitiativeStatusTransitionRequest(0L, PortfolioStatus.INITIATIVE_ARCHIVED, "archivada por evaluación"));
 
         AuditEventEntity event = eventFor(initiative.getCode(), "ESTADO_INICIATIVA_CAMBIADO");
@@ -101,7 +102,7 @@ class PortfolioStatusAuditTest {
     void recordsTheRequiredJsonEvidenceForProjectTransition() throws Exception {
         PortfolioRecordEntity project = project();
 
-        service.transitionProjectStatus(project.getCode(),
+        projects.transitionProjectStatus(project.getCode(),
             new ProjectStatusTransitionRequest(0L, PortfolioStatus.PRODUCT_APPROVED, "producto validado"));
 
         AuditEventEntity event = eventFor(project.getCode(), "ESTADO_PROYECTO_CAMBIADO");
@@ -115,7 +116,7 @@ class PortfolioStatusAuditTest {
         PortfolioRecordEntity initiative = initiative();
         audit.failAfterWrite(true);
 
-        assertThatThrownBy(() -> service.transitionInitiativeStatus(initiative.getCode(),
+        assertThatThrownBy(() -> initiatives.transitionInitiativeStatus(initiative.getCode(),
             new InitiativeStatusTransitionRequest(0L, PortfolioStatus.INITIATIVE_ARCHIVED, "debe revertirse")))
             .isInstanceOf(IllegalStateException.class);
 
@@ -131,7 +132,7 @@ class PortfolioStatusAuditTest {
         PortfolioRecordEntity project = project();
         audit.failAfterWrite(true);
 
-        assertThatThrownBy(() -> service.transitionProjectStatus(project.getCode(),
+        assertThatThrownBy(() -> projects.transitionProjectStatus(project.getCode(),
             new ProjectStatusTransitionRequest(0L, PortfolioStatus.PRODUCT_APPROVED, "debe revertirse")))
             .isInstanceOf(IllegalStateException.class);
 

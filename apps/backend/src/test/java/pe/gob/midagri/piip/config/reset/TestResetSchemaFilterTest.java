@@ -22,8 +22,8 @@ class TestResetSchemaFilterTest {
     @Test void filtroIncluyeUnicamenteLaTablaSeleccionada() {
         TestResetSchemaFilterProvider provider = new TestResetSchemaFilterProvider();
         provider.select("DOCUMENTO");
-        assertThat(provider.getDropFilter().includeTable(new Table("DOCUMENTO"))).isTrue();
-        assertThat(provider.getDropFilter().includeTable(new Table("USUARIO"))).isFalse();
+        assertThat(provider.getDropFilter().includeTable(new Table("test", "DOCUMENTO"))).isTrue();
+        assertThat(provider.getDropFilter().includeTable(new Table("test", "USUARIO"))).isFalse();
         assertThatThrownBy(() -> provider.select("USUARIO")).isInstanceOf(IllegalArgumentException.class);
     }
 }

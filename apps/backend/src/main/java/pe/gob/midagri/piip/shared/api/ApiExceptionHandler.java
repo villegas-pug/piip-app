@@ -5,6 +5,10 @@ import org.springframework.http.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
+import pe.gob.midagri.piip.shared.application.error.InvalidReferenceException;
+import pe.gob.midagri.piip.shared.application.error.NotFoundException;
+import pe.gob.midagri.piip.shared.application.error.StaleVersionException;
 import java.net.URI;
 
 @RestControllerAdvice
@@ -12,7 +16,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     ProblemDetail notFound(NotFoundException exception) { return problem(HttpStatus.NOT_FOUND, "Recurso no encontrado", exception.getMessage()); }
 
-    @ExceptionHandler({BusinessRuleException.class, IllegalStateException.class})
+    @ExceptionHandler(BusinessRuleException.class)
     ProblemDetail business(RuntimeException exception) { return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Regla de negocio", exception.getMessage()); }
 
     @ExceptionHandler(InvalidReferenceException.class)

@@ -8,7 +8,7 @@ import pe.gob.midagri.piip.documents.domain.DocumentState;
 import pe.gob.midagri.piip.documents.persistence.DocumentRepository;
 import pe.gob.midagri.piip.identity.application.*;
 import pe.gob.midagri.piip.portfolio.persistence.*;
-import pe.gob.midagri.piip.organization.api.OrganizationController.OrganizationalUnitResponse;
+import pe.gob.midagri.piip.organization.application.OrganizationReadModels.OrganizationalUnitView;
 
 @Service
 public class DocumentInboxService {
@@ -34,9 +34,9 @@ public class DocumentInboxService {
             .filter(record -> access.coversExecutingUnit(record.getExecutingUnit().getId(), record.getExecutingUnit().getInstitution().getId()))
             .map(record -> {
                 var slots = documents.findByRecordIdOrderByTypeDisplayOrderAscTypeCodeAsc(record.getId());
-                List<OrganizationalUnitResponse> units = responsibleUnits.findByRecordIdOrderByDisplayOrder(record.getId()).stream()
+                List<OrganizationalUnitView> units = responsibleUnits.findByRecordIdOrderByDisplayOrder(record.getId()).stream()
                     .map(ResponsibleUnitEntity::getOrganizationalUnit)
-                    .map(unit -> new OrganizationalUnitResponse(unit.getId(), unit.getCode(), unit.getName(), unit.isActive(), unit.getAcronym(),
+                    .map(unit -> new OrganizationalUnitView(unit.getId(), unit.getCode(), unit.getName(), unit.isActive(), unit.getAcronym(),
                         unit.getParent() == null ? null : unit.getParent().getId(), unit.getExecutingUnit().getId())).toList();
                 return new DossierSummary(record.getRecordType().label(), record.getCode(), record.getName(), record.getExecutingUnit().getName(), record.getStatus().label(),
                     slots.stream().filter(item -> item.getState() == DocumentState.LOADED).count(),
@@ -47,5 +47,5 @@ public class DocumentInboxService {
     }
     public record DossierSummary(String recordType, String code, String name, String unit, String status,
         long loadedCount, long pendingCount, long notApplicableCount, Instant lastActivity,
-        String recordTypeCode, Long executingUnitId, List<OrganizationalUnitResponse> organizationalUnits) {}
+        String recordTypeCode, Long executingUnitId, List<OrganizationalUnitView> organizationalUnits) {}
 }

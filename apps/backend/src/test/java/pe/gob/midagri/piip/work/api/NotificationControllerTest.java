@@ -18,7 +18,7 @@ import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
 import pe.gob.midagri.piip.identity.application.RoleScopeGrant;
 import pe.gob.midagri.piip.identity.domain.RoleCode;
 import pe.gob.midagri.piip.identity.persistence.UserEntity;
-import pe.gob.midagri.piip.shared.api.NotFoundException;
+import pe.gob.midagri.piip.shared.application.error.NotFoundException;
 import pe.gob.midagri.piip.work.persistence.NotificationEntity;
 import pe.gob.midagri.piip.work.persistence.NotificationRepository;
 

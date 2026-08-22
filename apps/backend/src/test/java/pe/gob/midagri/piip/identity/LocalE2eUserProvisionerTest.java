@@ -1,6 +1,7 @@
 package pe.gob.midagri.piip.identity;
 
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * en {@link #requireExplicitLocalExecution()}.</p>
  */
 @DataJpaTest
+@Tag("integration")
 @ActiveProfiles("local-e2e")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)

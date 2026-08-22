@@ -1,17 +1,16 @@
 package pe.gob.midagri.piip.audit.api;
 
 import org.junit.jupiter.api.Test;
-import pe.gob.midagri.piip.audit.persistence.AuditEventEntity;
-import pe.gob.midagri.piip.identity.persistence.UserEntity;
+import pe.gob.midagri.piip.audit.application.AuditReadModels.EventView;
 import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AuditControllerTest {
     @Test
     void exposesTheActorPresentationWithoutChangingTheStoredDetail() {
-        UserEntity user = new UserEntity("actor-subject", "Ana Analista", "ana@midagri.gob.pe");
-        AuditEventEntity event = new AuditEventEntity("DOCUMENTO_CARGADO", "REGISTRO_PORTAFOLIO", "I-001-2026",
-            "{\"tipo\":\"INITIATIVE_TECHNICAL_OPINION\"}", user, "actor-subject");
+        EventView event = new EventView("DOCUMENTO_CARGADO", "I-001-2026",
+            "{\"tipo\":\"INITIATIVE_TECHNICAL_OPINION\"}", "actor-subject", "Ana Analista",
+            "ana@midagri.gob.pe", Instant.now());
 
         AuditController.EventResponse response = AuditController.toEventResponse(event);
 
@@ -23,7 +22,8 @@ class AuditControllerTest {
 
     @Test
     void preservesTheTechnicalSubjectWhenTheHistoricalEventHasNoUser() {
-        AuditEventEntity event = new AuditEventEntity("TAREA_CREADA", "TAREA_TRABAJO", "10", "{\"registro\":\"I-001-2026\"}", null, "legacy-subject");
+        EventView event = new EventView("TAREA_CREADA", "10", "{\"registro\":\"I-001-2026\"}",
+            "legacy-subject", null, null, Instant.now());
 
         AuditController.EventResponse response = AuditController.toEventResponse(event);
 

@@ -4,13 +4,14 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import pe.gob.midagri.piip.portfolio.domain.*;
 import pe.gob.midagri.piip.catalogs.api.CatalogDtos.*;
-import pe.gob.midagri.piip.organization.api.OrganizationController.OrganizationalUnitResponse;
 import java.time.*;
 import java.util.List;
 
 public final class PortfolioDtos {
     private PortfolioDtos() {}
 
+    public record OrganizationalUnitResponse(Long id, String code, String name, boolean active, String acronym,
+            Long parentId, Long executingUnitId) {}
     public record ResponsibleUnitInput(@NotNull Long organizationalUnitId) {}
     public record ResponsibleUnitResponse(OrganizationalUnitResponse organizationalUnit, String originalDesignation, int displayOrder) {}
 

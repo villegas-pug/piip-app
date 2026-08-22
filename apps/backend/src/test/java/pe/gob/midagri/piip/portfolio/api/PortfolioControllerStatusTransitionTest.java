@@ -14,21 +14,25 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import pe.gob.midagri.piip.portfolio.application.PortfolioService;
+import pe.gob.midagri.piip.portfolio.application.InitiativeApplicationService;
+import pe.gob.midagri.piip.portfolio.application.PortfolioQueryService;
+import pe.gob.midagri.piip.portfolio.application.ProjectApplicationService;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.shared.api.ApiExceptionHandler;
-import pe.gob.midagri.piip.shared.api.BusinessRuleException;
-import pe.gob.midagri.piip.shared.api.NotFoundException;
-import pe.gob.midagri.piip.shared.api.StaleVersionException;
+import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
+import pe.gob.midagri.piip.shared.application.error.NotFoundException;
+import pe.gob.midagri.piip.shared.application.error.StaleVersionException;
 
 @ExtendWith(MockitoExtension.class)
 class PortfolioControllerStatusTransitionTest {
-    @Mock PortfolioService service;
+    @Mock InitiativeApplicationService initiatives;
+    @Mock ProjectApplicationService projects;
+    @Mock PortfolioQueryService queries;
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
-        mvc = MockMvcBuilders.standaloneSetup(new PortfolioController(service))
+        mvc = MockMvcBuilders.standaloneSetup(new PortfolioController(queries, initiatives, projects))
             .setControllerAdvice(new ApiExceptionHandler())
             .build();
     }
@@ -51,25 +55,25 @@ class PortfolioControllerStatusTransitionTest {
 
     @Test
     void mapsAuthorizationFailureToForbidden() throws Exception {
-        when(service.transitionProjectStatus(any(), any())).thenThrow(new AccessDeniedException("fuera de ámbito"));
+        when(projects.transition(any(), any())).thenThrow(new AccessDeniedException("fuera de ámbito"));
         performValidProjectTransition().andExpect(status().isForbidden());
     }
 
     @Test
     void mapsMissingRecordToNotFound() throws Exception {
-        when(service.transitionProjectStatus(any(), any())).thenThrow(new NotFoundException("Proyecto inexistente"));
+        when(projects.transition(any(), any())).thenThrow(new NotFoundException("Proyecto inexistente"));
         performValidProjectTransition().andExpect(status().isNotFound());
     }
 
     @Test
     void mapsStaleVersionToConflict() throws Exception {
-        when(service.transitionProjectStatus(any(), any())).thenThrow(new StaleVersionException());
+        when(projects.transition(any(), any())).thenThrow(new StaleVersionException());
         performValidProjectTransition().andExpect(status().isConflict());
     }
 
     @Test
     void mapsDisallowedTransitionToUnprocessableEntity() throws Exception {
-        when(service.transitionProjectStatus(any(), any())).thenThrow(new BusinessRuleException("Transición no permitida"));
+        when(projects.transition(any(), any())).thenThrow(new BusinessRuleException("Transición no permitida"));
         performValidProjectTransition().andExpect(status().isUnprocessableEntity());
     }
 

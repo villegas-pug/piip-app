@@ -71,6 +71,19 @@ public class LocalAuthorizationService {
         return context;
     }
 
+    /**
+     * Revalida la elegibilidad del usuario destino usando una única asignación
+     * activa, sin combinar institución y UE de grants distintos.
+     */
+    @Transactional(readOnly = true)
+    public void requireReassignmentEligible(String subject, Long institutionId, Long executingUnitId) {
+        boolean allowed = scopes.findActiveBySubject(subject, Instant.now()).stream().anyMatch(scope ->
+            scope.getRole().getCode() == RoleCode.ADMINISTRADOR_PIIP
+                && scope.getInstitution().getId().equals(institutionId)
+                && (scope.getExecutingUnit() == null || scope.getExecutingUnit().getId().equals(executingUnitId)));
+        if (!allowed) throw new AccessDeniedException("El usuario no es administrador del mismo ámbito");
+    }
+
     private boolean coversUnit(LocalAccessContext context, Long unitId) {
         ExecutingUnitEntity unit = unit(unitId);
         return context.coversExecutingUnit(unitId, unit.getInstitution().getId());

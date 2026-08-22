@@ -1,2 +1,7 @@
 package pe.gob.midagri.piip.shared.api;
-public class NotFoundException extends RuntimeException { public NotFoundException(String message) { super(message); } }
+
+/** @deprecated usar el error de application; se conserva como puente temporal de compatibilidad. */
+@Deprecated(forRemoval = false)
+public class NotFoundException extends pe.gob.midagri.piip.shared.application.error.NotFoundException {
+    public NotFoundException(String message) { super(message); }
+}

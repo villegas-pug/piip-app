@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.gob.midagri.piip.catalogs.domain.CatalogCode;
 import pe.gob.midagri.piip.catalogs.persistence.*;
-import pe.gob.midagri.piip.shared.api.InvalidReferenceException;
+import pe.gob.midagri.piip.shared.application.error.InvalidReferenceException;
 
 @Service
 @Transactional(readOnly = true)

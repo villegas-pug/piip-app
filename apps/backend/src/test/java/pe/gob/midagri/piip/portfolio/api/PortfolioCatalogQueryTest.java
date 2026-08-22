@@ -40,11 +40,9 @@ class PortfolioCatalogQueryTest {
         when(records.findByCodeIgnoreCase("I-01")).thenReturn(Optional.of(record));
         when(responsible.findByRecordIdOrderByDisplayOrder(7L)).thenReturn(List.of());
 
-        PortfolioService service = new PortfolioService(records, responsible, mock(ExecutingUnitRepository.class),
-            mock(OrganizationalUnitRepository.class), mock(pe.gob.midagri.piip.identity.persistence.UserRepository.class),
-            mock(WorkTaskRepository.class), mock(NotificationRepository.class), mock(DocumentRepository.class),
-            mock(CodeGeneratorService.class), authorization, mock(AuditService.class), mock(CatalogReferenceService.class),
-            mock(DocumentTypeRepository.class));
+        PortfolioQueryService service = new PortfolioQueryService(records,
+            new PortfolioApplicationSupport(authorization, java.time.Clock.systemUTC()),
+            new PortfolioReadModelAssembler(responsible));
         var response = service.get("I-01");
 
         assertThat(response.solutionType().id()).isEqualTo(11L);

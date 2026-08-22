@@ -14,7 +14,10 @@ import pe.gob.midagri.piip.identity.application.*;
 import pe.gob.midagri.piip.identity.domain.RoleCode;
 import pe.gob.midagri.piip.identity.persistence.*;
 import pe.gob.midagri.piip.portfolio.persistence.*;
-import pe.gob.midagri.piip.shared.api.*;
+import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
+import pe.gob.midagri.piip.shared.application.error.InvalidReferenceException;
+import pe.gob.midagri.piip.shared.application.error.NotFoundException;
+import pe.gob.midagri.piip.shared.application.error.StaleVersionException;
 import pe.gob.midagri.piip.work.persistence.*;
 import java.io.IOException;
 import java.security.*;
@@ -48,15 +51,21 @@ public class DocumentService {
     }
 
     @Transactional
-    public VersionResponse upload(String recordCode, Long documentTypeId, MultipartFile file) {
+    public VersionResponse upload(String recordCode, Long documentTypeId, DocumentUploadInput file) {
         PortfolioRecordEntity record = record(recordCode); LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, record.getExecutingUnit().getId());
         validate(file); byte[] bytes = read(file);
         DocumentEntity document = documentSlot(record, documentTypeId);
         int number = document.registerUpload();
-        DocumentVersionEntity version = versions.save(new DocumentVersionEntity(document, number, sanitize(file.getOriginalFilename()), file.getContentType(), bytes.length, sha256(bytes), actor.subject()));
+        DocumentVersionEntity version = versions.save(new DocumentVersionEntity(document, number, sanitize(file.originalFilename()), file.contentType(), bytes.length, sha256(bytes), actor.subject()));
         contents.save(new DocumentContentEntity(version, bytes));
         audit.event("DOCUMENTO_CARGADO", "REGISTRO_PORTAFOLIO", recordCode, documentAudit(document, number), actor.subject());
         return toVersion(version);
+    }
+
+    /** @deprecated la frontera HTTP debe usar {@link DocumentUploadInput}. */
+    @Deprecated(forRemoval = false)
+    public VersionResponse upload(String recordCode, Long documentTypeId, MultipartFile file) {
+        return upload(recordCode, documentTypeId, pe.gob.midagri.piip.documents.api.MultipartDocumentUploadAdapter.adapt(file));
     }
 
     @Transactional
@@ -114,8 +123,8 @@ public class DocumentService {
         return Map.of("tipoCodigo", document.getType().getCode(), "tipoNombre", document.getType().getName(), "version", version);
     }
     private VersionResponse toVersion(DocumentVersionEntity value) { return new VersionResponse(value.getId(), value.getVersionNumber(), value.getFilename(), value.getMimeType(), value.getSizeBytes(), value.getChecksumSha256(), value.getUploadedAt(), value.isExternallyPublished(), value.getOptimisticVersion()); }
-    private void validate(MultipartFile file) { if (file.isEmpty()) throw new BusinessRuleException("El archivo está vacío"); if (file.getSize() > properties.maxSizeBytes()) throw new BusinessRuleException("El archivo excede el límite configurado"); if (!ALLOWED_MIME.contains(file.getContentType())) throw new BusinessRuleException("Tipo MIME no permitido"); }
-    private byte[] read(MultipartFile file) { try { return file.getBytes(); } catch (IOException exception) { throw new BusinessRuleException("No se pudo leer el archivo"); } }
+    private void validate(DocumentUploadInput file) { if (file.sizeBytes() == 0) throw new BusinessRuleException("El archivo está vacío"); if (file.sizeBytes() > properties.maxSizeBytes()) throw new BusinessRuleException("El archivo excede el límite configurado"); if (!ALLOWED_MIME.contains(file.contentType())) throw new BusinessRuleException("Tipo MIME no permitido"); }
+    private byte[] read(DocumentUploadInput file) { return file.bytes().get(); }
     private String sanitize(String name) { if (name == null || name.isBlank()) return "documento"; return name.replaceAll("[\\\\/:*?\"<>|]", "_"); }
     private String sha256(byte[] bytes) { try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); } catch (NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); } }
 }

@@ -18,7 +18,7 @@ import pe.gob.midagri.piip.organization.persistence.*;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.*;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.persistence.*;
-import pe.gob.midagri.piip.shared.api.InvalidReferenceException;
+import pe.gob.midagri.piip.shared.application.error.InvalidReferenceException;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 import pe.gob.midagri.piip.work.persistence.*;
 
@@ -46,7 +46,7 @@ class ResponsibleUnitValidationTest {
             .thenReturn(new LocalAccessContext(1L, "subject", Set.of()));
         CodeGeneratorService codes = mock(CodeGeneratorService.class);
         when(codes.next(any(), anyInt())).thenReturn("I-01");
-        PortfolioService service = new PortfolioService(records, responsible, executing, organizational,
+        InitiativeApplicationService service = new InitiativeApplicationService(records, responsible, executing, organizational,
             mock(pe.gob.midagri.piip.identity.persistence.UserRepository.class), mock(WorkTaskRepository.class),
             mock(NotificationRepository.class), mock(DocumentRepository.class), codes, authorization, mock(AuditService.class),
             references, mock(DocumentTypeRepository.class));
@@ -63,8 +63,7 @@ class ResponsibleUnitValidationTest {
         TestContext context = context();
         when(context.organizational().findHistoricalById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(context.service(), "saveResponsibleUnits",
-            context.record(), List.of(new ResponsibleUnitInput(99L))))
+        assertThatThrownBy(() -> context.responsibleService().save(context.record(), List.of(new ResponsibleUnitInput(99L))))
             .isInstanceOf(InvalidReferenceException.class).hasMessage("La Unidad Orgánica no existe");
         verifyNoInteractions(context.responsible());
     }
@@ -78,8 +77,7 @@ class ResponsibleUnitValidationTest {
         ReflectionTestUtils.setField(other, "id", 88L);
         when(context.organizational().findHistoricalById(88L)).thenReturn(Optional.of(other));
 
-        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(context.service(), "saveResponsibleUnits",
-            context.record(), List.of(new ResponsibleUnitInput(88L))))
+        assertThatThrownBy(() -> context.responsibleService().save(context.record(), List.of(new ResponsibleUnitInput(88L))))
             .isInstanceOf(InvalidReferenceException.class)
             .hasMessage("La Unidad Orgánica pertenece a otra Unidad Ejecutora");
         verifyNoInteractions(context.responsible());
@@ -91,15 +89,15 @@ class ResponsibleUnitValidationTest {
         ReflectionTestUtils.setField(active, "id", 8L);
         when(context.organizational().findHistoricalById(8L)).thenReturn(Optional.of(active));
 
-        ReflectionTestUtils.invokeMethod(context.service(), "saveResponsibleUnits", context.record(), List.of(new ResponsibleUnitInput(8L)));
+        context.responsibleService().save(context.record(), List.of(new ResponsibleUnitInput(8L)));
 
         verify(context.responsible()).save(argThat(saved -> saved.getOrganizationalUnit() == active
             && saved.getOriginalDesignation().equals("Unidad válida") && saved.getDisplayOrder() == 1));
     }
 
     @Test void lasCreacionesConResponsablesConservanFronteraTransaccional() throws NoSuchMethodException {
-        Transactional transactional = PortfolioService.class
-            .getMethod("createInitiative", InitiativeCreateRequest.class).getAnnotation(Transactional.class);
+        Transactional transactional = InitiativeApplicationService.class
+            .getMethod("create", InitiativeCreateRequest.class).getAnnotation(Transactional.class);
         assertThat(transactional).isNotNull();
     }
 
@@ -126,14 +124,14 @@ class ResponsibleUnitValidationTest {
         ExecutingUnitEntity unit = new ExecutingUnitEntity(institution, "UE", "Unidad");
         ReflectionTestUtils.setField(unit, "id", 5L);
         PortfolioRecordEntity record = PortfolioRecordTestBuilder.transientReferences().initiative("I-01", unit, "Iniciativa");
-        PortfolioService service = new PortfolioService(records, responsible, executing, organizational,
+        InitiativeApplicationService service = new InitiativeApplicationService(records, responsible, executing, organizational,
             mock(pe.gob.midagri.piip.identity.persistence.UserRepository.class), mock(WorkTaskRepository.class),
             mock(NotificationRepository.class), mock(DocumentRepository.class), mock(CodeGeneratorService.class), authorization,
             mock(AuditService.class), mock(CatalogReferenceService.class), mock(DocumentTypeRepository.class));
-        return new TestContext(service, record, responsible, organizational, executing, authorization);
+        return new TestContext(service, new ResponsibleUnitService(responsible, organizational), record, responsible, organizational, executing, authorization);
     }
 
-    private record TestContext(PortfolioService service, PortfolioRecordEntity record,
+    private record TestContext(InitiativeApplicationService service, ResponsibleUnitService responsibleService, PortfolioRecordEntity record,
             ResponsibleUnitRepository responsible, OrganizationalUnitRepository organizational,
             ExecutingUnitRepository executing, LocalAuthorizationService authorization) {}
 }

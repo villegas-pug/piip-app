@@ -14,6 +14,8 @@ import pe.gob.midagri.piip.identity.api.AdminDtos.RoleAssignmentUpdateRequest;
 import pe.gob.midagri.piip.identity.domain.RoleCode;
 import pe.gob.midagri.piip.identity.persistence.*;
 import pe.gob.midagri.piip.organization.persistence.*;
+import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
+import pe.gob.midagri.piip.shared.application.error.StaleVersionException;
 
 import java.time.Instant;
 import java.util.List;
@@ -134,7 +136,7 @@ class UserAdministrationServiceTest {
         when(scopes.findActiveAdministratorsForUpdate(eq(RoleCode.ADMINISTRADOR_PIIP), eq(10L), isNull(), any())).thenReturn(List.of(scope));
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.suspend(20L, 0L))
-            .isInstanceOf(pe.gob.midagri.piip.shared.api.BusinessRuleException.class);
+            .isInstanceOf(BusinessRuleException.class);
         verify(audit, never()).event(anyString(), anyString(), anyString(), anyMap(), anyString());
     }
 
@@ -212,7 +214,7 @@ class UserAdministrationServiceTest {
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.assign(new RoleAssignmentRequest(
                 "admin-subject", RoleCode.ADMINISTRADOR_PIIP, 10L, null)))
-            .isInstanceOf(pe.gob.midagri.piip.shared.api.BusinessRuleException.class);
+            .isInstanceOf(BusinessRuleException.class);
 
         verify(scopes, never()).save(any());
         verifyNoInteractions(audit);
@@ -242,7 +244,7 @@ class UserAdministrationServiceTest {
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.assign(new RoleAssignmentRequest(
                 "managed-subject", RoleCode.CONSULTA_EXTERNA, 10L, 101L)))
-            .isInstanceOf(pe.gob.midagri.piip.shared.api.BusinessRuleException.class);
+            .isInstanceOf(BusinessRuleException.class);
 
         verify(users, never()).findByKeycloakSubjectForUpdate(anyString());
     }
@@ -258,7 +260,7 @@ class UserAdministrationServiceTest {
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.update(20L, 1L,
                 new RoleAssignmentUpdateRequest(RoleCode.CONSULTA_EXTERNA, 10L, 101L)))
-            .isInstanceOf(pe.gob.midagri.piip.shared.api.StaleVersionException.class);
+            .isInstanceOf(StaleVersionException.class);
 
         verifyNoInteractions(roles, institutions, units, audit);
     }

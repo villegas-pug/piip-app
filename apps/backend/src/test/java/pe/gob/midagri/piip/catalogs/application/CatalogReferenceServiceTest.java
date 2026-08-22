@@ -7,7 +7,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import pe.gob.midagri.piip.catalogs.domain.CatalogCode;
 import pe.gob.midagri.piip.catalogs.persistence.*;
-import pe.gob.midagri.piip.shared.api.InvalidReferenceException;
+import pe.gob.midagri.piip.shared.application.error.InvalidReferenceException;
 
 class CatalogReferenceServiceTest {
     private final CatalogItemRepository items = mock(CatalogItemRepository.class);

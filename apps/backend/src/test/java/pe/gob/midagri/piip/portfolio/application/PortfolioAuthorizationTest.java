@@ -55,12 +55,15 @@ class PortfolioAuthorizationTest {
     @Mock AuditService audit;
     @Mock CatalogReferenceService catalogReferences;
     @Mock DocumentTypeRepository documentTypes;
-    private PortfolioService service;
+    private InitiativeApplicationService initiativeService;
+    private PortfolioQueryService queryService;
 
     @BeforeEach
     void setUp() {
-        service = new PortfolioService(records, responsibleUnits, executingUnits, organizationalUnits, users, tasks,
+        initiativeService = new InitiativeApplicationService(records, responsibleUnits, executingUnits, users, tasks,
             notifications, documents, codes, authorization, audit, catalogReferences, documentTypes);
+        queryService = new PortfolioQueryService(records, new PortfolioApplicationSupport(authorization, java.time.Clock.systemUTC()),
+            new PortfolioReadModelAssembler(responsibleUnits));
     }
 
     @Test
@@ -76,7 +79,7 @@ class PortfolioAuthorizationTest {
         when(records.existsByOriginRecordId(2L)).thenReturn(false);
         when(responsibleUnits.findByRecordIdOrderByDisplayOrder(2L)).thenReturn(List.of());
 
-        assertThat(service.eligibleInitiatives()).extracting(response -> response.code()).containsExactly("INI-UE2");
+        assertThat(queryService.eligibleInitiatives()).extracting(response -> response.code()).containsExactly("INI-UE2");
     }
 
     @Test
@@ -97,7 +100,7 @@ class PortfolioAuthorizationTest {
             DigitalComponent.NO,
             List.of(new ResponsibleUnitInput(13L)));
 
-        assertThatThrownBy(() -> service.createInitiative(request))
+        assertThatThrownBy(() -> initiativeService.createInitiative(request))
             .isInstanceOf(AccessDeniedException.class);
 
         verifyNoInteractions(records, codes, audit);

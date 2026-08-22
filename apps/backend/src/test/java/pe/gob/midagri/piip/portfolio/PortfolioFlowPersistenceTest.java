@@ -34,7 +34,7 @@ import pe.gob.midagri.piip.organization.persistence.OrganizationalUnitRepository
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.*;
 import pe.gob.midagri.piip.portfolio.application.*;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
-import pe.gob.midagri.piip.shared.api.InvalidReferenceException;
+import pe.gob.midagri.piip.shared.application.error.InvalidReferenceException;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 import pe.gob.midagri.piip.work.persistence.*;
 
@@ -107,7 +107,7 @@ class PortfolioFlowPersistenceTest {
         when(references.resolveActive(11L, CatalogCode.SOLUTION_TYPE, "solutionTypeId")).thenReturn(fixtures.solution());
         when(references.resolveActive(12L, CatalogCode.SOURCE_ORIGIN, "sourceId"))
             .thenThrow(new InvalidReferenceException("Referencia inválida", "sourceId", 12L, "INACTIVE"));
-        PortfolioService service = new PortfolioService(mockedRecords, mock(ResponsibleUnitRepository.class), mockedExecutingUnits,
+        InitiativeApplicationService service = new InitiativeApplicationService(mockedRecords, mock(ResponsibleUnitRepository.class), mockedExecutingUnits,
             mock(OrganizationalUnitRepository.class), mock(UserRepository.class), mock(WorkTaskRepository.class),
             mock(NotificationRepository.class), mock(DocumentRepository.class), codes, authorization, mock(AuditService.class),
             references, mock(DocumentTypeRepository.class));

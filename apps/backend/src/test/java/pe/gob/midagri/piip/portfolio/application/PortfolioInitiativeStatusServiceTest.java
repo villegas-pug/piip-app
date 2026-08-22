@@ -36,7 +36,7 @@ import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
-import pe.gob.midagri.piip.shared.api.BusinessRuleException;
+import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
 import pe.gob.midagri.piip.work.persistence.NotificationRepository;
 import pe.gob.midagri.piip.work.persistence.WorkTaskRepository;
 
@@ -55,11 +55,11 @@ class PortfolioInitiativeStatusServiceTest {
     @Mock AuditService audit;
     @Mock CatalogReferenceService catalogReferences;
     @Mock DocumentTypeRepository documentTypes;
-    private PortfolioService service;
+    private InitiativeApplicationService service;
 
     @BeforeEach
     void setUp() {
-        service = new PortfolioService(records, responsibleUnits, executingUnits, organizationalUnits, users, tasks,
+        service = new InitiativeApplicationService(records, responsibleUnits, executingUnits, users, tasks,
             notifications, documents, codes, authorization, audit, catalogReferences, documentTypes);
         lenient().when(responsibleUnits.findByRecordIdOrderByDisplayOrder(any())).thenReturn(List.of());
     }

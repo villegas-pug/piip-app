@@ -8,7 +8,9 @@ import pe.gob.midagri.piip.identity.api.AdminDtos.*;
 import pe.gob.midagri.piip.identity.domain.RoleCode;
 import pe.gob.midagri.piip.identity.persistence.*;
 import pe.gob.midagri.piip.organization.persistence.*;
-import pe.gob.midagri.piip.shared.api.*;
+import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
+import pe.gob.midagri.piip.shared.application.error.NotFoundException;
+import pe.gob.midagri.piip.shared.application.error.StaleVersionException;
 
 import java.time.Instant;
 import java.util.*;

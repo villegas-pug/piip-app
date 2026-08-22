@@ -6,56 +6,54 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.ProblemDetail;
-import org.springframework.web.bind.annotation.*;
-import pe.gob.midagri.piip.identity.application.*;
-import pe.gob.midagri.piip.portfolio.domain.*;
-import pe.gob.midagri.piip.portfolio.persistence.*;
-import pe.gob.midagri.piip.work.domain.TaskStatus;
-import pe.gob.midagri.piip.work.persistence.WorkTaskRepository;
-import pe.gob.midagri.piip.work.persistence.NotificationRepository;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import pe.gob.midagri.piip.dashboard.application.DashboardPortfolioService;
-import java.time.LocalDate;
-import java.util.*;
+import pe.gob.midagri.piip.dashboard.application.DashboardSummaryReadModel;
+import pe.gob.midagri.piip.dashboard.application.DashboardSummaryService;
+import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.RecordType;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.work.persistence.NotificationRepository;
+import pe.gob.midagri.piip.work.persistence.WorkTaskRepository;
 
 @RestController
 @RequestMapping("/dashboard")
 public class DashboardController {
-    private final PortfolioRecordRepository records; private final WorkTaskRepository tasks;
-    private final NotificationRepository notifications; private final LocalAuthorizationService authorization;
+    private final DashboardSummaryService summaryService;
     private final DashboardPortfolioService portfolioService;
+
     @Autowired
-    public DashboardController(PortfolioRecordRepository records, WorkTaskRepository tasks, NotificationRepository notifications,
-            LocalAuthorizationService authorization, DashboardPortfolioService portfolioService) {
-        this.records = records; this.tasks = tasks; this.notifications = notifications; this.authorization = authorization;
+    public DashboardController(DashboardSummaryService summaryService, DashboardPortfolioService portfolioService) {
+        this.summaryService = summaryService;
         this.portfolioService = portfolioService;
     }
-    public DashboardController(PortfolioRecordRepository records, WorkTaskRepository tasks, NotificationRepository notifications,
-            LocalAuthorizationService authorization) {
+
+    /** Constructor de compatibilidad para pruebas unitarias existentes. */
+    public DashboardController(PortfolioRecordRepository records, WorkTaskRepository tasks,
+            NotificationRepository notifications, LocalAuthorizationService authorization,
+            DashboardPortfolioService portfolioService) {
+        this(new DashboardSummaryService(records, tasks, notifications, authorization), portfolioService);
+    }
+
+    public DashboardController(PortfolioRecordRepository records, WorkTaskRepository tasks,
+            NotificationRepository notifications, LocalAuthorizationService authorization) {
         this(records, tasks, notifications, authorization, null);
     }
-    @GetMapping @Transactional(readOnly = true)
-    public DashboardResponse summary() {
-        LocalAccessContext actor = authorization.requireAuthenticatedRole();
-        List<PortfolioRecordEntity> visibleRecords = records.findAll().stream()
-            .filter(item -> actor.coversExecutingUnit(item.getExecutingUnit().getId(), item.getExecutingUnit().getInstitution().getId())).toList();
-        long initiatives = visibleRecords.stream().filter(item -> item.getRecordType() == RecordType.INITIATIVE).count();
-        long projects = visibleRecords.stream().filter(item -> item.getRecordType() == RecordType.PROJECT).count();
-        Map<String, Long> byStatus = new LinkedHashMap<>();
-        visibleRecords.forEach(item -> byStatus.merge(item.getStatus().label(), 1L, Long::sum));
 
-        var pendingTasks = actor.hasRole(pe.gob.midagri.piip.identity.domain.RoleCode.ADMINISTRADOR_PIIP)
-            ? tasks.findByAssignedUserIdAndStatusOrderByDueDateAsc(actor.userId(), TaskStatus.PENDING).stream()
-                .filter(task -> actor.coversExecutingUnit(pe.gob.midagri.piip.identity.domain.RoleCode.ADMINISTRADOR_PIIP,
-                    task.getRecord().getExecutingUnit().getId(), task.getRecord().getExecutingUnit().getInstitution().getId()))
-                .toList()
-            : List.<pe.gob.midagri.piip.work.persistence.WorkTaskEntity>of();
-        long alerts = pendingTasks.stream().filter(task -> task.getDueDate() != null && !task.getDueDate().isAfter(LocalDate.now().plusDays(3))).count();
-        long unread = notifications.findByRecipientIdOrderByCreatedAtDesc(actor.userId()).stream().filter(item -> !item.isRead()).count();
-        return new DashboardResponse(initiatives, projects, alerts, pendingTasks.size(), unread, byStatus);
+    @GetMapping
+    public DashboardResponse summary() {
+        DashboardSummaryReadModel value = summaryService.summary();
+        return new DashboardResponse(value.initiatives(), value.projects(), value.alerts(), value.pendingTasks(),
+            value.notifications(), value.portfolioByStatus());
     }
 
     @ApiResponses({

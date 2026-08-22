@@ -115,7 +115,8 @@ describe('ProjectsComponent', () => {
     const fixture = TestBed.createComponent(ProjectsComponent);
     fixture.detectChanges();
     const component = fixture.componentInstance;
-    const firstPageTags = Array.from(fixture.nativeElement.querySelectorAll<HTMLElement>('.status-tag'));
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    const firstPageTags = Array.from(nativeElement.querySelectorAll<HTMLElement>('.status-tag'));
 
     expect(firstPageTags).toHaveLength(5);
     expected.slice(0, 5).forEach(([status, icon, tone], index) => {
@@ -128,7 +129,7 @@ describe('ProjectsComponent', () => {
 
     component.pageIndex.set(1);
     fixture.detectChanges();
-    const lastTag = fixture.nativeElement.querySelector<HTMLElement>('.status-tag');
+    const lastTag = nativeElement.querySelector<HTMLElement>('.status-tag');
     expect(lastTag?.getAttribute('data-tone')).toBe('success');
     expect(lastTag?.textContent).toContain('Finalizado');
     expect(component.statusVisual('Estado desconocido')).toEqual({ icon: 'circle', tone: 'neutral' });
