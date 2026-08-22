@@ -101,7 +101,7 @@ describe('ProjectDetailComponent', () => {
       recordCode: 'P-005-2026', timestamp: '20/08/2026, 8:20 a. m.', event: 'DOCUMENTO_CARGADO',
       user: 'Administrador PIIP', email: 'admin@example.pe',
       rawDetail: JSON.stringify({ tipoCodigo: 'PROJECT_MANAGEMENT_DOCUMENTATION', tipoNombre: 'Documentación de la gestión del proyecto', version: 1 }),
-      observation: '', icon: 'history',
+      observation: '', documentName: 'Gestion_Proyecto_P-005-2026.pdf', icon: 'history',
     }]);
     const fixture = TestBed.createComponent(ProjectDetailComponent);
     fixture.detectChanges();

@@ -312,7 +312,7 @@ describe('UserAdministrationComponent operations', () => {
     fixture.detectChanges();
 
     const states = Array.from(fixture.nativeElement.querySelectorAll('.status') as NodeListOf<Element>).map((item) => item.textContent?.trim());
-    expect(states).toEqual(['Asignación suspendida']);
+    expect(states).toEqual(['1 suspendida']);
     expect(fixture.nativeElement.textContent).not.toContain('Inhabilitar usuario');
     expect(fixture.nativeElement.textContent).not.toContain('Habilitar usuario');
   });

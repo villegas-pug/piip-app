@@ -27,7 +27,10 @@ export class ProjectDetailComponent {
 
   readonly code = computed(() => this.paramMap().get('code') ?? '');
   readonly detail = computed(() => this.repository.getProjectDetail(this.code()));
-  readonly canAdministerRecord = computed(() => this.repository.canAdministerExecutingUnit(this.detail()?.project.executingUnitId));
+  readonly canAdministerRecord = computed(() => {
+    const detail = this.detail();
+    return this.repository.canAdministerExecutingUnit(detail?.project.executingUnitId ?? detail?.portfolioRecord.executingUnitId);
+  });
   readonly transitionOptions = computed(() => {
     const status = this.detail()?.project.status as ProjectStatus | undefined;
     if (!status) return [] as readonly ProjectStatus[];

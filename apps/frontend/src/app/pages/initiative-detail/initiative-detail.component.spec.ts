@@ -100,6 +100,8 @@ describe('InitiativeDetailComponent', () => {
 
   it('hides status controls and explains the lock when a derived project is linked', () => {
     const repository = TestBed.inject(PiipMockRepository);
+    repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
+    repository.portfolioRecords.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
     repository.projects.update((projects) => [
       { ...projects[0], originCode: 'I-024-2026', originMode: 'DERIVED_FROM_INITIATIVE' },
       ...projects.slice(1),
@@ -119,7 +121,7 @@ describe('InitiativeDetailComponent', () => {
     const receivedEvents: AuditEvent[] = [
       {
         recordCode: 'I-024-2026', timestamp: '20/05/2026\n10:28:19', event: 'DOCUMENTO_CARGADO', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
-        observation: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Informe de opinión técnica de evaluación de iniciativa","version":1}', rawDetail: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Informe de opinión técnica de evaluación de iniciativa","version":1}', icon: 'cloud_upload',
+        observation: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Informe de opinión técnica de evaluación de iniciativa","version":1}', rawDetail: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Informe de opinión técnica de evaluación de iniciativa","version":1}', documentName: 'Informe_tecnico_I-024-2026.pdf', icon: 'cloud_upload',
       },
       {
         recordCode: 'I-024-2026', timestamp: '20/05/2026\n09:31:12', event: 'INICIATIVA_REGISTRADA', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
