@@ -13,14 +13,17 @@ description: Evolucionar y publicar el contrato OpenAPI del backend PIIP a parti
 
 ## Mantener coherencia HTTP
 
-1. Conservar validaciones de entrada, códigos HTTP y errores coherentes con los contratos existentes. Cambiarlos incidentalmente produciría una incompatibilidad funcional adicional.
-2. Actualizar la prueba de contrato correspondiente para que el artefacto publicado represente el comportamiento implementado.
+1. Conservar validaciones de entrada y códigos HTTP coherentes con el comportamiento. Documentar respuestas de error como `application/problem+json` con schema `ProblemDetail`; no declarar un DTO de éxito ni `application/json` para esos errores.
+2. Añadir assertions estructurales sobre paths, operaciones, schemas, required/nullable, media types y referencias de `ProblemDetail`; una búsqueda textual no demuestra la forma del contrato.
+3. Actualizar la prueba de contrato correspondiente para que el artefacto publicado represente el comportamiento implementado.
 
 ## Publicar de forma secuencial
 
-1. Generar `apps/backend/target/piip-openapi.json` mediante `OpenApiGenerationTest` y el Gradle Wrapper solo cuando el usuario autorice expresamente en el turno actual `gradlew.bat test --tests pe.gob.midagri.piip.contract.OpenApiGenerationTest` en Windows o su equivalente `./gradlew` en Linux/macOS.
-2. No afirmar que el contrato fue publicado si el artefacto no se generó.
-3. Completar esta publicación antes de regenerar el cliente frontend, porque Angular debe consumir el contrato canónico y no una propuesta intermedia.
+1. Tratar controladores, DTO y manejo HTTP del backend como contrato fuente; `apps/backend/target/piip-openapi.json` es un artefacto generado, no otra fuente editable.
+2. Generar el artefacto mediante `OpenApiGenerationTest` y el Gradle Wrapper solo cuando el usuario autorice expresamente en el turno actual `gradlew.bat test --tests pe.gob.midagri.piip.contract.OpenApiGenerationTest` en Windows o su equivalente `./gradlew` en Linux/macOS.
+3. Comprobar freshness: el artefacto debe provenir del checkout y revisión actuales, y las assertions estructurales deben pasar. Existencia o timestamp aislados no prueban vigencia.
+4. No afirmar que el contrato fue publicado si no se generó y verificó en el turno autorizado.
+5. Entregar después al agente principal el artefacto verificado y el cambio observable; el frontend regenera su cliente mediante `fe-sync-openapi-client` en una fase separada.
 
 ## Límites de alcance y ejecución
 
@@ -34,6 +37,6 @@ Presentar un handoff con:
 - Endpoints, métodos y DTO afectados.
 - Campos agregados, modificados o retirados.
 - Compatibilidad o ruptura respecto del contrato anterior.
-- Prueba de contrato actualizada.
-- Estado de `piip-openapi.json` y comando utilizado o pendiente de autorización.
-- Pasos requeridos para `fe-sync-openapi-client`.
+- Assertions estructurales de contrato actualizadas.
+- Estado y evidencia de freshness de `piip-openapi.json`, con comando utilizado o pendiente de autorización.
+- Handoff al agente principal y pasos separados requeridos para `fe-sync-openapi-client`.

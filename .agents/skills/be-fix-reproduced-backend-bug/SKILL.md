@@ -16,8 +16,11 @@ description: Reproducir y corregir regresiones del backend Spring PIIP con evide
 
 1. Localizar la causa en API, aplicación, dominio, autorización o persistencia sin cambiar reglas funcionales para hacer pasar pruebas.
 2. Aplicar el cambio mínimo exclusivamente en `apps/backend/**`. Un cambio más amplio dificulta demostrar qué resolvió la regresión.
-3. Mantener transacciones, autorización y auditoría correctas aunque el defecto observado pertenezca a una sola capa.
-4. Añadir o ajustar una prueba diseñada para fallar antes del cambio y cubrir la regresión después. No afirmar que pasa hasta haberla ejecutado con autorización.
+3. Preservar los límites portables: `api` adapta HTTP/DTO/validación/`ProblemDetail`/OpenAPI; `application` orquesta casos de uso, transacciones, autorización y auditoría; `domain` conserva invariantes; `persistence` usa JPA/JPQL. No introducir dependencias `application -> api` ni repositorios o entidades JPA en controllers.
+4. Tratar violaciones preexistentes como baseline, no como permiso para repetirlas. Si el cambio no puede evitar el baseline, aislarlo y reportarlo sin ampliar la corrección.
+5. Si cambia un error HTTP observable, conservar `application/problem+json`, schema `ProblemDetail` y assertions estructurales OpenAPI; entregar la publicación del artefacto como fase autorizada separada.
+6. Mantener transacciones, autorización y auditoría correctas aunque el defecto observado pertenezca a una sola capa.
+7. Añadir o ajustar una prueba diseñada para fallar antes del cambio y cubrir la regresión después. No afirmar que pasa hasta haberla ejecutado con autorización.
 
 ## Límites de alcance y ejecución
 
@@ -32,6 +35,7 @@ Presentar:
 - Evidencia de reproducción previa.
 - Causa raíz localizada.
 - Cambio mínimo y archivos afectados.
+- Guardas de límites modulares y contrato HTTP preservadas.
 - Prueba de regresión añadida o ajustada.
 - Resultado de las pruebas autorizadas y cobertura no ejecutada.
 - Handoff por cambios HTTP observables.

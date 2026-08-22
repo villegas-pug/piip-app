@@ -1,6 +1,6 @@
 ---
 name: be-implement-transactional-use-case
-description: Implementar funcionalidades y casos de uso transaccionales del backend PIIP con Spring Boot, DTO, servicios de aplicación, dominio y repositorios JPA. Usar siempre ante solicitudes como "crea un endpoint", "guarda o actualiza este registro", "implementa este caso de uso", "agrega un servicio transaccional" o "incorpora lógica backend" en `apps/backend`. No usar para inventar reglas funcionales ni para modificar Angular.
+description: Implementar funcionalidades y casos de uso transaccionales del backend PIIP con adapters HTTP, commands, read models, servicios de aplicación, dominio y persistencia JPA. Usar siempre ante solicitudes como "crea un endpoint", "guarda o actualiza este registro", "implementa este caso de uso", "agrega un servicio transaccional" o "incorpora lógica backend" en `apps/backend`. No usar para inventar reglas funcionales ni para modificar Angular.
 ---
 
 # Implementar caso de uso transaccional
@@ -12,11 +12,11 @@ description: Implementar funcionalidades y casos de uso transaccionales del back
 
 ## Mantener las responsabilidades
 
-1. Mantener controladores delgados y contratos HTTP separados de entidades JPA. No inyectar ni consultar repositorios desde controladores, porque hacerlo expondría persistencia y reglas desde la capa API.
-2. No declarar `@Transactional` en controladores. Ubicar la orquestación, la autorización funcional y el límite transaccional en servicios de aplicación, para que el caso de uso conserve una transacción reutilizable.
-3. Mantener la persistencia en repositorios Spring Data JPA. Introducir accesos alternativos rompería la fuente canónica del esquema.
-4. Validar el rol y ámbito efectivo dentro del servicio para operaciones sensibles, porque proteger solo el endpoint permite omitir la autorización desde otros flujos.
-5. Registrar auditoría sin tokens, cuerpos HTTP ni contenido documental, para conservar trazabilidad sin exponer información sensible.
+1. Usar `api` como adapter: convertir HTTP y DTO hacia commands de aplicación, y read models hacia responses. La validación de forma pertenece al borde; no convertir DTO de API en dependencia de `application`.
+2. Ubicar casos de uso, commands, read models, autorización, auditoría y límites `@Transactional` en `application`. No declarar transacciones en controllers ni introducir nuevas dependencias `application -> api`.
+3. Mantener invariantes puras en `domain` y acceso JPA/JPQL en `persistence`. Los acoplamientos existentes que contradigan estos límites son baseline, no patrones para código nuevo.
+4. Mantener controladores delgados. No inyectar ni consultar repositorios desde controladores, ni exponer repositorios o entidades JPA en endpoints.
+5. Aplicar en el servicio, y dentro de la misma orquestación transaccional, validación funcional, autorización por asignación vigente, cambio de estado y evento de auditoría. La auditoría de acceso conserva su frontera independiente cuando corresponda.
 
 ## Límites de alcance y ejecución
 
@@ -30,7 +30,9 @@ Presentar:
 
 - Caso de uso, entradas, salidas y fuente funcional.
 - Capas y archivos afectados.
-- Límite transaccional, autorización y auditoría aplicados.
+- Commands, read models y adapters introducidos o reutilizados.
+- Límite transaccional, validación, autorización y auditoría aplicados.
+- Dependencias modulares nuevas y baseline preexistente detectado.
 - Pruebas ejecutadas o pendientes de autorización.
 - Handoff para OpenAPI o frontend cuando el consumidor deba adaptarse.
 - Decisiones pendientes como `NEEDS CLARIFICATION`.

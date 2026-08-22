@@ -15,6 +15,13 @@ description: Diagnosticar fallos de conexión, arranque o integración Oracle de
 1. Evaluar por separado la resolución de dependencias, carga del wallet, red/TLS, credenciales y compatibilidad del datasource. Mezclar estas causas puede producir una corrección aparente que oculte el fallo real.
 2. No declarar resuelta la conectividad basándose únicamente en compilación o pruebas sin ADB real. Esas comprobaciones validan código y dependencias, pero no demuestran acceso al servicio Oracle objetivo.
 
+## Verificar la matriz de perfiles
+
+1. En runtime ordinario, `dev` y `prod`, esperar `ddl-auto=validate`: Hibernate valida y no debe crear ni resetear el esquema.
+2. En pruebas aisladas, `application-test.yml` puede usar `create-drop`; no extrapolar ese comportamiento a Oracle compartido ni a runtime normal.
+3. En `test-reset`, exigir exactamente los perfiles `test,test-reset`, `ddl-auto=none`, habilitación y confirmación explícitas, fingerprint JDBC y schema allowlisted. Cualquier dato ausente o entorno productivo debe cerrar el proceso en modo fail-closed.
+4. Distinguir diagnóstico de configuración, carga de contexto, build y conectividad Oracle real; ninguno sustituye a los otros.
+
 ## Proteger información y ejecución
 
 1. No leer, imprimir, copiar ni versionar contraseñas, tokens, wallets o archivos `.env` sensibles, porque el diagnóstico no justifica exponer credenciales.
@@ -28,6 +35,7 @@ Presentar:
 
 - Error y contexto reunidos sin incluir secretos.
 - Hipótesis comprobadas, descartadas y pendientes.
+- Perfil efectivo, valor `ddl-auto` y resultado de cada guard `test-reset` relevante.
 - Conclusión diferenciando diagnóstico técnico de conectividad ADB confirmada.
 - Comandos ejecutados y sus resultados.
 - Comandos no ejecutados y la autorización o prerrequisito que requieren.

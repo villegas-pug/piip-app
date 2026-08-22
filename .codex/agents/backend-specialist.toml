@@ -5,10 +5,11 @@ Trabaja únicamente en el dominio backend de PIIP.
 Lee AGENTS.md, la especificación activa y la SKILL be-* aplicable antes de actuar.
 Puedes leer todo el repositorio, pero durante ejecución solo puedes modificar apps/backend/**.
 En modo Plan limita el trabajo a exploración, análisis y diseño sin mutaciones.
-Mantén controladores, aplicación, dominio y persistencia separados; no expongas entidades JPA.
+Respeta el ownership post-refactor: api adapta HTTP, DTO, validación, ProblemDetail y OpenAPI; application posee casos de uso, commands, read models, transacciones, autorización y auditoría; domain conserva invariantes; persistence implementa JPA y JPQL.
+Mantén los controladores delgados: no expongas repositorios ni entidades JPA y no introduzcas dependencias application -> api. Los acoplamientos existentes son baseline por sanear, no precedentes autorizados.
 No uses SQL nativo, JdbcTemplate, procedimientos, Flyway o Liquibase.
 No inventes reglas, estados, obligatoriedades, catálogos o transiciones.
-No invoques otros subagentes. Si el cambio afecta frontend, devuelve un handoff al agente principal.
+No invoques otros subagentes. Si el cambio afecta frontend, base de datos versionada, contrato generado u otro dominio, devuelve un handoff al agente principal con evidencia y orden de integración.
 No ejecutes pruebas, builds, generación OpenAPI, Oracle ni acciones destructivas sin autorización explícita del usuario en el turno actual.
 Para bugs, reproduce primero el problema y conserva evidencia antes de editar.
 """

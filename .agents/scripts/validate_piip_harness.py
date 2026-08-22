@@ -44,22 +44,51 @@ FORBIDDEN_BACKEND_BUILD_PATTERNS = (
     r"\bmvn\b",
     r"\bpom\.xml\b",
 )
-REQUIRED_SKILL_CONTENT = {
-    "be-diagnose-oracle-runtime": ("build.gradle.kts", "Gradle Wrapper", "integrationTest"),
-    "be-fix-reproduced-backend-bug": ("Gradle", "integrationTest"),
-    "be-implement-transactional-use-case": (
-        "Gradle",
-        "integrationTest",
-        "No inyectar ni consultar repositorios desde controladores",
-        "No declarar `@Transactional` en controladores",
-        "servicios de aplicación",
-    ),
-    "be-publish-openapi-contract": (
-        "Gradle Wrapper",
-        "OpenApiGenerationTest",
-        "apps/backend/target/piip-openapi.json",
-    ),
-    "fe-maintain-auth-session": ("apps/frontend/src/app/core",),
+BACKEND_SEMANTIC_RULES = {
+    "be-implement-transactional-use-case": {
+        "adapters, commands y read models": (r"\badapter", r"\bcommands?\b", r"read models?"),
+        "ownership de application": (r"application.{0,120}(casos de uso|commands)", r"límites? `?@transactional"),
+        "dependencia application hacia api prohibida": (r"(?:no|ni) (?:introducir|crear).{0,80}application\s*[-=]>\s*api",),
+        "controllers sin persistencia": (r"no (inyectar|exponer).{0,80}(repositorios|entidades jpa).{0,80}control",),
+        "autorización y auditoría transaccionales": (r"autorización.{0,100}auditoría", r"misma orquestación transaccional"),
+    },
+    "be-enforce-authorization-audit": {
+        "Keycloak autentica y Oracle autoriza": (r"keycloak.{0,80}autentic", r"oracle.{0,80}autoriza"),
+        "ámbito Oracle completo": (r"asignación oracle activa y vigente", r"institución.{0,80}unidad ejecutora"),
+        "auditoría de acceso independiente": (r"auditoría de acceso.{0,160}requires_new",),
+        "evento funcional atómico": (r"evento funcional.{0,120}(misma|dentro de la) transacción", r"confirmen o reviertan juntos"),
+    },
+    "be-publish-openapi-contract": {
+        "ProblemDetail correcto": (r"application/problem\+json", r"schema `?problemdetail"),
+        "assertions estructurales": (r"assertions estructurales", r"paths?.{0,160}schemas?.{0,160}media types?"),
+        "freshness verificable": (r"freshness", r"checkout y revisión actuales"),
+        "fuente, artefacto y handoff separados": (r"contrato fuente", r"artefacto generado", r"handoff al agente principal"),
+    },
+    "be-evolve-jpa-oracle-model": {
+        "JPA y JPQL canónicos": (r"jpa.{0,120}fuente canónica", r"\bjpql\b"),
+        "matriz ddl-auto": (r"ddl-auto=validate", r"create-drop", r"ddl-auto=none"),
+        "test-reset fail-closed": (r"test-reset.{0,160}fail-closed", r"allowlisted"),
+        "DDL derivado con ownership y freshness": (r"ddl.{0,100}derivad", r"freshness", r"agente principal o dba"),
+    },
+    "be-diagnose-oracle-runtime": {
+        "matriz vigente de perfiles": (r"ddl-auto=validate", r"create-drop", r"ddl-auto=none", r"test,test-reset"),
+        "test-reset fail-closed": (r"test-reset.{0,240}fail-closed", r"fingerprint jdbc", r"schema allowlisted"),
+        "build no prueba conectividad": (r"no declarar resuelta la conectividad.{0,120}compilación",),
+    },
+    "be-fix-reproduced-backend-bug": {
+        "guardas modulares portables": (r"api.{0,100}application.{0,100}domain.{0,100}persistence",),
+        "dependencia application hacia api prohibida": (r"no introducir dependencias `?application\s*[-=]>\s*api",),
+        "baseline no autoriza patrón": (r"baseline.{0,80}no como (permiso|patrón)",),
+        "ProblemDetail y OpenAPI estructural": (r"application/problem\+json", r"problemdetail", r"assertions estructurales openapi"),
+    },
+}
+
+BACKEND_PROFILE_RULES = {
+    "ownership de capas": (r"api.{0,120}application.{0,120}domain.{0,120}persistence",),
+    "dependencia application hacia api prohibida": (r"no (introduzcas|crear).{0,40}application\s*[-=]>\s*api",),
+    "persistencia fuera de controllers": (r"no expongas.{0,80}(repositorios|entidades jpa)",),
+    "baseline no es precedente": (r"baseline.{0,80}no (como|precedentes?)",),
+    "handoff cross-domain": (r"(?:handoff.{0,160}agente principal|agente principal.{0,40}handoff)", r"orden de integración"),
 }
 
 
@@ -118,14 +147,14 @@ def validate_skill_semantics(errors: list[str]) -> None:
             if re.search(pattern, text, flags=re.IGNORECASE):
                 errors.append(f"{skill_name}: referencia obsoleta al build anterior")
 
-    for skill_name, required_fragments in REQUIRED_SKILL_CONTENT.items():
+    for skill_name, rules in BACKEND_SEMANTIC_RULES.items():
         path = ROOT / ".agents" / "skills" / skill_name / "SKILL.md"
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8").casefold()
-        for fragment in required_fragments:
-            if fragment.casefold() not in text:
-                errors.append(f"{skill_name}: falta contenido requerido: {fragment}")
+        for concept, patterns in rules.items():
+            if any(re.search(pattern, text, flags=re.DOTALL) is None for pattern in patterns):
+                errors.append(f"{skill_name}: semántica incompleta para {concept}")
 
     auth_path = ROOT / ".agents" / "skills" / "fe-maintain-auth-session" / "SKILL.md"
     if auth_path.is_file() and "apps/frontend/core" in auth_path.read_text(encoding="utf-8"):
@@ -166,6 +195,21 @@ def validate_codex(errors: list[str]) -> None:
         if f"--scope {expected_scope}" not in serialized:
             errors.append(f"Codex {agent_name}: hook de scope ausente")
 
+    backend_text = (ROOT / ".codex" / "agents" / "backend-specialist.toml").read_text(encoding="utf-8").casefold()
+    for concept, patterns in BACKEND_PROFILE_RULES.items():
+        if any(re.search(pattern, backend_text, flags=re.DOTALL) is None for pattern in patterns):
+            errors.append(f"Codex backend-specialist: semántica incompleta para {concept}")
+
+    frontend_config = tomllib.loads((ROOT / ".codex" / "agents" / "frontend-specialist.toml").read_text(encoding="utf-8"))
+    frontend_disabled = {
+        item.get("path")
+        for item in frontend_config.get("skills", {}).get("config", [])
+        if item.get("enabled") is False
+    }
+    missing_disabled = {f".agents/skills/{name}/SKILL.md" for name in BACKEND_SKILLS} - frontend_disabled
+    if missing_disabled:
+        errors.append("Codex frontend-specialist: solo backend-specialist puede habilitar skills be-*")
+
 
 def validate_opencode(errors: list[str]) -> None:
     try:
@@ -204,6 +248,18 @@ def validate_opencode(errors: list[str]) -> None:
             errors.append(f"OpenCode {domain}: scope de escritura ausente")
         if "hidden: true" not in hidden_frontmatter or re.search(r"^\s*edit: deny$", hidden_frontmatter, re.MULTILINE) is None:
             errors.append(f"OpenCode {domain}-plan: debe ser oculto y read-only")
+
+    for path in (ROOT / ".opencode" / "agents").glob("*.md"):
+        text = path.read_text(encoding="utf-8")
+        if '"be-*": allow' in text and path.name not in {"backend-specialist.md", "backend-specialist-plan.md"}:
+            errors.append(f"OpenCode {path.name}: solo backend-specialist puede habilitar skills be-*")
+
+    backend_visible = ROOT / ".opencode" / "agents" / "backend-specialist.md"
+    backend_command = ROOT / ".opencode" / "commands" / "backend-specialist.md"
+    combined = "\n".join(path.read_text(encoding="utf-8").casefold() for path in (backend_visible, backend_command))
+    for concept, patterns in BACKEND_PROFILE_RULES.items():
+        if any(re.search(pattern, combined, flags=re.DOTALL) is None for pattern in patterns):
+            errors.append(f"OpenCode backend-specialist/command: semántica incompleta para {concept}")
 
 
 def validate_retirement_and_routing(errors: list[str]) -> None:
