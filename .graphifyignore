@@ -1,0 +1,16 @@
+.specify/feature.json
+.specify/init-options.json
+.specify/integration.json
+.specify/integrations/codex.manifest.json
+.specify/integrations/speckit.manifest.json
+.specify/workflows/workflow-registry.json
+.vault-project.json
+apps/frontend/tsconfig.app.json
+apps/frontend/tsconfig.json
+apps/frontend/tsconfig.spec.json
+apps/frontend/src/app/api/generated/strict-http-response.ts
+apps/frontend/src/app/api/generated/request-builder.ts
+apps/frontend/src/app/api/generated/functions.ts
+apps/frontend/src/app/api/generated/models.ts
+apps/frontend/src/app/api/generated/services.ts
+apps/frontend/src/app/api/generated/index.ts
