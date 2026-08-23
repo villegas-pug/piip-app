@@ -110,7 +110,6 @@
 .all-notifications mat-icon { width: 18px; height: 18px; font-size: 18px; }
 
 .search-clear:focus-visible, .clear-button:focus-visible, .state-panel button:focus-visible, .notification-state button:focus-visible, .secondary-button:focus-visible, .module-link:focus-visible, .distribution-toggle:focus-visible, .notification-tabs button:focus-visible, .read-button:focus-visible, .all-notifications:focus-visible { outline: 3px solid rgba(230, 169, 0, .35); outline-offset: 2px; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .button-spinner { animation: spin 1s linear infinite; }
 
 @keyframes spin { to { transform: rotate(360deg); } }

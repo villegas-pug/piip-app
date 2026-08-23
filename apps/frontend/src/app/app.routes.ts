@@ -3,6 +3,7 @@ import { administratorGuard } from './core/administrator.guard';
 import { activeScopeAdministratorGuard } from './core/active-scope-administrator.guard';
 import { authenticatedGuard } from './core/authenticated.guard';
 import { piipReadyGuard } from './core/piip-ready.guard';
+import { pendingChangesGuard } from './core/pending-changes.guard';
 
 export const routes: Routes = [
   {
@@ -41,6 +42,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/initiative-form/initiative-form.component').then(
             (module) => module.InitiativeFormComponent,
+          ),
+      },
+      {
+        path: 'iniciativas/:code/editar',
+        title: 'PIIP | Editar iniciativa',
+        canDeactivate: [pendingChangesGuard],
+        data: { recordType: 'Iniciativa' },
+        loadComponent: () =>
+          import('./pages/portfolio-record-edit/portfolio-record-edit.component').then(
+            (module) => module.PortfolioRecordEditComponent,
           ),
       },
       {
@@ -84,6 +95,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/derived-project-form/derived-project-form.component').then(
             (module) => module.DerivedProjectFormComponent,
+          ),
+      },
+      {
+        path: 'proyectos/:code/editar',
+        title: 'PIIP | Editar proyecto',
+        canDeactivate: [pendingChangesGuard],
+        data: { recordType: 'Proyecto' },
+        loadComponent: () =>
+          import('./pages/portfolio-record-edit/portfolio-record-edit.component').then(
+            (module) => module.PortfolioRecordEditComponent,
           ),
       },
       {

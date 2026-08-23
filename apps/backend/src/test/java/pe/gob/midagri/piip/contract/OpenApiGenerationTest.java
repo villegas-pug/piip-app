@@ -1,5 +1,7 @@
 package pe.gob.midagri.piip.contract;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -45,8 +47,27 @@ class OpenApiGenerationTest {
         assertThat(response.body())
             .contains("InitiativeStatusTransitionRequest", "ProjectStatusTransitionRequest")
             .contains("\"/initiatives/{code}/status-transitions\"", "\"/projects/{code}/status-transitions\"");
+        JsonNode document = new ObjectMapper().readTree(response.body());
+        assertPatchContract(document, "/initiatives/{code}", "InitiativeUpdateRequest");
+        assertPatchContract(document, "/projects/{code}", "ProjectUpdateRequest");
         Path output = Path.of("target", "piip-openapi.json");
         Files.createDirectories(output.getParent());
         Files.writeString(output, response.body(), StandardCharsets.UTF_8);
+    }
+
+    private static void assertPatchContract(JsonNode document, String path, String requestSchema) {
+        JsonNode patch = document.path("paths").path(path).path("patch");
+        assertThat(patch.path("requestBody").path("content").path("application/json").path("schema").path("$ref").asText())
+            .isEqualTo("#/components/schemas/" + requestSchema);
+        assertThat(document.path("components").path("schemas").path(requestSchema).path("required").toString())
+            .contains("version");
+        assertThat(document.path("components").path("schemas").path("ProblemDetail").isObject()).isTrue();
+        for (String status : new String[] {"400", "403", "404", "409", "422"}) {
+            JsonNode problemSchema = patch.path("responses").path(status).path("content")
+                .path("application/problem+json").path("schema");
+            assertThat(problemSchema.path("$ref").asText())
+                .as(path + " " + status + " must use application/problem+json ProblemDetail")
+                .isEqualTo("#/components/schemas/ProblemDetail");
+        }
     }
 }

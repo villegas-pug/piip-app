@@ -1,8 +1,10 @@
 package pe.gob.midagri.piip.portfolio.application;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ import pe.gob.midagri.piip.portfolio.domain.RecordType;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
+import pe.gob.midagri.piip.portfolio.application.PortfolioUpdateCommands.*;
 import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
 import pe.gob.midagri.piip.shared.application.error.NotFoundException;
 import pe.gob.midagri.piip.shared.application.error.StaleVersionException;
@@ -121,6 +124,49 @@ public class InitiativeApplicationService {
 
     @Transactional
     public PortfolioRecordResponse createInitiative(InitiativeCreateRequest request) { return create(request); }
+
+    @Transactional
+    public PortfolioRecordResponse update(String code, InitiativeUpdateCommand command) {
+        PortfolioRecordEntity record = records.findByCodeIgnoreCaseAndRecordTypeForUpdate(code, RecordType.INITIATIVE)
+            .orElseThrow(() -> new NotFoundException("Iniciativa inexistente"));
+        LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, record.getExecutingUnit().getId());
+        if (record.getVersion() != command.version()) throw new StaleVersionException();
+        if (record.getStatus() != PortfolioStatus.PRESENTED)
+            throw new BusinessRuleException("La iniciativa solo puede editarse en estado Presentado");
+        if (records.existsByOriginRecordId(record.getId()))
+            throw new BusinessRuleException("La iniciativa tiene un proyecto derivado y no admite edición");
+        if (!command.hasEditableField()) throw new BusinessRuleException("La actualización no contiene campos editables");
+
+        var currentUnits = responsibleUnitService.list(record);
+        var before = PortfolioUpdateAuditDetail.snapshot(record, currentUnits);
+        var solution = command.solutionTypeId().present()
+            ? catalogReferences.resolveActive(command.solutionTypeId().value(), CatalogCode.SOLUTION_TYPE, "solutionTypeId")
+            : record.getSolutionType();
+        var source = command.sourceId().present()
+            ? catalogReferences.resolveActive(command.sourceId().value(), CatalogCode.SOURCE_ORIGIN, "sourceId")
+            : record.getSourceOrigin();
+        var pei = command.peiObjectiveId().present()
+            ? catalogReferences.resolveActive(command.peiObjectiveId().value(), CatalogCode.PEI_OBJECTIVE, "peiObjectiveId")
+            : record.getPeiObjective();
+        var poi = command.poiActivityId().present()
+            ? catalogReferences.resolveActive(command.poiActivityId().value(), CatalogCode.POI_ACTIVITY, "poiActivityId")
+            : record.getPoiActivity();
+        if (command.responsibleUnits().present()) responsibleUnitService.replace(record, command.responsibleUnits().value());
+        record.applyEditableFields(value(command.name(), record.getName()), solution, source,
+            value(command.startDate(), record.getStartDate()), value(command.responsible(), record.getResponsible()), pei, poi,
+            value(command.description(), record.getDescription()), null, value(command.note(), record.getNote()),
+            value(command.digitalComponent(), record.getDigitalComponent()), support.clock().instant());
+        var after = PortfolioUpdateAuditDetail.snapshot(record, responsibleUnitService.list(record));
+        var changes = PortfolioUpdateAuditDetail.diff(before, after);
+        if (changes.isEmpty()) throw new BusinessRuleException("La actualización no produce cambios efectivos");
+        long previousVersion = record.getVersion();
+        records.flush();
+        audit.event("INICIATIVA_ACTUALIZADA", "REGISTRO_PORTAFOLIO", record.getCode(),
+            PortfolioUpdateAuditDetail.detail(record, previousVersion, record.getVersion(), before, after), actor.subject());
+        return assembler.toResponse(record);
+    }
+
+    private static <T> T value(FieldUpdate<T> update, T current) { return update.present() ? update.value() : current; }
 
     @Transactional
     public PortfolioRecordResponse approve(String code, ApprovalRequest request) {

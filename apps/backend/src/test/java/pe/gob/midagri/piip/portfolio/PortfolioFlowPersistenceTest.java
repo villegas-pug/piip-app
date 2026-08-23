@@ -131,4 +131,25 @@ class PortfolioFlowPersistenceTest {
         assertThatThrownBy(() -> records.saveAndFlush(fixtures.derivedProject("P-UNIQUE-JPA-2027", initiative, "Proyecto dos")))
             .isInstanceOf(DataIntegrityViolationException.class);
     }
+
+    @Test
+    void portfolioEditDoesNotChangeLifecycleStatusOriginOrClosingDate() {
+        InstitutionEntity institution = institutions.save(new InstitutionEntity("MIDAGRI-EDIT-FLOW", "Institución edición"));
+        ExecutingUnitEntity unit = executingUnits.save(new ExecutingUnitEntity(institution, "UE-EDIT-FLOW", "Unidad edición"));
+        PortfolioRecordTestBuilder fixtures = PortfolioRecordTestBuilder.persistedReferences(catalogs, catalogItems, "edit-flow");
+        PortfolioRecordEntity initiative = records.save(fixtures.initiative("I-EDIT-FLOW-2026", unit, "Iniciativa"));
+        initiative.approve();
+        PortfolioRecordEntity project = records.saveAndFlush(
+            fixtures.derivedProject("P-EDIT-FLOW-2026", initiative, "Proyecto"));
+
+        project.applyEditableFields("Proyecto actualizado", project.getSolutionType(), project.getSourceOrigin(),
+            project.getStartDate(), project.getResponsible(), project.getPeiObjective(), project.getPoiActivity(),
+            project.getDescription(), project.getKeyResults(), project.getNote(), project.getDigitalComponent(),
+            project.getUpdatedAt());
+        records.flush();
+
+        assertThat(project.getStatus()).isEqualTo(PortfolioStatus.PROJECT_IN_PROGRESS);
+        assertThat(project.getOriginRecord()).isSameAs(initiative);
+        assertThat(project.getClosingDate()).isNull();
+    }
 }

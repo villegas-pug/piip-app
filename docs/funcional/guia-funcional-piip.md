@@ -111,6 +111,14 @@ La iniciativa conserva su registro y su expediente. El proyecto inicia otro expe
 
 Desde que existe el proyecto vinculado, la iniciativa conserva `Iniciativa aprobada` y sus acciones de cambio de estado quedan bloqueadas. La relación `proyecto derivado` identifica el vínculo entre ambos registros; no es un estado adicional.
 
+### 3.1 Editar un registro existente
+
+La acción **Editar** solo se muestra defensivamente a un `Administrador PIIP` que cubre la UE real del registro. La autorización efectiva se vuelve a comprobar en el backend; abrir directamente la ruta no evita las reglas. Una iniciativa se puede editar únicamente en `Presentado` y sin proyecto derivado. Un proyecto se puede editar únicamente en `Proyecto en ejecución`, tanto si es derivado como preexistente.
+
+El formulario carga una copia fresca, conserva la identidad, el código, el origen, el estado, la relación y la UE, y envía únicamente propiedades modificadas junto con la `version` esperada. La ausencia de una propiedad conserva su valor; PEI, POI y nota pueden enviarse explícitamente como nulos. Las Unidades Orgánicas responsables se reemplazan como una lista completa, no vacía, sin duplicados, ordenada y perteneciente a la UE del registro. Las referencias nuevas deben estar activas; un valor histórico inactivo permanece visible como contexto y no se reutiliza para escribir.
+
+Un cambio efectivo devuelve la representación completa con nueva fecha de modificación y versión superior, y genera un único evento funcional con actor, UE, versiones y diff estable sin cuerpo HTTP. Un envío sin cambios produce `422`; una referencia o lista inválida produce `422`; la falta de autorización produce `403`; una ruta inexistente produce `404`; y una versión obsoleta produce `409` sin reintento automático. Ante `409`, la pantalla conserva la copia local y ofrece **Recargar versión vigente**. La navegación o el cierre de la pestaña advierten solo si existen cambios pendientes y no se persisten borradores locales.
+
 ### 4. Cambiar estados desde los detalles
 
 Las transiciones se inician y confirman desde el detalle contextual, no desde los listados. La iniciativa y el proyecto usan rutas, requests y opciones separadas para impedir mezclar sus estados. `No Aplicable` queda fuera de los destinos de transición de esta versión.

@@ -168,4 +168,17 @@ describe('ProjectsComponent', () => {
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Unidades no disponibles');
   });
+
+  it('mantiene el listado consultivo: detalle, documentos y ciclo de vida fuera de edición inline', () => {
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.detectChanges();
+    const row = fixture.nativeElement.querySelector('tbody tr') as HTMLElement;
+    const detailLink = row.querySelector('a.secondary-button') as HTMLAnchorElement;
+
+    expect(detailLink?.getAttribute('href')).toBe('/proyectos/P-003-2026');
+    expect(row.querySelector('button[aria-label="Acciones de P-003-2026"]')).not.toBeNull();
+    expect(row.querySelector('a[href*="/editar"]')).toBeNull();
+    expect(row.textContent).not.toContain('Editar');
+    expect(row.textContent).toContain('Proyecto en ejecución');
+  });
 });

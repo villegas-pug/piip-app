@@ -1,6 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
+import { PortfolioControllerService } from '../api/generated';
+import type { PortfolioRecordResponse } from '../api/generated/models';
 import { PiipHttpRepository } from './piip-http.repository';
 
 describe('PiipHttpRepository', () => {
@@ -331,7 +334,45 @@ describe('PiipHttpRepository', () => {
 
     expect(repository.portfolioRecords()[0].status).toBe('Proyecto en ejecución');
     expect(refresh).not.toHaveBeenCalled();
+    expect((repository as unknown as { recordVersions: Map<string, number> }).recordVersions.get(record.code)).toBe(1);
     expect(repository.lastError()).not.toBe('Fin de prueba');
+  });
+
+  it('refreshes audit events after successful initiative and project updates', async () => {
+    const initialization = repository.initialize();
+    http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
+      { detail: 'Fin de preparación', status: 403 },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    await initialization;
+    repository.currentUser.set({
+      subject: 'admin', fullName: 'Administrador', email: 'admin@example.pe',
+      roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 }],
+      roles: ['ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1], institutionWide: false,
+    });
+    repository.executingUnits.set([{ id: 1, code: 'UE-001', name: 'UE-001', institutionId: 1 }]);
+    const response = {
+      recordType: { code: 'INITIATIVE', name: 'Iniciativa', displayOrder: 1, active: true },
+      code: 'I-006-2026', originCode: 'NA', name: 'Iniciativa actualizada',
+      solutionType: { id: 1, code: 'SOLUTION', name: 'Solución potencial o adaptable', displayOrder: 1, active: true },
+      source: { id: 2, code: 'SOURCE', name: 'Fuente', displayOrder: 1, active: true },
+      startDate: '2026-08-01', responsible: 'Responsable', peiObjective: null, poiActivity: null,
+      responsibleUnits: [], description: 'Descripción', keyResults: null, note: null, status: 'Presentado',
+      finalProductType: 'NA', digitalComponent: 'No', closingDate: null, technicalOpinionReport: null,
+      formalApprovalDecision: null, finalProductApprovalDocument: null, projectManagementDocumentation: null,
+      finalClosureReport: null, executingUnitId: 1, executingUnit: 'UE-001', updatedAt: '2026-08-22T10:00:00Z', version: 2,
+    };
+    const portfolio = TestBed.inject(PortfolioControllerService);
+    vi.spyOn(portfolio, 'updateInitiative').mockReturnValue(of(response as unknown as PortfolioRecordResponse));
+    const refreshAudit = vi.spyOn(repository as unknown as { loadAudit: () => Promise<void> }, 'loadAudit').mockResolvedValue();
+
+    await repository.updateInitiative('I-006-2026', { version: 1, name: 'Iniciativa actualizada' });
+    expect(refreshAudit).toHaveBeenCalledOnce();
+
+    const projectResponse = { ...response, recordType: { ...response.recordType, code: 'PROJECT', name: 'Proyecto' }, code: 'P-004-2026', originCode: 'NA', status: 'Proyecto en ejecución' };
+    vi.spyOn(portfolio, 'updateProject').mockReturnValue(of(projectResponse as unknown as PortfolioRecordResponse));
+    await repository.updateProject('P-004-2026', { version: 1, name: 'Proyecto actualizado' });
+    expect(refreshAudit).toHaveBeenCalledTimes(2);
   });
 
   it('loads the unified home portfolio with UE, filters and five-row pagination', async () => {

@@ -85,4 +85,20 @@ class PortfolioTransitionTest {
         assertThat(project.getOriginRecord()).isSameAs(initiative);
         assertThat(initiative.getStatus()).isEqualTo(PortfolioStatus.INITIATIVE_APPROVED);
     }
+
+    @Test
+    void editingFieldsCannotCloseAProjectOrCreateAStatusTransition() {
+        InstitutionEntity institution = new InstitutionEntity("MIDAGRI-EDIT", "MIDAGRI");
+        ExecutingUnitEntity unit = new ExecutingUnitEntity(institution, "UE-EDIT", "Unidad edición");
+        PortfolioRecordEntity project = PortfolioRecordTestBuilder.transientReferences()
+            .preexistingProject("P-EDIT-2026", unit, "Proyecto");
+
+        project.applyEditableFields("Proyecto actualizado", project.getSolutionType(), project.getSourceOrigin(),
+            project.getStartDate(), project.getResponsible(), project.getPeiObjective(), project.getPoiActivity(),
+            project.getDescription(), project.getKeyResults(), project.getNote(), project.getDigitalComponent(),
+            Instant.parse("2026-08-22T12:00:00Z"));
+
+        assertThat(project.getStatus()).isEqualTo(PortfolioStatus.PROJECT_IN_PROGRESS);
+        assertThat(project.getClosingDate()).isNull();
+    }
 }

@@ -26,6 +26,7 @@ import pe.gob.midagri.piip.portfolio.domain.RecordType;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
+import pe.gob.midagri.piip.portfolio.application.PortfolioUpdateCommands.*;
 import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
 import pe.gob.midagri.piip.shared.application.error.NotFoundException;
 import pe.gob.midagri.piip.shared.application.error.StaleVersionException;
@@ -142,6 +143,50 @@ public class ProjectApplicationService {
             Map.of("origen", "NA"), actor.subject());
         return assembler.toResponse(project);
     }
+
+    @Transactional
+    public PortfolioRecordResponse update(String code, ProjectUpdateCommand command) {
+        PortfolioRecordEntity project = records.findByCodeIgnoreCaseAndRecordTypeForUpdate(code, RecordType.PROJECT)
+            .orElseThrow(() -> new NotFoundException("Proyecto inexistente"));
+        LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, project.getExecutingUnit().getId());
+        if (project.getVersion() != command.version()) throw new StaleVersionException();
+        if (project.getStatus() != PortfolioStatus.PROJECT_IN_PROGRESS)
+            throw new BusinessRuleException("El proyecto solo puede editarse en estado Proyecto en ejecución");
+        if (!command.hasEditableField()) throw new BusinessRuleException("La actualización no contiene campos editables");
+
+        var currentUnits = responsibleUnitService.list(project);
+        var before = PortfolioUpdateAuditDetail.snapshot(project, currentUnits);
+        var source = command.sourceId().present()
+            ? catalogReferences.resolveActive(command.sourceId().value(), CatalogCode.SOURCE_ORIGIN, "sourceId")
+            : project.getSourceOrigin();
+        var pei = command.peiObjectiveId().present()
+            ? catalogReferences.resolveActive(command.peiObjectiveId().value(), CatalogCode.PEI_OBJECTIVE, "peiObjectiveId")
+            : project.getPeiObjective();
+        var poi = command.poiActivityId().present()
+            ? catalogReferences.resolveActive(command.poiActivityId().value(), CatalogCode.POI_ACTIVITY, "poiActivityId")
+            : project.getPoiActivity();
+        var solution = project.getSolutionType();
+        if (command.solutionTypeId().present()) {
+            if (project.getOriginMode() == pe.gob.midagri.piip.portfolio.domain.ProjectOriginMode.PREEXISTING)
+                throw new BusinessRuleException("El proyecto preexistente conserva Tipo de solución No aplica");
+            solution = catalogReferences.resolveActive(command.solutionTypeId().value(), CatalogCode.SOLUTION_TYPE, "solutionTypeId");
+        }
+        if (command.responsibleUnits().present()) responsibleUnitService.replace(project, command.responsibleUnits().value());
+        project.applyEditableFields(value(command.name(), project.getName()), solution, source,
+            value(command.startDate(), project.getStartDate()), value(command.responsible(), project.getResponsible()), pei, poi,
+            value(command.description(), project.getDescription()), value(command.keyResults(), project.getKeyResults()),
+            value(command.note(), project.getNote()), value(command.digitalComponent(), project.getDigitalComponent()), support.clock().instant());
+        var after = PortfolioUpdateAuditDetail.snapshot(project, responsibleUnitService.list(project));
+        var changes = PortfolioUpdateAuditDetail.diff(before, after);
+        if (changes.isEmpty()) throw new BusinessRuleException("La actualización no produce cambios efectivos");
+        long previousVersion = project.getVersion();
+        records.flush();
+        audit.event("PROYECTO_ACTUALIZADO", "REGISTRO_PORTAFOLIO", project.getCode(),
+            PortfolioUpdateAuditDetail.detail(project, previousVersion, project.getVersion(), before, after), actor.subject());
+        return assembler.toResponse(project);
+    }
+
+    private static <T> T value(FieldUpdate<T> update, T current) { return update.present() ? update.value() : current; }
 
     @Transactional
     public PortfolioRecordResponse transition(String code, ProjectStatusTransitionRequest request) {

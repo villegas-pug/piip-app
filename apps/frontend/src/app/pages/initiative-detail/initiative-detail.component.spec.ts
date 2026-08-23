@@ -280,4 +280,33 @@ describe('InitiativeDetailComponent', () => {
     expect(timeline.textContent).toContain('Se registró la iniciativa.');
     expect(timeline.querySelector('.activity-status-row')).toBeNull();
   });
+
+  it('muestra edición solo para Administrador PIIP de la UE y conserva la ruta del detalle', () => {
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+    const edit = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('a'))
+      .find((link) => link.textContent?.includes('Editar'));
+    expect(edit?.getAttribute('href')).toBe('/iniciativas/I-024-2026/editar');
+
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.currentUser.set({
+      subject: 'external', fullName: 'Consulta', email: 'consulta@example.pe',
+      roleScopes: [{ role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 1 }],
+      roles: ['CONSULTA_EXTERNA'], institutionIds: [1], executingUnitIds: [1], institutionWide: false,
+    });
+    fixture.detectChanges();
+    expect(Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('a')).some((link) => link.textContent?.includes('Editar'))).toBe(false);
+  });
+
+  it('oculta edición cuando la iniciativa aprobada ya tiene proyecto derivado', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
+    repository.portfolioRecords.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
+    repository.projects.update((items) => [{ ...items[0], originCode: 'I-024-2026', originMode: 'DERIVED_FROM_INITIATIVE' }, ...items.slice(1)]);
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.canEditRecord()).toBe(false);
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Editar');
+  });
 });

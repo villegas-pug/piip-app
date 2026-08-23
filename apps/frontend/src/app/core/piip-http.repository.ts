@@ -4,9 +4,9 @@ import { Observable, firstValueFrom } from 'rxjs';
 import {
   AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
   DocumentDossierSummary, DocumentRecord, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail,
-  InitiativeInput, InitiativeRecord, InitiativeStatusTransitionInput, NotificationItem, OrganizationalUnit,
+  InitiativeInput, InitiativeRecord, InitiativeStatusTransitionInput, InitiativeUpdateInput, NotificationItem, OrganizationalUnit,
   PiipPortfolioRecord, PiipRecordType, PreexistingProjectInput, ProjectDetail, ProjectRecord,
-  ProjectStatusTransitionInput, UserRole, UserRoleCode, WorkItem, HomePortfolioQuery, HomePortfolioResult,
+  ProjectStatusTransitionInput, ProjectUpdateInput, UserRole, UserRoleCode, WorkItem, HomePortfolioQuery, HomePortfolioResult,
   HomePortfolioItem, HomePortfolioStatusCount, PiipStatus, CatalogBundle, PersistentCatalogOption,
   TechnicalCatalogOption,
 } from './piip.models';
@@ -16,8 +16,8 @@ import { PiipCatalogsStore } from './piip-catalogs.store';
 import { resolveApiUrl as runtimeApiUrl } from './piip-runtime-config';
 import {
   ApprovalRequest, DerivedProjectRequest, InitiativeCreateRequest, InitiativeStatusTransitionRequest,
-  DossierSummary, PersistentCatalogItemResponse, PreexistingProjectRequest, ProjectStatusTransitionRequest,
-  ResponsibleUnitResponse, TechnicalCatalogItemResponse,
+  DossierSummary, InitiativeUpdateRequest, PersistentCatalogItemResponse, PreexistingProjectRequest,
+  ProjectStatusTransitionRequest, ProjectUpdateRequest, ResponsibleUnitResponse, TechnicalCatalogItemResponse,
 } from '../api/generated/models';
 
 interface ApiPortfolioRecord {
@@ -318,6 +318,10 @@ export class PiipHttpRepository extends PiipRepository {
     };
   }
 
+  async reloadPortfolioRecord(recordType: PiipRecordType, code: string): Promise<void> {
+    await this.loadPortfolioRecord(recordType, code, true);
+  }
+
   getProjectByOrigin(initiativeCode: string): ProjectRecord | undefined {
     return this.projects().find((project) => project.originMode === 'DERIVED_FROM_INITIATIVE' && project.originCode === initiativeCode);
   }
@@ -458,6 +462,46 @@ export class PiipHttpRepository extends PiipRepository {
     }
     await this.refreshAll();
     return toPortfolioRecord(record);
+  }
+
+  async updateInitiative(code: string, input: InitiativeUpdateInput): Promise<PiipPortfolioRecord> {
+    const body: InitiativeUpdateRequest = {
+      ...updateFields(input),
+      responsibleUnits: input.responsibleUnitIds?.map((organizationalUnitId) => ({ organizationalUnitId })),
+      version: input.version,
+    } as InitiativeUpdateRequest;
+    const response = await this.request(this.portfolio.updateInitiative({ code, body })) as unknown as ApiPortfolioRecord;
+    this.upsertUpdatedRecord(response);
+    await this.refreshAuditAfterUpdate();
+    return toPortfolioRecord(response);
+  }
+
+  async updateProject(code: string, input: ProjectUpdateInput): Promise<PiipPortfolioRecord> {
+    const body: ProjectUpdateRequest = {
+      ...updateFields(input),
+      keyResults: input.keyResults,
+      responsibleUnits: input.responsibleUnitIds?.map((organizationalUnitId) => ({ organizationalUnitId })),
+      version: input.version,
+    } as ProjectUpdateRequest;
+    const response = await this.request(this.portfolio.updateProject({ code, body })) as unknown as ApiPortfolioRecord;
+    this.upsertUpdatedRecord(response);
+    await this.refreshAuditAfterUpdate();
+    return toPortfolioRecord(response);
+  }
+
+  private async refreshAuditAfterUpdate(): Promise<void> {
+    if (this.hasAnyAdministratorScope()) await this.loadAudit();
+  }
+
+  private upsertUpdatedRecord(response: ApiPortfolioRecord): void {
+    const record = toPortfolioRecord(response);
+    this.recordVersions.set(response.code, response.version);
+    this.portfolioRecords.update((items) => upsertByCode(items, record));
+    if (record.recordType === 'Iniciativa') {
+      this.initiatives.update((items) => upsertByCode(items, toInitiativeRecord(response)));
+    } else {
+      this.projects.update((items) => upsertByCode(items, toProjectRecord(response)));
+    }
   }
 
   async uploadDocument(code: string, documentTypeId: number, file: File): Promise<void> {
@@ -689,9 +733,9 @@ export class PiipHttpRepository extends PiipRepository {
     this.auditAccesses.set(scopedAccesses);
   }
 
-  private async loadPortfolioRecord(recordType: PiipRecordType, code: string): Promise<PiipPortfolioRecord | undefined> {
+  private async loadPortfolioRecord(recordType: PiipRecordType, code: string, force = false): Promise<PiipPortfolioRecord | undefined> {
     const existing = this.portfolioRecords().find((candidate) => candidate.code === code);
-    if (existing || !code || this.loadingRecordCodes.has(code)) return existing;
+    if ((!force && existing) || !code || this.loadingRecordCodes.has(code)) return existing;
     this.loadingRecordCodes.add(code);
     try {
       const path = recordType === 'Iniciativa' ? 'initiatives' : 'projects';
@@ -797,6 +841,31 @@ export function resolveApiUrl(): string {
   return runtimeApiUrl();
 }
 
+function updateFields(input: InitiativeUpdateInput | ProjectUpdateInput): Record<string, unknown> {
+  return {
+    name: input.name,
+    solutionTypeId: input.solutionTypeId,
+    sourceId: input.sourceId,
+    startDate: input.startDate,
+    responsible: input.responsible,
+    peiObjectiveId: input.peiObjectiveId,
+    poiActivityId: input.poiActivityId,
+    description: input.description,
+    note: input.note,
+    digitalComponent: input.digitalComponent === undefined
+      ? undefined
+      : input.digitalComponent === 'Si' ? 'YES' : 'NO',
+  };
+}
+
+function upsertByCode<T extends { code: string }>(items: T[], value: T): T[] {
+  const index = items.findIndex((item) => item.code === value.code);
+  if (index < 0) return [...items, value];
+  const next = [...items];
+  next[index] = value;
+  return next;
+}
+
 function portfolioStatusCode(status: PiipPortfolioRecord['status']): string {
   const codes: Record<string, string> = {
     'Presentado': 'PRESENTED', 'Iniciativa aprobada': 'INITIATIVE_APPROVED', 'Iniciativa archivada': 'INITIATIVE_ARCHIVED',
@@ -838,6 +907,7 @@ function toPortfolioRecord(value: ApiPortfolioRecord): PiipPortfolioRecord {
     projectManagementDocumentation: value.projectManagementDocumentation ?? '',
     finalClosureReport: value.finalClosureReport ?? '',
     executingUnitId: value.executingUnitId,
+    version: value.version,
     recordTypeReference, solutionTypeReference, sourceReference, peiObjectiveReference, poiActivityReference,
     responsibleUnitReferences,
   };

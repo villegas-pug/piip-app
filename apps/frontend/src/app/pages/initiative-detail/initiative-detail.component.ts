@@ -7,6 +7,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { INITIATIVE_STATUSES, INITIATIVE_STATUS_TRANSITIONS, type InitiativeStatus } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import type { DocumentRecord, InitiativeDetail, PiipStatus } from '../../core/piip.models';
+import { canEditInitiative } from '../../core/portfolio-edit-permissions';
 import { presentAuditEvent, type PresentedAuditEvent } from '../audit/audit-event.presenter';
 import { initiativeStatusVisual, type InitiativeStatusVisual } from '../initiatives/initiative-status-visual';
 import { projectStatusVisual, type ProjectStatusVisual } from '../projects/project-status-visual';
@@ -40,6 +41,7 @@ export class InitiativeDetailComponent {
   readonly code = computed(() => this.paramMap().get('code') ?? '');
   readonly detail = computed(() => this.repository.getInitiativeDetail(this.code()));
   readonly canAdministerRecord = computed(() => this.repository.canAdministerExecutingUnit(this.detail()?.initiative.executingUnitId));
+  readonly canEditRecord = computed(() => canEditInitiative(this.detail(), this.canAdministerRecord()));
   readonly initiativeTransitionOptions = computed(() => {
     const current = this.detail()?.initiative.status as InitiativeStatus | undefined;
     if (!current || this.detail()?.derivedProject) return [] as readonly InitiativeStatus[];

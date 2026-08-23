@@ -134,6 +134,24 @@ public class PortfolioRecordEntity {
         updatedAt = transitionAt;
     }
 
+    /** Aplica únicamente el candidato ya validado por el caso de uso. */
+    public void applyEditableFields(String name, CatalogItemEntity solutionType, CatalogItemEntity sourceOrigin,
+            LocalDate startDate, String responsible, CatalogItemEntity peiObjective, CatalogItemEntity poiActivity,
+            String description, String keyResults, String note, DigitalComponent digitalComponent, Instant changedAt) {
+        this.name = name;
+        this.solutionType = solutionType;
+        this.sourceOrigin = sourceOrigin;
+        this.startDate = startDate;
+        this.responsible = responsible;
+        this.peiObjective = peiObjective;
+        this.poiActivity = poiActivity;
+        this.description = description;
+        this.keyResults = keyResults;
+        this.note = note;
+        this.digitalComponent = digitalComponent;
+        this.updatedAt = changedAt;
+    }
+
     public Long getId() { return id; }
     public RecordType getRecordType() { return recordType; }
     public String getCode() { return code; }

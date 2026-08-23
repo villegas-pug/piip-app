@@ -17,10 +17,12 @@ export type { HomePortfolioItemResponse } from './models/home-portfolio-item-res
 export type { HomePortfolioResponse } from './models/home-portfolio-response';
 export type { InitiativeCreateRequest } from './models/initiative-create-request';
 export type { InitiativeStatusTransitionRequest } from './models/initiative-status-transition-request';
+export type { InitiativeUpdateRequest } from './models/initiative-update-request';
 export type { InstitutionResponse } from './models/institution-response';
 export type { NotApplicableRequest } from './models/not-applicable-request';
 export type { NotificationResponse } from './models/notification-response';
 export type { OrganizationalUnitResponse } from './models/organizational-unit-response';
+export type { OrganizationalUnitView } from './models/organizational-unit-view';
 export type { PageResponsePortfolioRecordResponse } from './models/page-response-portfolio-record-response';
 export type { PersistentCatalogItemResponse } from './models/persistent-catalog-item-response';
 export type { PortfolioRecordResponse } from './models/portfolio-record-response';
@@ -28,6 +30,7 @@ export type { PortfolioStatusCountResponse } from './models/portfolio-status-cou
 export type { PreexistingProjectRequest } from './models/preexisting-project-request';
 export type { ProblemDetail } from './models/problem-detail';
 export type { ProjectStatusTransitionRequest } from './models/project-status-transition-request';
+export type { ProjectUpdateRequest } from './models/project-update-request';
 export type { ReassignRequest } from './models/reassign-request';
 export type { ResponsibleUnitInput } from './models/responsible-unit-input';
 export type { ResponsibleUnitResponse } from './models/responsible-unit-response';

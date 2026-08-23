@@ -10,15 +10,17 @@ import { RequestBuilder } from '../../request-builder';
 import { DossierSummary } from '../../models/dossier-summary';
 
 export interface List2$Params {
+  executingUnitId?: number;
 }
 
 export function list2(http: HttpClient, rootUrl: string, params?: List2$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<DossierSummary>>> {
   const rb = new RequestBuilder(rootUrl, list2.PATH, 'get');
   if (params) {
+    rb.query('executingUnitId', params.executingUnitId, {});
   }
 
   return http.request(
-    rb.build({ responseType: 'blob', accept: '*/*', context })
+    rb.build({ responseType: 'json', accept: 'application/json', context })
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {

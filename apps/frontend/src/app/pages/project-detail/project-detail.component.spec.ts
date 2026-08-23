@@ -110,4 +110,37 @@ describe('ProjectDetailComponent', () => {
     expect(text).toContain('Gestion_Proyecto_P-005-2026.pdf');
     expect(text).toContain('Documento cargado');
   });
+
+  it('muestra edición solo al Administrador PIIP con cobertura de la UE del proyecto', () => {
+    const fixture = TestBed.createComponent(ProjectDetailComponent);
+    fixture.detectChanges();
+    const edit = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('a'))
+      .find((link) => link.textContent?.includes('Editar'));
+    expect(edit?.getAttribute('href')).toBe('/proyectos/P-005-2026/editar');
+
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.currentUser.set({
+      subject: 'external', fullName: 'Consulta', email: 'consulta@example.pe',
+      roleScopes: [{ role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 1 }],
+      roles: ['CONSULTA_EXTERNA'], institutionIds: [1], executingUnitIds: [1], institutionWide: false,
+    });
+    fixture.detectChanges();
+    expect(Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('a')).some((link) => link.textContent?.includes('Editar'))).toBe(false);
+  });
+
+  it('oculta edición para un proyecto fuera de la UE activa o en estado no editable', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.executingUnits.set([{ id: 1, code: 'UE-001', name: 'UE 001', institutionId: 1 }, { id: 2, code: 'UE-002', name: 'UE 002', institutionId: 1 }]);
+    repository.portfolioRecords.update((records) => records.map((record) => record.code === 'P-005-2026' ? { ...record, executingUnitId: 2 } : record));
+    repository.projects.update((projects) => projects.map((project) => project.code === 'P-005-2026' ? { ...project, executingUnitId: 2 } : project));
+    const fixture = TestBed.createComponent(ProjectDetailComponent);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.canEditRecord()).toBe(false);
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Editar');
+
+    repository.portfolioRecords.update((records) => records.map((record) => record.code === 'P-005-2026' ? { ...record, executingUnitId: 1, status: 'Finalizado' } : record));
+    repository.projects.update((projects) => projects.map((project) => project.code === 'P-005-2026' ? { ...project, executingUnitId: 1, status: 'Finalizado' } : project));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.canEditRecord()).toBe(false);
+  });
 });

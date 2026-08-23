@@ -68,4 +68,48 @@ describe('presentAuditEvent', () => {
     expect(event.detailFields).toContainEqual({ label: 'Tipo documental', value: 'Nombre histórico recibido del backend' });
     expect(event.technicalDetail).toContain('Nombre histórico recibido del backend');
   });
+
+  it('presenta actualizaciones de proyecto con etiquetas funcionales y diff legible', () => {
+    const event = presentAuditEvent({
+      ...baseEvent,
+      recordCode: 'P-004-2026',
+      event: 'PROYECTO_ACTUALIZADO',
+      observation: JSON.stringify({
+        tipoRegistro: 'Proyecto', unidadEjecutoraId: 1, unidadEjecutora: 'UE Demo', versionAnterior: 4, versionNueva: 5,
+        cambios: {
+          name: { anterior: 'Proyecto anterior', nuevo: 'Proyecto actualizado' },
+          responsibleUnits: { anterior: [{ id: 10, code: 'UO-10' }], nuevo: [{ id: 11, code: 'UO-11' }] },
+        }, resultado: 'EXITOSO',
+      }),
+      rawDetail: JSON.stringify({
+        tipoRegistro: 'Proyecto', unidadEjecutoraId: 1, unidadEjecutora: 'UE Demo', versionAnterior: 4, versionNueva: 5,
+        cambios: { name: { anterior: 'Proyecto anterior', nuevo: 'Proyecto actualizado' }, responsibleUnits: { anterior: [{ id: 10 }], nuevo: [{ id: 11 }] } }, resultado: 'EXITOSO',
+      }),
+    });
+
+    expect(event.eventLabel).toBe('Proyecto actualizado');
+    expect(event.observation).toBe('El proyecto se actualizó de la versión 4 a la 5. Campos modificados: Nombre, Unidades responsables.');
+    expect(event.detailFields).toEqual(expect.arrayContaining([
+      { label: 'Tipo de registro', value: 'Proyecto' },
+      { label: 'Versión anterior', value: '4' },
+      { label: 'Versión nueva', value: '5' },
+      { label: 'Cambios', value: expect.stringContaining('Anterior: Proyecto anterior; Nuevo: Proyecto actualizado') },
+    ]));
+    expect(event.detailFields.find((field) => field.label === 'Cambios')?.value).not.toContain('[object Object]');
+    expect(event.technicalDetail).toContain('"versionAnterior": 4');
+  });
+
+  it('resume una actualización de iniciativa sin cambios y humaniza claves camelCase desconocidas', () => {
+    const event = presentAuditEvent({
+      ...baseEvent,
+      event: 'INICIATIVA_ACTUALIZADA',
+      observation: '{"tipoRegistro":"Iniciativa","versionAnterior":7,"versionNueva":8,"cambios":{}}',
+      rawDetail: '{"tipoRegistro":"Iniciativa","versionAnterior":7,"versionNueva":8,"cambios":{}}',
+    });
+
+    expect(event.eventLabel).toBe('Iniciativa actualizada');
+    expect(event.observation).toBe('La iniciativa se actualizó de la versión 7 a la 8.');
+    expect(event.detailFields).toContainEqual({ label: 'Tipo de registro', value: 'Iniciativa' });
+    expect(event.detailFields.find((field) => field.label === 'Cambios')?.value).toBe('{}');
+  });
 });

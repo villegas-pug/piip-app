@@ -7,6 +7,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PROJECT_STATUS_TRANSITIONS, type ProjectStatus } from '../../core/piip.catalogs';
 import type { PiipStatus, ProjectDetail } from '../../core/piip.models';
+import { canEditProject } from '../../core/portfolio-edit-permissions';
 import { presentAuditEvent, type PresentedAuditEvent } from '../audit/audit-event.presenter';
 import { ProjectStatusTransitionDialogComponent, type ProjectStatusTransitionDialogResult } from './project-status-transition-dialog.component';
 import { projectStatusVisual, type ProjectStatusVisual } from '../projects/project-status-visual';
@@ -31,6 +32,7 @@ export class ProjectDetailComponent {
     const detail = this.detail();
     return this.repository.canAdministerExecutingUnit(detail?.project.executingUnitId ?? detail?.portfolioRecord.executingUnitId);
   });
+  readonly canEditRecord = computed(() => canEditProject(this.detail(), this.canAdministerRecord()));
   readonly transitionOptions = computed(() => {
     const status = this.detail()?.project.status as ProjectStatus | undefined;
     if (!status) return [] as readonly ProjectStatus[];

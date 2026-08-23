@@ -1,0 +1,56 @@
+<section class="page edit-page" [attr.aria-labelledby]="'edit-title'">
+  <nav class="breadcrumbs" aria-label="Ruta de navegación">
+    <a [routerLink]="recordType() === 'Iniciativa' ? '/iniciativas' : '/proyectos'">{{ recordType() === 'Iniciativa' ? 'Iniciativas' : 'Proyectos' }}</a>
+    <span aria-hidden="true">›</span><a [routerLink]="[recordType() === 'Iniciativa' ? '/iniciativas' : '/proyectos', code()]">{{ code() }}</a><span aria-current="page">Editar</span>
+  </nav>
+
+  @if (loading() && !detail()) {
+    <article class="panel state-card" aria-live="polite"><mat-icon aria-hidden="true">progress_activity</mat-icon><h2>Cargando versión vigente…</h2><p>Estamos consultando el registro antes de habilitar la edición.</p></article>
+  } @else if (detail(); as detail) {
+    <header class="panel edit-hero">
+      <div><p class="eyebrow">ACTUALIZACIÓN CONTROLADA</p><h2 id="edit-title">Editar {{ recordType() === 'Iniciativa' ? 'iniciativa' : 'proyecto' }} <span>{{ code() }}</span></h2><p>Modifica únicamente los campos de negocio permitidos. La Unidad Ejecutora, el estado y la relación de origen permanecen protegidos.</p></div>
+      <div class="version-card"><small>Versión abierta</small><strong>{{ detail.portfolioRecord.version ?? 0 }}</strong><span>{{ isEditable() ? 'Edición disponible' : 'Edición no disponible' }}</span></div>
+    </header>
+
+    @if (!isEditable()) {
+      <article class="panel state-card error-state" role="alert"><mat-icon aria-hidden="true">lock</mat-icon><h2>Este registro no puede editarse</h2><p>La acción requiere cobertura Administrador PIIP sobre la Unidad Ejecutora real y un estado editable.</p><a class="primary-button" [routerLink]="[recordType() === 'Iniciativa' ? '/iniciativas' : '/proyectos', code()]">Volver al detalle</a></article>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <article class="panel edit-section">
+          <header><h3>Datos editables</h3><p>Los valores se envían de forma parcial; un campo no modificado se conserva en el servidor.</p></header>
+          <div class="form-grid">
+            <label class="field span-2"><span>Nombre *</span><input formControlName="name" [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid ? 'true' : null" aria-describedby="name-help" /><small id="name-help">Hasta 180 caracteres.</small>@if (form.controls.name.touched && form.controls.name.invalid) {<small class="error" role="alert">Ingresa un nombre válido.</small>}</label>
+            <label class="field"><span>Fecha de inicio *</span><input type="date" formControlName="startDate" />@if (form.controls.startDate.touched && form.controls.startDate.invalid) {<small class="error" role="alert">Ingresa la fecha de inicio.</small>}</label>
+            <label class="field"><span>Responsable *</span><input formControlName="responsible" />@if (form.controls.responsible.touched && form.controls.responsible.invalid) {<small class="error" role="alert">Ingresa el responsable.</small>}</label>
+            <label class="field"><span>Tipo de solución</span><select formControlName="solutionTypeId"><option value="">Sin selección</option>@for (option of catalogOptions('solutionTypeId'); track option.id) {<option [value]="option.id" [disabled]="!isSelectableCatalogOption(option, 'solutionTypeId')">{{ option.name }}{{ option.active ? '' : ' · Histórico' }}</option>}</select>@if (isHistorical(form.controls.solutionTypeId.value, 'solutionTypeId')) {<small class="warning">Valor histórico conservado; elige una opción activa para reemplazarlo.</small>}</label>
+            <label class="field"><span>Fuente u origen</span><select formControlName="sourceId"><option value="">Sin selección</option>@for (option of catalogOptions('sourceId'); track option.id) {<option [value]="option.id" [disabled]="!isSelectableCatalogOption(option, 'sourceId')">{{ option.name }}{{ option.active ? '' : ' · Histórico' }}</option>}</select>@if (isHistorical(form.controls.sourceId.value, 'sourceId')) {<small class="warning">Valor histórico conservado; elige una opción activa para reemplazarlo.</small>}</label>
+            <label class="field"><span>Componente Digital *</span><select formControlName="digitalComponent"><option value="">Seleccionar</option><option value="Si">Si</option><option value="No">No</option></select></label>
+            <label class="field"><span>Objetivo PEI</span><select formControlName="peiObjectiveId"><option value="">Sin selección</option>@for (option of catalogOptions('peiObjectiveId'); track option.id) {<option [value]="option.id" [disabled]="!isSelectableCatalogOption(option, 'peiObjectiveId')">{{ option.code }} — {{ option.name }}{{ option.active ? '' : ' · Histórico' }}</option>}</select>@if (isHistorical(form.controls.peiObjectiveId.value, 'peiObjectiveId')) {<small class="warning">Valor histórico conservado; elige una opción activa para reemplazarlo.</small>}</label>
+            <label class="field"><span>Actividad POI</span><select formControlName="poiActivityId"><option value="">Sin selección</option>@for (option of catalogOptions('poiActivityId'); track option.id) {<option [value]="option.id" [disabled]="!isSelectableCatalogOption(option, 'poiActivityId')">{{ option.code }} — {{ option.name }}{{ option.active ? '' : ' · Histórico' }}</option>}</select>@if (isHistorical(form.controls.poiActivityId.value, 'poiActivityId')) {<small class="warning">Valor histórico conservado; elige una opción activa para reemplazarlo.</small>}</label>
+            <label class="field span-2"><span>Descripción *</span><textarea formControlName="description" rows="5"></textarea>@if (form.controls.description.touched && form.controls.description.invalid) {<small class="error" role="alert">Ingresa una descripción válida.</small>}</label>
+            @if (recordType() === 'Proyecto') {<label class="field span-2"><span>Resultados clave</span><textarea formControlName="keyResults" rows="4"></textarea></label>}
+            <label class="field span-2"><span>Nota</span><textarea formControlName="note" rows="3"></textarea></label>
+          </div>
+        </article>
+
+        <article class="panel edit-section">
+          <app-responsible-unit-order-editor [units]="units()" [selectedIds]="form.controls.responsibleUnitIds.value" (selectedIdsChange)="setResponsibleUnitIds($event)" />
+          @if (form.controls.responsibleUnitIds.touched && form.controls.responsibleUnitIds.invalid) {<p class="error" role="alert">Selecciona al menos una Unidad Orgánica responsable.</p>}
+        </article>
+
+        <article class="panel readonly-section" aria-labelledby="readonly-title">
+          <header><h3 id="readonly-title">Datos protegidos</h3><p>Estos valores se muestran como contexto y no forman parte del formulario de actualización.</p></header>
+          <dl class="metadata-grid">
+            <div><dt>Código</dt><dd>{{ detail.portfolioRecord.code }}</dd></div><div><dt>Tipo</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div><div><dt>Origen</dt><dd>{{ detail.portfolioRecord.originCode }}</dd></div><div><dt>Unidad Ejecutora</dt><dd>{{ detail.portfolioRecord.executingUnitId ?? 'No registrada' }}</dd></div><div><dt>Estado</dt><dd>{{ detail.portfolioRecord.status }}</dd></div><div><dt>Producto final</dt><dd>{{ detail.portfolioRecord.finalProductType }}</dd></div><div><dt>Fecha de cierre</dt><dd>{{ detail.portfolioRecord.closingDate ? formatDate(detail.portfolioRecord.closingDate) : 'Sin fecha registrada' }}</dd></div><div><dt>Última modificación</dt><dd>Disponible al confirmar</dd></div>
+          </dl>
+        </article>
+
+        @if (errorMessage()) {<p class="form-error" role="alert"><mat-icon aria-hidden="true">error</mat-icon><span>{{ errorMessage() }}</span></p>}
+        @if (conflict()) {<button class="secondary-button" type="button" (click)="reloadLatest()"><mat-icon aria-hidden="true">refresh</mat-icon>Recargar versión vigente</button>}
+        <footer class="edit-actions"><button class="secondary-button" type="button" (click)="cancel()">Cancelar</button><button class="primary-button" type="submit" [disabled]="submitting() || conflict()"><mat-icon aria-hidden="true">save</mat-icon>{{ submitting() ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
+      </form>
+    }
+  } @else {
+    <article class="panel state-card error-state" role="alert"><mat-icon aria-hidden="true">search_off</mat-icon><h2>Registro no disponible</h2><p>{{ errorMessage() || ('No existe información vigente para el código ' + (code() || 'solicitado') + '.') }}</p><a class="primary-button" [routerLink]="recordType() === 'Iniciativa' ? '/iniciativas' : '/proyectos'">Volver</a></article>
+  }
+</section>

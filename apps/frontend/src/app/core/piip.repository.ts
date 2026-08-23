@@ -1,9 +1,9 @@
 import { Signal, WritableSignal } from '@angular/core';
 import {
   AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
-  DocumentDossierSummary, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput,
+  DocumentDossierSummary, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput, InitiativeUpdateInput,
   InitiativeRecord, InitiativeStatusTransitionInput, NotificationItem, OrganizationalUnit, PiipPortfolioRecord,
-  PreexistingProjectInput, ProjectDetail, ProjectRecord, ProjectStatusTransitionInput, PiipRecordType, UserRole, WorkItem,
+  PreexistingProjectInput, ProjectDetail, ProjectRecord, ProjectStatusTransitionInput, ProjectUpdateInput, PiipRecordType, UserRole, WorkItem,
   HomePortfolioQuery, HomePortfolioResult, CatalogBundle, ResourceState,
 } from './piip.models';
 
@@ -53,6 +53,8 @@ export abstract class PiipRepository {
   abstract getDocumentDossierSummaries(): DocumentDossierSummary[];
   abstract getInitiativeDetail(code: string): InitiativeDetail | undefined;
   abstract getProjectDetail(code: string): ProjectDetail | undefined;
+  /** Fuerza la carga del detalle desde la fuente vigente antes de editar. */
+  abstract reloadPortfolioRecord(recordType: PiipRecordType, code: string): RepositoryOperation<void>;
   abstract getProjectByOrigin(initiativeCode: string): ProjectRecord | undefined;
   abstract getInitiativesEligibleForProject(): InitiativeRecord[];
   abstract getNextProjectCode(initiativeCode: string): string;
@@ -65,6 +67,8 @@ export abstract class PiipRepository {
   abstract transitionProjectStatus(input: ProjectStatusTransitionInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract registerDerivedProject(input: DerivedProjectInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract registerPreexistingProject(input: PreexistingProjectInput): RepositoryOperation<PiipPortfolioRecord>;
+  abstract updateInitiative(code: string, input: InitiativeUpdateInput): RepositoryOperation<PiipPortfolioRecord>;
+  abstract updateProject(code: string, input: ProjectUpdateInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract uploadDocument(code: string, documentTypeId: number, file: File): RepositoryOperation<void>;
   abstract markDocumentNotApplicable(code: string, documentTypeId: number, reason: string): RepositoryOperation<void>;
   abstract downloadDocument(code: string, versionId: number, filename: string): RepositoryOperation<void>;

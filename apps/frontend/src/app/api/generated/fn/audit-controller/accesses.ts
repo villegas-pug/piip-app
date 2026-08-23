@@ -10,15 +10,17 @@ import { RequestBuilder } from '../../request-builder';
 import { AccessResponse } from '../../models/access-response';
 
 export interface Accesses$Params {
+  executingUnitId?: number;
 }
 
 export function accesses(http: HttpClient, rootUrl: string, params?: Accesses$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<AccessResponse>>> {
   const rb = new RequestBuilder(rootUrl, accesses.PATH, 'get');
   if (params) {
+    rb.query('executingUnitId', params.executingUnitId, {});
   }
 
   return http.request(
-    rb.build({ responseType: 'blob', accept: '*/*', context })
+    rb.build({ responseType: 'json', accept: 'application/json', context })
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {

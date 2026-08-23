@@ -96,6 +96,8 @@ export interface PiipPortfolioRecord {
   peiObjectiveReference?: HistoricalCatalogReference | null;
   poiActivityReference?: HistoricalCatalogReference | null;
   responsibleUnitReferences?: OrganizationalUnit[];
+  /** Versión de concurrencia entregada por el backend. */
+  version?: number;
 }
 
 export interface InitiativeRecord {
@@ -203,6 +205,37 @@ export interface InitiativeDetail {
   portfolioRecord: PiipPortfolioRecord;
   dossier?: DocumentDossier;
   derivedProject?: ProjectRecord;
+}
+
+export interface InitiativeUpdateInput {
+  version: number;
+  name?: string;
+  solutionTypeId?: number;
+  sourceId?: number;
+  startDate?: string;
+  responsible?: string;
+  peiObjectiveId?: number | null;
+  poiActivityId?: number | null;
+  responsibleUnitIds?: readonly number[];
+  description?: string;
+  note?: string;
+  digitalComponent?: PiipPortfolioRecord['digitalComponent'];
+}
+
+export interface ProjectUpdateInput {
+  version: number;
+  name?: string;
+  solutionTypeId?: number;
+  sourceId?: number;
+  startDate?: string;
+  responsible?: string;
+  peiObjectiveId?: number | null;
+  poiActivityId?: number | null;
+  responsibleUnitIds?: readonly number[];
+  description?: string;
+  keyResults?: string | null;
+  note?: string;
+  digitalComponent?: PiipPortfolioRecord['digitalComponent'];
 }
 
 export interface ProjectDetail {

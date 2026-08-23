@@ -30,4 +30,35 @@ class PortfolioControllerContractTest {
 
         assertThat(result).isSameAs(page);
     }
+
+    @Test
+    void preservesSparsePatchPresenceAndExplicitNull() {
+        PortfolioDtos.InitiativeUpdateRequest absent = new PortfolioDtos.InitiativeUpdateRequest();
+        absent.setVersion(0L);
+        absent.setName("Nombre actualizado");
+
+        PortfolioDtos.InitiativeUpdateRequest explicitNull = new PortfolioDtos.InitiativeUpdateRequest();
+        explicitNull.setVersion(0L);
+        explicitNull.setPeiObjectiveId(null);
+
+        assertThat(absent.presentProperties()).containsExactlyInAnyOrder("version", "name");
+        assertThat(explicitNull.presentProperties()).containsExactlyInAnyOrder("version", "peiObjectiveId");
+        assertThat(absent.has("description")).isFalse();
+        assertThat(explicitNull.has("peiObjectiveId")).isTrue();
+    }
+
+    @Test
+    void keepsPortfolioResponseVersionAndTechnicalIdentityInTheContract() {
+        var response = new PortfolioDtos.PortfolioRecordResponse(
+            new pe.gob.midagri.piip.catalogs.api.CatalogDtos.TechnicalCatalogItemResponse(
+                "INITIATIVE", "Iniciativa", 0, true),
+            "I-001-2026", "NA", "Iniciativa", null, null, null, null, null, null,
+            List.of(), "Descripción", null, null, "Presentado", "No aplica", "No", null,
+            null, null, null, null, null, 100L, "UE", null, 4L);
+
+        assertThat(response.code()).isEqualTo("I-001-2026");
+        assertThat(response.version()).isEqualTo(4L);
+        assertThat(response.executingUnitId()).isEqualTo(100L);
+        assertThat(response.responsibleUnits()).isEmpty();
+    }
 }

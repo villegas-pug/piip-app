@@ -10,6 +10,7 @@
         <span class="status-tag" [attr.data-tone]="statusVisual(detail.project.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(detail.project.status).icon }}</mat-icon><span>{{ detail.project.status }}</span></span>
       </div>
       <div class="hero-actions">
+        @if (canEditRecord()) {<a class="primary-button" [routerLink]="['/proyectos', detail.project.code, 'editar']"><mat-icon aria-hidden="true">edit</mat-icon>Editar</a>}
         <a class="secondary-button" [routerLink]="['/proyectos', detail.project.code, 'documentos']"><mat-icon aria-hidden="true">description</mat-icon>Ver documentos</a>
         @if (canAdministerRecord() && transitionOptions().length) {<button class="secondary-button" type="button" (click)="openStatusDialog()"><mat-icon aria-hidden="true">swap_horiz</mat-icon>Cambiar estado</button>}
       </div>

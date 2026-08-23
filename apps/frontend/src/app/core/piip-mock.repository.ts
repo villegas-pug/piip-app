@@ -12,6 +12,7 @@ import {
   InitiativeDetail,
   InitiativeStatusTransitionInput,
   InitiativeInput,
+  InitiativeUpdateInput,
   InitiativeRecord,
   PiipPortfolioRecord,
   PreexistingProjectInput,
@@ -19,6 +20,7 @@ import {
   ProjectRecord,
   ProjectDetail,
   ProjectStatusTransitionInput,
+  ProjectUpdateInput,
   PiipRecordType,
   UserRole,
   WorkItem,
@@ -29,6 +31,12 @@ import { PiipRepository } from './piip.repository';
 
 function emptyHomePortfolio(): HomePortfolioResult {
   return { content: [], page: 0, size: 5, totalElements: 0, totalPages: 0, executingUnitTotalElements: 0, statusCounts: [] };
+}
+
+function mockRepositoryError(status: number, message: string): Error & { status: number } {
+  const error = new Error(message) as Error & { status: number };
+  error.status = status;
+  return error;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -371,6 +379,8 @@ export class PiipMockRepository extends PiipRepository {
     };
   }
 
+  reloadPortfolioRecord(_recordType: PiipRecordType, _code: string): void {}
+
   getProjectByOrigin(initiativeCode: string): ProjectRecord | undefined {
     return this.projects().find(
       (project) => project.originMode === 'DERIVED_FROM_INITIATIVE' && project.originCode === initiativeCode,
@@ -545,6 +555,99 @@ export class PiipMockRepository extends PiipRepository {
       ...events,
     ]);
     return structuredRecord;
+  }
+
+  updateInitiative(code: string, input: InitiativeUpdateInput): PiipPortfolioRecord {
+    const detail = this.getInitiativeDetail(code);
+    if (!detail) throw mockRepositoryError(404, 'La iniciativa indicada no existe.');
+    if (!this.canAdministerExecutingUnit(detail.portfolioRecord.executingUnitId)) throw mockRepositoryError(403, 'No tienes autorización sobre la Unidad Ejecutora del registro.');
+    if (detail.initiative.status !== 'Presentado' || detail.derivedProject) throw mockRepositoryError(422, 'La iniciativa no se encuentra en un estado editable.');
+    return this.applyMockUpdate(code, input.version, {
+      name: input.name,
+      solutionTypeId: input.solutionTypeId,
+      sourceId: input.sourceId,
+      startDate: input.startDate,
+      responsible: input.responsible,
+      peiObjectiveId: input.peiObjectiveId,
+      poiActivityId: input.poiActivityId,
+      responsibleUnitIds: input.responsibleUnitIds,
+      description: input.description,
+      note: input.note,
+      digitalComponent: input.digitalComponent,
+    });
+  }
+
+  updateProject(code: string, input: ProjectUpdateInput): PiipPortfolioRecord {
+    const detail = this.getProjectDetail(code);
+    if (!detail) throw mockRepositoryError(404, 'El proyecto indicado no existe.');
+    if (!this.canAdministerExecutingUnit(detail.portfolioRecord.executingUnitId)) throw mockRepositoryError(403, 'No tienes autorización sobre la Unidad Ejecutora del registro.');
+    if (detail.project.status !== 'Proyecto en ejecución') throw mockRepositoryError(422, 'El proyecto no se encuentra en un estado editable.');
+    return this.applyMockUpdate(code, input.version, {
+      name: input.name,
+      solutionTypeId: input.solutionTypeId,
+      sourceId: input.sourceId,
+      startDate: input.startDate,
+      responsible: input.responsible,
+      peiObjectiveId: input.peiObjectiveId,
+      poiActivityId: input.poiActivityId,
+      responsibleUnitIds: input.responsibleUnitIds,
+      description: input.description,
+      keyResults: input.keyResults,
+      note: input.note,
+      digitalComponent: input.digitalComponent,
+    });
+  }
+
+  private applyMockUpdate(code: string, version: number, changes: Partial<{
+    name: string; solutionTypeId: number; sourceId: number; startDate: string; responsible: string;
+    peiObjectiveId: number | null; poiActivityId: number | null; responsibleUnitIds: readonly number[];
+    description: string; keyResults: string | null; note: string; digitalComponent: PiipPortfolioRecord['digitalComponent'];
+  }>): PiipPortfolioRecord {
+    const current = this.portfolioRecords().find((record) => record.code === code);
+    if (!current) throw mockRepositoryError(404, 'El registro indicado no existe.');
+    const currentVersion = current.version ?? 0;
+    if (currentVersion !== version) throw mockRepositoryError(409, 'La copia abierta está desactualizada. Recarga la versión vigente.');
+    const nextUnits = changes.responsibleUnitIds === undefined
+      ? current.responsibleUnitReferences ?? []
+      : changes.responsibleUnitIds.map((id) => this.organizationalUnits().find((unit) => unit.id === id)).filter((unit): unit is OrganizationalUnit => Boolean(unit));
+    if (!nextUnits.length) throw mockRepositoryError(422, 'Selecciona al menos una Unidad Orgánica responsable.');
+    if (new Set(nextUnits.map((unit) => unit.id)).size !== nextUnits.length) throw mockRepositoryError(422, 'No puedes repetir una Unidad Orgánica responsable.');
+    const catalog = this.catalogs().value;
+    const solutionType = changes.solutionTypeId === undefined ? current.solutionTypeReference : catalog.solutionTypes.find((item) => item.id === changes.solutionTypeId && item.active);
+    const source = changes.sourceId === undefined ? current.sourceReference : catalog.sources.find((item) => item.id === changes.sourceId && item.active);
+    if (!solutionType || !source) throw mockRepositoryError(422, 'Selecciona referencias activas válidas.');
+    const pei = changes.peiObjectiveId === undefined ? current.peiObjectiveReference : changes.peiObjectiveId === null ? null : catalog.peiObjectives.find((item) => item.id === changes.peiObjectiveId && item.active) ?? null;
+    const poi = changes.poiActivityId === undefined ? current.poiActivityReference : changes.poiActivityId === null ? null : catalog.poiActivities.find((item) => item.id === changes.poiActivityId && item.active) ?? null;
+    const next: PiipPortfolioRecord = {
+      ...current,
+      ...(changes.name === undefined ? {} : { name: changes.name }),
+      ...(changes.startDate === undefined ? {} : { startDate: changes.startDate }),
+      ...(changes.responsible === undefined ? {} : { responsible: changes.responsible }),
+      ...(changes.description === undefined ? {} : { description: changes.description }),
+      ...(changes.keyResults === undefined ? {} : { keyResults: changes.keyResults ?? '' }),
+      ...(changes.note === undefined ? {} : { note: changes.note }),
+      ...(changes.digitalComponent === undefined ? {} : { digitalComponent: changes.digitalComponent }),
+      solutionType: solutionType.name as PiipPortfolioRecord['solutionType'],
+      solutionTypeReference: solutionType,
+      source: source.name,
+      sourceReference: source,
+      peiObjective: pei?.name ?? '', peiObjectiveReference: pei,
+      poiActivity: poi?.name ?? '', poiActivityReference: poi,
+      responsibleUnits: nextUnits.map((unit) => unit.acronym || unit.name).join(', '),
+      responsibleUnitReferences: nextUnits,
+      version: currentVersion + 1,
+    };
+    if (JSON.stringify({ ...current, version: undefined }) === JSON.stringify({ ...next, version: undefined })) {
+      throw mockRepositoryError(422, 'La actualización no contiene cambios efectivos.');
+    }
+    this.portfolioRecords.update((records) => records.map((record) => record.code === code ? next : record));
+    if (next.recordType === 'Iniciativa') {
+      this.initiatives.update((items) => items.map((item) => item.code === code ? { ...item, name: next.name, source: next.source, responsible: next.responsible, unit: next.responsibleUnits, status: next.status, organizationalUnits: next.responsibleUnitReferences, updatedAt: formatDateTime(new Date()), executingUnitId: next.executingUnitId } : item));
+    } else {
+      this.projects.update((items) => items.map((item) => item.code === code ? { ...item, name: next.name, responsible: next.responsible, unit: next.responsibleUnits, organizationalUnits: next.responsibleUnitReferences } : item));
+    }
+    this.auditEvents.update((events) => [{ recordCode: code, timestamp: formatAuditTimestamp(new Date()), event: `${next.recordType} actualizado`, user: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', observation: 'Se actualizaron campos editables del registro.', icon: 'edit' }, ...events]);
+    return next;
   }
 
   registerPreexistingProject(input: PreexistingProjectInput): PiipPortfolioRecord {

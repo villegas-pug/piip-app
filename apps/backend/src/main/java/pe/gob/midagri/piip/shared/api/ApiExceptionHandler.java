@@ -4,6 +4,7 @@ import jakarta.persistence.OptimisticLockException;
 import org.springframework.http.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.*;
 import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
 import pe.gob.midagri.piip.shared.application.error.InvalidReferenceException;
@@ -39,6 +40,11 @@ public class ApiExceptionHandler {
         String detail = exception.getBindingResult().getFieldErrors().stream()
             .map(error -> error.getField() + ": " + error.getDefaultMessage()).findFirst().orElse("Solicitud inválida");
         return problem(HttpStatus.BAD_REQUEST, "Validación", detail);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ProblemDetail malformed(HttpMessageNotReadableException exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Solicitud inválida", "El cuerpo JSON no cumple el contrato solicitado");
     }
 
     private ProblemDetail problem(HttpStatus status, String title, String detail) {

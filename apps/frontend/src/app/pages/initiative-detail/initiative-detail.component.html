@@ -10,6 +10,7 @@
         <span class="status-tag" [attr.data-tone]="statusVisual(detail.initiative.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(detail.initiative.status).icon }}</mat-icon><span>{{ detail.initiative.status }}</span></span>
       </div>
       <div class="hero-actions">
+        @if (canEditRecord()) {<a class="primary-button" [routerLink]="['/iniciativas', detail.initiative.code, 'editar']"><mat-icon aria-hidden="true">edit</mat-icon>Editar</a>}
         <a class="secondary-button" [routerLink]="['/iniciativas', detail.initiative.code, 'documentos']"><mat-icon aria-hidden="true">description</mat-icon>{{ canAdministerRecord() ? 'Gestionar documentos' : 'Ver documentos' }}</a>
         @if (canAdministerRecord() && detail.initiative.status === 'Presentado' && !detail.derivedProject) {<button class="primary-button" type="button" (click)="openApproval()"><mat-icon aria-hidden="true">verified</mat-icon>Registrar aprobación</button>}
         @if (canAdministerRecord() && initiativeTransitionOptions().length && !detail.derivedProject) {<button class="secondary-button" type="button" (click)="openStatusDialog()"><mat-icon aria-hidden="true">swap_horiz</mat-icon>Cambiar estado</button>}

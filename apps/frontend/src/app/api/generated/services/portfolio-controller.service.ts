@@ -34,6 +34,10 @@ import { transitionInitiative } from '../fn/portfolio-controller/transition-init
 import { TransitionInitiative$Params } from '../fn/portfolio-controller/transition-initiative';
 import { transitionProject } from '../fn/portfolio-controller/transition-project';
 import { TransitionProject$Params } from '../fn/portfolio-controller/transition-project';
+import { updateInitiative } from '../fn/portfolio-controller/update-initiative';
+import { UpdateInitiative$Params } from '../fn/portfolio-controller/update-initiative';
+import { updateProject } from '../fn/portfolio-controller/update-project';
+import { UpdateProject$Params } from '../fn/portfolio-controller/update-project';
 
 @Injectable({ providedIn: 'root' })
 export class PortfolioControllerService extends BaseService {
@@ -230,33 +234,6 @@ export class PortfolioControllerService extends BaseService {
     );
   }
 
-  /** Path part for operation `projects()` */
-  static readonly ProjectsPath = '/projects';
-
-  /**
-   * This method provides access to the full `HttpResponse`, allowing access to response headers.
-   * To access only the response body, use `projects()` instead.
-   *
-   * This method doesn't expect any request body.
-   */
-  projects$Response(params?: Projects$Params, context?: HttpContext): Observable<StrictHttpResponse<PageResponsePortfolioRecordResponse>> {
-    const obs = projects(this.http, this.rootUrl, params, context);
-    return obs;
-  }
-
-  /**
-   * This method provides access only to the response body.
-   * To access the full response (for headers, for example), `projects$Response()` instead.
-   *
-   * This method doesn't expect any request body.
-   */
-  projects(params?: Projects$Params, context?: HttpContext): Observable<PageResponsePortfolioRecordResponse> {
-    const resp = this.projects$Response(params, context);
-    return resp.pipe(
-      map((r: StrictHttpResponse<PageResponsePortfolioRecordResponse>): PageResponsePortfolioRecordResponse => r.body)
-    );
-  }
-
   /** Path part for operation `project()` */
   static readonly ProjectPath = '/projects/{code}';
 
@@ -284,30 +261,30 @@ export class PortfolioControllerService extends BaseService {
     );
   }
 
-  /** Path part for operation `eligible()` */
-  static readonly EligiblePath = '/projects/eligible-initiatives';
+  /** Path part for operation `updateProject()` */
+  static readonly UpdateProjectPath = '/projects/{code}';
 
   /**
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
-   * To access only the response body, use `eligible()` instead.
+   * To access only the response body, use `updateProject()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
-  eligible$Response(params?: Eligible$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<PortfolioRecordResponse>>> {
-    const obs = eligible(this.http, this.rootUrl, params, context);
+  updateProject$Response(params: UpdateProject$Params, context?: HttpContext): Observable<StrictHttpResponse<PortfolioRecordResponse>> {
+    const obs = updateProject(this.http, this.rootUrl, params, context);
     return obs;
   }
 
   /**
    * This method provides access only to the response body.
-   * To access the full response (for headers, for example), `eligible$Response()` instead.
+   * To access the full response (for headers, for example), `updateProject$Response()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
-  eligible(params?: Eligible$Params, context?: HttpContext): Observable<Array<PortfolioRecordResponse>> {
-    const resp = this.eligible$Response(params, context);
+  updateProject(params: UpdateProject$Params, context?: HttpContext): Observable<PortfolioRecordResponse> {
+    const resp = this.updateProject$Response(params, context);
     return resp.pipe(
-      map((r: StrictHttpResponse<Array<PortfolioRecordResponse>>): Array<PortfolioRecordResponse> => r.body)
+      map((r: StrictHttpResponse<PortfolioRecordResponse>): PortfolioRecordResponse => r.body)
     );
   }
 
@@ -335,6 +312,87 @@ export class PortfolioControllerService extends BaseService {
     const resp = this.initiative$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<PortfolioRecordResponse>): PortfolioRecordResponse => r.body)
+    );
+  }
+
+  /** Path part for operation `updateInitiative()` */
+  static readonly UpdateInitiativePath = '/initiatives/{code}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `updateInitiative()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  updateInitiative$Response(params: UpdateInitiative$Params, context?: HttpContext): Observable<StrictHttpResponse<PortfolioRecordResponse>> {
+    const obs = updateInitiative(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `updateInitiative$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  updateInitiative(params: UpdateInitiative$Params, context?: HttpContext): Observable<PortfolioRecordResponse> {
+    const resp = this.updateInitiative$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<PortfolioRecordResponse>): PortfolioRecordResponse => r.body)
+    );
+  }
+
+  /** Path part for operation `projects()` */
+  static readonly ProjectsPath = '/projects';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `projects()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  projects$Response(params?: Projects$Params, context?: HttpContext): Observable<StrictHttpResponse<PageResponsePortfolioRecordResponse>> {
+    const obs = projects(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `projects$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  projects(params?: Projects$Params, context?: HttpContext): Observable<PageResponsePortfolioRecordResponse> {
+    const resp = this.projects$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<PageResponsePortfolioRecordResponse>): PageResponsePortfolioRecordResponse => r.body)
+    );
+  }
+
+  /** Path part for operation `eligible()` */
+  static readonly EligiblePath = '/projects/eligible-initiatives';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `eligible()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  eligible$Response(params?: Eligible$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<PortfolioRecordResponse>>> {
+    const obs = eligible(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `eligible$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  eligible(params?: Eligible$Params, context?: HttpContext): Observable<Array<PortfolioRecordResponse>> {
+    const resp = this.eligible$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<Array<PortfolioRecordResponse>>): Array<PortfolioRecordResponse> => r.body)
     );
   }
 

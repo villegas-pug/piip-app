@@ -18,6 +18,11 @@ public interface PortfolioRecordRepository extends JpaRepository<PortfolioRecord
     @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity"})
     @Query("select record from PortfolioRecordEntity record where lower(record.code) = lower(:code)")
     Optional<PortfolioRecordEntity> findByCodeIgnoreCaseForUpdate(@Param("code") String code);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity"})
+    @Query("select record from PortfolioRecordEntity record where lower(record.code) = lower(:code) and record.recordType = :recordType")
+    Optional<PortfolioRecordEntity> findByCodeIgnoreCaseAndRecordTypeForUpdate(@Param("code") String code,
+            @Param("recordType") RecordType recordType);
     @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity"})
     List<PortfolioRecordEntity> findByRecordTypeOrderByUpdatedAtDesc(RecordType type);
     boolean existsByOriginRecordId(Long originId);

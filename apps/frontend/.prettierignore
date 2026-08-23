@@ -2,4 +2,7 @@ node_modules/
 dist/
 build/
 coverage/
-src/app/api/generated/
+.angular/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

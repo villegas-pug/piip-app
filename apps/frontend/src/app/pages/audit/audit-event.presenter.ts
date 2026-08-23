@@ -29,12 +29,17 @@ const EVENT_LABELS: Record<string, string> = {
   TAREA_REASIGNADA: 'Tarea reasignada',
   ROL_ASIGNADO: 'Rol asignado',
   ROL_SUSPENDIDO: 'Rol suspendido',
+  INICIATIVA_ACTUALIZADA: 'Iniciativa actualizada',
+  PROYECTO_ACTUALIZADO: 'Proyecto actualizado',
 };
 
 const DETAIL_LABELS: Record<string, string> = {
   tipo: 'Tipo documental', tipoCodigo: 'Código de tipo documental', tipoNombre: 'Tipo documental', version: 'Versión', versionId: 'Versión', estado: 'Estado', estadoAnterior: 'Estado anterior', estadoNuevo: 'Estado nuevo', observacion: 'Observación',
   registro: 'Expediente', motivo: 'Motivo', iniciativaOrigen: 'Iniciativa de origen', origen: 'Origen',
   asignadoA: 'Asignado a', rol: 'Rol', institucion: 'Institución', unidadEjecutora: 'Unidad Ejecutora', unidadEjecutoraId: 'Unidad Ejecutora', resultado: 'Resultado',
+  tipoRegistro: 'Tipo de registro', versionAnterior: 'Versión anterior', versionNueva: 'Versión nueva', cambios: 'Cambios', anterior: 'Anterior', nuevo: 'Nuevo',
+  name: 'Nombre', solutionType: 'Tipo de solución', source: 'Fuente u origen', startDate: 'Fecha de inicio', responsible: 'Responsable',
+  peiObjective: 'Objetivo PEI', poiActivity: 'Actividad POI', responsibleUnits: 'Unidades responsables', description: 'Descripción', keyResults: 'Resultados clave', note: 'Nota', digitalComponent: 'Componente digital',
 };
 
 type AuditDetail = Record<string, unknown>;
@@ -64,6 +69,8 @@ function summarize(event: string, detail: AuditDetail): string {
     case 'INICIATIVA_APROBADA': return detail['observacion'] ? `Observación: ${detail['observacion']}` : 'La iniciativa fue aprobada.';
     case 'ESTADO_INICIATIVA_CAMBIADO': return statusChangeSummary('La iniciativa', detail);
     case 'ESTADO_PROYECTO_CAMBIADO': return statusChangeSummary('El proyecto', detail);
+    case 'INICIATIVA_ACTUALIZADA': return updateSummary('La iniciativa', detail);
+    case 'PROYECTO_ACTUALIZADO': return updateSummary('El proyecto', detail);
     case 'PROYECTO_DERIVADO_REGISTRADO': return detail['iniciativaOrigen'] ? `Iniciativa de origen: ${detail['iniciativaOrigen']}.` : 'Se registró el proyecto derivado.';
     case 'PROYECTO_PREEXISTENTE_REGISTRADO': return detail['origen'] ? `Origen: ${detail['origen']}.` : 'Se registró el proyecto preexistente.';
     case 'TAREA_CREADA': return record ? `Se creó una tarea para el expediente ${record}.` : 'Se creó una tarea.';
@@ -73,6 +80,21 @@ function summarize(event: string, detail: AuditDetail): string {
     case 'ROL_SUSPENDIDO': return `Rol ${detail['rol'] ?? 'registrado'} suspendido.`;
     default: return 'Evento registrado.';
   }
+}
+
+function updateSummary(subject: string, detail: AuditDetail): string {
+  const previous = detail['versionAnterior'];
+  const current = detail['versionNueva'];
+  const version = previous == null || current == null
+    ? ''
+    : ` de la versión ${presentValue('versionAnterior', previous)} a la ${presentValue('versionNueva', current)}`;
+  const changes = detail['cambios'];
+  const fields = changes && typeof changes === 'object' && !Array.isArray(changes)
+    ? Object.keys(changes).map((key) => DETAIL_LABELS[key] ?? humanize(key))
+    : [];
+  return fields.length
+    ? `${subject} se actualizó${version}. Campos modificados: ${fields.join(', ')}.`
+    : `${subject} se actualizó${version}.`;
 }
 
 function statusChangeSummary(subject: string, detail: AuditDetail): string {
@@ -98,9 +120,20 @@ function formatTechnicalDetail(value: string): string {
 
 function presentValue(key: string, value: unknown): string {
   if (value == null || value === '') return 'No registrado';
+  if (Array.isArray(value)) return value.map((item) => presentValue('', item)).join(', ');
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .map(([entryKey, entryValue]) => `${DETAIL_LABELS[entryKey] ?? humanize(entryKey)}: ${presentValue(entryKey, entryValue)}`)
+      .join('; ');
+    return entries || '{}';
+  }
   return String(value);
 }
 
 function humanize(value: string): string {
-  return value.toLocaleLowerCase().replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toLocaleUpperCase());
+  return value
+    .replace(/([a-záéíóúñ])([A-Z])/g, '$1 $2')
+    .toLocaleLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toLocaleUpperCase());
 }
