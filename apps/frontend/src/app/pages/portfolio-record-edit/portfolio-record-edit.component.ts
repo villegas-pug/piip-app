@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Overlay } from '@angular/cdk/overlay';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -9,6 +11,8 @@ import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { canEditInitiative, canEditProject } from '../../core/portfolio-edit-permissions';
 import type { OrganizationalUnit } from '../../core/piip.models';
 import type { PendingChangesAware } from '../../core/pending-changes.guard';
+import { PendingChangesDialogComponent } from './pending-changes-dialog.component';
+import { finalize, map, Observable } from 'rxjs';
 
 interface EditSnapshot {
   version: number;
@@ -41,6 +45,8 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
+  private readonly overlay = inject(Overlay);
   readonly repository = inject(PIIP_REPOSITORY);
   private readonly routeData = toSignal(this.route.data, { initialValue: this.route.snapshot.data });
   private readonly paramMap = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
@@ -85,6 +91,7 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
   });
 
   private loadedKey = '';
+  private pendingChangesDialogRef: MatDialogRef<PendingChangesDialogComponent, boolean> | null = null;
 
   constructor() {
     effect(() => {
@@ -114,6 +121,30 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
 
   hasPendingChanges(): boolean {
     return this.form.dirty && !this.submitting();
+  }
+
+  confirmPendingChanges(): Observable<boolean> {
+    if (!this.pendingChangesDialogRef) {
+      const dialogRef = this.dialog.open(PendingChangesDialogComponent, {
+        data: { recordType: this.recordType(), code: this.code() },
+        role: 'alertdialog',
+        ariaLabelledBy: 'pending-changes-title',
+        ariaDescribedBy: 'pending-changes-description',
+        autoFocus: 'first-tabbable',
+        restoreFocus: true,
+        disableClose: false,
+        width: '480px',
+        maxWidth: 'calc(100vw - 32px)',
+        scrollStrategy: this.overlay.scrollStrategies.block(),
+      });
+      this.pendingChangesDialogRef = dialogRef;
+      dialogRef.afterClosed().pipe(finalize(() => {
+        if (this.pendingChangesDialogRef === dialogRef) this.pendingChangesDialogRef = null;
+      })).subscribe();
+    }
+
+    const dialogRef = this.pendingChangesDialogRef!;
+    return dialogRef.afterClosed().pipe(map((discard) => discard === true));
   }
 
   @HostListener('window:beforeunload', ['$event'])

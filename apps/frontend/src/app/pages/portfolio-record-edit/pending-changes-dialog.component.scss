@@ -1,0 +1,25 @@
+:host { display: block; max-width: 100%; }
+.pending-changes-dialog { width: 100%; max-width: 480px; overflow: hidden; background: #fff; }
+header { display: flex; align-items: center; gap: 14px; padding: 22px 24px 18px; border-bottom: 1px solid var(--piip-border); }
+header p { margin: 0 0 3px; color: #8a5a00; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+header h2 { margin: 0; color: var(--piip-green-950); font-family: var(--piip-display); font-size: 24px; line-height: 1.2; }
+.warning-icon { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border-radius: 50%; color: #8a5a00; background: #fff3d6; }
+.warning-icon mat-icon { width: 24px; height: 24px; font-size: 24px; }
+mat-dialog-content { display: grid; gap: 16px; padding: 22px 24px !important; color: var(--piip-ink); }
+.dialog-message { margin: 0; font-size: 15px; line-height: 1.55; overflow-wrap: anywhere; }
+.dialog-message strong { color: var(--piip-green-950); }
+.irreversible-note { display: flex; align-items: flex-start; gap: 9px; margin: 0; padding: 12px; border: 1px solid #e8c98c; border-radius: 7px; color: #76500b; background: #fff7e7; font-size: 13px; line-height: 1.45; }
+.irreversible-note mat-icon { width: 18px; height: 18px; flex: 0 0 auto; font-size: 18px; }
+mat-dialog-actions { gap: 10px; padding: 14px 24px calc(20px + env(safe-area-inset-bottom)); border-top: 1px solid var(--piip-border); }
+button { min-height: 42px; }
+.discard-button { padding: 10px 18px; border: 1px solid #a62b2b; border-radius: 5px; color: #fff; background: #a62b2b; font: inherit; font-weight: 700; cursor: pointer; }
+.discard-button:hover { border-color: #842020; background: #842020; }
+.discard-button:focus-visible { outline: 3px solid rgb(166 43 43 / 28%); outline-offset: 2px; }
+
+@media (max-width: 480px) {
+  header, mat-dialog-content { padding-inline: 18px !important; }
+  header { align-items: flex-start; }
+  header h2 { font-size: 21px; }
+  mat-dialog-actions { align-items: stretch; flex-direction: column; padding-inline: 18px; }
+  mat-dialog-actions button { width: 100%; margin: 0; }
+}

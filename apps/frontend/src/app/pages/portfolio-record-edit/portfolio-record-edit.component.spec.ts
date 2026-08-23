@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { Overlay } from '@angular/cdk/overlay';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { firstValueFrom, Observable, of, Subject } from 'rxjs';
 import { PiipMockRepository } from '../../core/piip-mock.repository';
 import type { PiipPortfolioRecord, PiipRecordType } from '../../core/piip.models';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
@@ -14,6 +16,10 @@ describe('PortfolioRecordEditComponent', () => {
     configure?: (repository: PiipMockRepository) => void,
   ) {
     const paramMap = convertToParamMap({ code });
+    const dialogResult = new Subject<boolean | undefined>();
+    const dialogRef = { afterClosed: () => dialogResult.asObservable() };
+    const dialog = { open: vi.fn().mockReturnValue(dialogRef) };
+    const blockScroll = vi.fn().mockReturnValue({});
     await TestBed.configureTestingModule({
       imports: [PortfolioRecordEditComponent],
       providers: [
@@ -21,6 +27,8 @@ describe('PortfolioRecordEditComponent', () => {
         PiipMockRepository,
         { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository },
         { provide: MatSnackBar, useValue: { open: vi.fn() } },
+        { provide: MatDialog, useValue: dialog },
+        { provide: Overlay, useValue: { scrollStrategies: { block: blockScroll } } },
         { provide: ActivatedRoute, useValue: {
           data: of({ recordType }),
           paramMap: of(paramMap),
@@ -40,6 +48,9 @@ describe('PortfolioRecordEditComponent', () => {
       component: fixture.componentInstance,
       repository,
       router: TestBed.inject(Router),
+      dialog,
+      dialogResult,
+      blockScroll,
       code,
     };
   }
@@ -184,6 +195,56 @@ describe('PortfolioRecordEditComponent', () => {
     component.onBeforeUnload(dirtyEvent);
     expect(dirtyEvent.preventDefault).toHaveBeenCalledOnce();
     expect(dirtyEvent.returnValue).toBe('');
+  });
+
+  it('abre una sola confirmación accesible y conserva los cambios al seguir editando', async () => {
+    const { component, dialog, dialogResult, blockScroll, code } = await setup();
+    markEditableField(component);
+
+    const firstDecision = component.confirmPendingChanges();
+    const secondDecision = component.confirmPendingChanges();
+    const firstResult = firstValueFrom(firstDecision);
+    const secondResult = firstValueFrom(secondDecision);
+
+    expect(dialog.open).toHaveBeenCalledOnce();
+    expect(dialog.open).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({
+      data: { recordType: 'Iniciativa', code },
+      role: 'alertdialog',
+      ariaLabelledBy: 'pending-changes-title',
+      ariaDescribedBy: 'pending-changes-description',
+      autoFocus: 'first-tabbable',
+      restoreFocus: true,
+      disableClose: false,
+    }));
+    expect(blockScroll).toHaveBeenCalledOnce();
+
+    dialogResult.next(false);
+    dialogResult.complete();
+
+    await expect(firstResult).resolves.toBe(false);
+    await expect(secondResult).resolves.toBe(false);
+    expect(component.form.controls.name.value).toBe('Nombre actualizado');
+    expect(component.hasPendingChanges()).toBe(true);
+  });
+
+  it('interpreta Escape o backdrop como cancelación y solo el descarte explícito como salida', async () => {
+    const cancelSetup = await setup();
+    markEditableField(cancelSetup.component);
+    const cancelResult = firstValueFrom(cancelSetup.component.confirmPendingChanges());
+    cancelSetup.dialogResult.next(undefined);
+    cancelSetup.dialogResult.complete();
+    await expect(cancelResult).resolves.toBe(false);
+
+    TestBed.resetTestingModule();
+    const discardSetup = await setup('Proyecto', 'P-005-2026');
+    markEditableField(discardSetup.component);
+    const discardResult = firstValueFrom(discardSetup.component.confirmPendingChanges());
+    discardSetup.dialogResult.next(true);
+    discardSetup.dialogResult.complete();
+    await expect(discardResult).resolves.toBe(true);
+    expect(discardSetup.dialog.open).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({
+      data: { recordType: 'Proyecto', code: 'P-005-2026' },
+    }));
   });
 
   it('conserva cambios locales tras 409, bloquea el reenvío y ofrece recarga explícita', async () => {

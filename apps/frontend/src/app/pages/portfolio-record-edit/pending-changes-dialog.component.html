@@ -1,0 +1,24 @@
+<section class="pending-changes-dialog">
+  <header>
+    <span class="warning-icon" aria-hidden="true"><mat-icon>warning_amber</mat-icon></span>
+    <div>
+      <p>CAMBIOS SIN GUARDAR</p>
+      <h2 id="pending-changes-title">¿Descartar los cambios?</h2>
+    </div>
+  </header>
+
+  <mat-dialog-content>
+    <p id="pending-changes-description" class="dialog-message">
+      Los cambios realizados en {{ recordLabel() }} <strong>{{ data.code }}</strong> no se guardarán.
+    </p>
+    <p class="irreversible-note">
+      <mat-icon aria-hidden="true">info</mat-icon>
+      <span>Esta acción no se puede deshacer.</span>
+    </p>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button class="secondary-button" type="button" [mat-dialog-close]="false" cdkFocusInitial>Seguir editando</button>
+    <button class="discard-button" type="button" [mat-dialog-close]="true">Descartar y salir</button>
+  </mat-dialog-actions>
+</section>
