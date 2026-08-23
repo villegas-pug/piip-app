@@ -1,11 +1,14 @@
 import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal } from '@angular/core';
+import { Overlay } from '@angular/cdk/overlay';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PIIP_CATALOGS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { DerivedProjectInput } from '../../core/piip.models';
+import { DerivedProjectReviewDialogComponent, DerivedProjectReviewDialogData } from './derived-project-review-dialog.component';
 
 @Component({
   selector: 'app-derived-project-form',
@@ -20,6 +23,8 @@ export class DerivedProjectFormComponent {
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
+  private readonly dialog = inject(MatDialog);
+  private readonly overlay = inject(Overlay);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly catalogs = PIIP_CATALOGS;
   readonly catalogState = this.repository.catalogs;
@@ -35,8 +40,8 @@ export class DerivedProjectFormComponent {
   ].filter((item) => item && !item.active);
   readonly existingProject = this.repository.getProjectByOrigin(this.initiativeCode);
   readonly provisionalCode = this.repository.getNextProjectCode(this.initiativeCode);
-  readonly reviewOpen = signal(false);
   readonly submitting = signal(false);
+  private reviewDialogRef: MatDialogRef<DerivedProjectReviewDialogComponent> | null = null;
 
   readonly form = this.formBuilder.nonNullable.group({
     recordType: [{ value: 'Proyecto', disabled: true }],
@@ -85,27 +90,98 @@ export class DerivedProjectFormComponent {
   }
 
   openReview(): void {
+    if (this.reviewDialogRef) return;
+
     this.form.markAllAsTouched();
     if (!this.dependenciesReady() || this.form.invalid) {
       this.snackBar.open('Completa los campos requeridos antes de revisar el proyecto.', 'Cerrar', { duration: 4000 });
       return;
     }
-    this.reviewOpen.set(true);
+
+    const data = this.buildReviewData();
+    if (!data) {
+      this.snackBar.open('Una opción seleccionada ya no está disponible. Elige una opción vigente.', 'Cerrar', { duration: 4200 });
+      return;
+    }
+
+    this.reviewDialogRef = this.dialog.open(DerivedProjectReviewDialogComponent, {
+      width: '680px',
+      maxWidth: 'calc(100vw - 32px)',
+      maxHeight: 'calc(100dvh - 32px)',
+      autoFocus: 'first-heading',
+      restoreFocus: true,
+      disableClose: false,
+      role: 'dialog',
+      ariaLabelledBy: 'derived-project-review-title',
+      ariaDescribedBy: 'derived-project-review-description',
+      panelClass: 'derived-project-review-dialog-panel',
+      backdropClass: 'initiative-review-dialog-backdrop',
+      scrollStrategy: this.overlay.scrollStrategies.block(),
+      data,
+    });
+    this.reviewDialogRef.afterClosed().subscribe(() => this.reviewDialogRef = null);
   }
 
-  async registerProject(): Promise<void> {
-    if (this.submitting() || !this.dependenciesReady()) return;
+  async registerProject(): Promise<boolean> {
+    if (this.submitting() || !this.dependenciesReady()) return false;
     this.submitting.set(true);
     try {
       const record = await Promise.resolve(this.repository.registerDerivedProject(this.buildInput()));
-      this.reviewOpen.set(false);
       this.snackBar.open('Proyecto derivado registrado y vinculado con su iniciativa.', 'Cerrar', { duration: 3800 });
       await this.router.navigate(['/proyectos', record.code, 'documentos']);
+      return true;
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible registrar el proyecto.', 'Cerrar', { duration: 4300 });
+      return false;
     } finally {
       this.submitting.set(false);
     }
+  }
+
+  private buildReviewData(): DerivedProjectReviewDialogData | null {
+    const value = this.form.getRawValue();
+    const catalogs = this.catalogState().value;
+    const solutionType = catalogs.solutionTypes.find((option) => option.id === Number(value.solutionType) && option.active);
+    const source = catalogs.sources.find((option) => option.id === Number(value.source) && option.active);
+    const organizationalUnit = this.units().find((unit) => unit.id === Number(value.responsibleUnits) && unit.active);
+    if (!solutionType || !source || !organizationalUnit) return null;
+
+    return {
+      initiativeCode: this.initiativeCode,
+      projectCode: this.provisionalCode,
+      name: value.name.trim(),
+      startDateIso: value.startDate,
+      startDate: this.formatReviewDate(value.startDate),
+      solutionType: solutionType.name.trim() || 'Sin información registrada',
+      source: source.name.trim() || 'Sin información registrada',
+      digitalComponent: value.digitalComponent,
+      responsible: value.responsible.trim(),
+      organizationalUnit: this.organizationalUnitLabel(organizationalUnit.acronym, organizationalUnit.name),
+      description: value.description.trim(),
+      keyResults: value.keyResults.trim(),
+      registerProject: () => this.registerProject(),
+    };
+  }
+
+  private organizationalUnitLabel(acronym: string, name: string): string {
+    const normalizedAcronym = acronym.trim();
+    const normalizedName = name.trim();
+    if (!normalizedAcronym) return normalizedName || 'Sin información registrada';
+    if (!normalizedName || normalizedAcronym.localeCompare(normalizedName, 'es', { sensitivity: 'accent' }) === 0) return normalizedAcronym;
+    return `${normalizedAcronym} — ${normalizedName}`;
+  }
+
+  private formatReviewDate(value: string): string {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) return 'Sin información registrada';
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const calendarDate = new Date(Date.UTC(year, month - 1, day, 12));
+    if (calendarDate.getUTCFullYear() !== year || calendarDate.getUTCMonth() !== month - 1 || calendarDate.getUTCDate() !== day) {
+      return 'Sin información registrada';
+    }
+    return new Intl.DateTimeFormat('es-PE', { dateStyle: 'long', timeZone: 'America/Lima' }).format(calendarDate);
   }
 
   private buildInput(): DerivedProjectInput {

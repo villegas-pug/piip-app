@@ -97,6 +97,7 @@ tbody tr:hover { background: #fbfdfb; }
 
 .mat-mdc-snack-bar-container { --mat-snack-bar-container-color: #003f2b; --mat-snack-bar-supporting-text-color: #fff; --mat-snack-bar-button-color: #ffd15c; }
 .initiative-review-dialog-panel .mat-mdc-dialog-surface { padding: 0; overflow: hidden; border-radius: 10px; background: transparent; box-shadow: none; }
+.derived-project-review-dialog-panel .mat-mdc-dialog-surface { padding: 0; overflow: hidden; border-radius: 12px; background: transparent; box-shadow: none; }
 .project-status-dialog-panel .mat-mdc-dialog-surface { padding: 0; overflow: hidden; border-radius: 10px; background: transparent; box-shadow: none; }
 .initiative-review-dialog-backdrop { background: rgba(0,38,25,.55); backdrop-filter: blur(3px); }
 

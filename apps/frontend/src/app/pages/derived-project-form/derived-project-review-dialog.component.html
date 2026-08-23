@@ -1,0 +1,77 @@
+<section
+  class="review-dialog"
+  role="document"
+  aria-labelledby="derived-project-review-title"
+  aria-describedby="derived-project-review-description"
+  [attr.aria-busy]="submitting()"
+>
+  <header>
+    <span class="header-icon" aria-hidden="true"><mat-icon>fact_check</mat-icon></span>
+    <div>
+      <p>REVISIÓN FINAL</p>
+      <h2 id="derived-project-review-title">Registrar proyecto derivado</h2>
+      <span id="derived-project-review-description">Verifica los datos principales antes de crear el registro.</span>
+    </div>
+    <button class="icon-action" type="button" mat-dialog-close aria-label="Cerrar revisión" [disabled]="submitting()">
+      <mat-icon aria-hidden="true">close</mat-icon>
+    </button>
+  </header>
+
+  <div class="dialog-scroll">
+    <section class="traceability" aria-label="Trazabilidad del proyecto">
+      <div><span>Iniciativa origen</span><strong>{{ data.initiativeCode }}</strong></div>
+      <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+      <div><span>Proyecto a registrar</span><strong>{{ data.projectCode }}</strong></div>
+    </section>
+
+    <section class="review-section" aria-labelledby="review-identification-title">
+      <h3 id="review-identification-title">Identificación</h3>
+      <dl class="summary-grid">
+        <div class="wide"><dt>Nombre</dt><dd>{{ data.name }}</dd></div>
+        <div><dt>Fecha de inicio</dt><dd><time [attr.datetime]="data.startDateIso">{{ data.startDate }}</time></dd></div>
+        <div><dt>Estado inicial</dt><dd><span class="status-chip">Proyecto en ejecución</span></dd></div>
+      </dl>
+    </section>
+
+    <section class="review-section" aria-labelledby="review-classification-title">
+      <h3 id="review-classification-title">Clasificación</h3>
+      <dl class="summary-grid three-columns">
+        <div><dt>Tipo de solución</dt><dd>{{ data.solutionType }}</dd></div>
+        <div><dt>Fuente u origen</dt><dd>{{ data.source }}</dd></div>
+        <div><dt>Componente digital</dt><dd>{{ data.digitalComponent }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="review-section" aria-labelledby="review-responsibility-title">
+      <h3 id="review-responsibility-title">Responsabilidad</h3>
+      <dl class="summary-grid">
+        <div><dt>Responsable</dt><dd>{{ data.responsible }}</dd></div>
+        <div><dt>Unidad Orgánica</dt><dd>{{ data.organizationalUnit }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="review-section" aria-labelledby="review-content-title">
+      <h3 id="review-content-title">Contenido principal</h3>
+      <dl class="text-previews">
+        <div><dt>Descripción</dt><dd>{{ data.description || 'Sin información registrada' }}</dd></div>
+        <div><dt>Resultados clave</dt><dd>{{ data.keyResults || 'Sin información registrada' }}</dd></div>
+      </dl>
+    </section>
+
+    <div class="review-info" role="note">
+      <mat-icon aria-hidden="true">info</mat-icon>
+      <p>La iniciativa permanecerá como un registro independiente y vinculado. Los documentos no se duplicarán: el proyecto iniciará con su propio expediente.</p>
+    </div>
+  </div>
+
+  <footer>
+    <button class="secondary-button" type="button" mat-dialog-close [disabled]="submitting()">Volver a editar</button>
+    <button class="primary-button" type="button" [disabled]="submitting()" (click)="register()">
+      @if (submitting()) {
+        <mat-icon class="button-spinner" aria-hidden="true">progress_activity</mat-icon>Registrando...
+      } @else {
+        <mat-icon aria-hidden="true">save</mat-icon>Registrar proyecto
+      }
+    </button>
+  </footer>
+</section>
