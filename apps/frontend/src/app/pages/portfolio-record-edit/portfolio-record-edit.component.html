@@ -26,11 +26,11 @@
       <article class="panel state-card error-state" role="alert"><mat-icon aria-hidden="true">lock</mat-icon><h2>Este registro no puede editarse</h2><p>La acción requiere cobertura Administrador PIIP sobre la Unidad Ejecutora real y un estado editable.</p><a class="primary-button" [routerLink]="[recordType() === 'Iniciativa' ? '/iniciativas' : '/proyectos', code()]">Volver al detalle</a></article>
     } @else {
       <nav class="section-nav" aria-label="Secciones del formulario">
-        <a href="#datos-generales"><span>01</span>Datos generales</a>
-        <a href="#clasificacion"><span>02</span>Clasificación</a>
-        <a href="#responsabilidad"><span>03</span>Responsabilidad</a>
-        <a href="#alineamiento"><span>04</span>Alineamiento</a>
-        <a href="#informacion-complementaria"><span>05</span>Información complementaria</a>
+        <a href="#datos-generales" (click)="scrollToSection('datos-generales', $event)"><span>01</span>Datos generales</a>
+        <a href="#clasificacion" (click)="scrollToSection('clasificacion', $event)"><span>02</span>Clasificación</a>
+        <a href="#responsabilidad" (click)="scrollToSection('responsabilidad', $event)"><span>03</span>Responsabilidad</a>
+        <a href="#alineamiento" (click)="scrollToSection('alineamiento', $event)"><span>04</span>Alineamiento</a>
+        <a href="#informacion-complementaria" (click)="scrollToSection('informacion-complementaria', $event)"><span>05</span>Información complementaria</a>
       </nav>
 
       <form [formGroup]="form" (ngSubmit)="save()" [attr.aria-busy]="submitting() ? 'true' : null" novalidate>
@@ -91,7 +91,7 @@
           <aside class="panel readonly-section" aria-labelledby="readonly-title">
             <header><span class="lock-icon"><mat-icon aria-hidden="true">lock</mat-icon></span><div><h3 id="readonly-title">Datos protegidos</h3><p>Contexto que no forma parte de la actualización.</p></div></header>
             <dl class="metadata-grid">
-              <div><dt>Código</dt><dd>{{ detail.portfolioRecord.code }}</dd></div><div><dt>Tipo</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div><div><dt>Origen</dt><dd>{{ detail.portfolioRecord.originCode }}</dd></div>@if (isPreexistingProject()) {<div><dt>Tipo de solución</dt><dd>{{ detail.portfolioRecord.solutionType }}</dd></div>}<div><dt>Unidad Ejecutora</dt><dd>{{ detail.portfolioRecord.executingUnitId ?? 'No registrada' }}</dd></div><div><dt>Estado</dt><dd>{{ detail.portfolioRecord.status }}</dd></div><div><dt>Producto final</dt><dd>{{ detail.portfolioRecord.finalProductType }}</dd></div><div><dt>Fecha de cierre</dt><dd>{{ detail.portfolioRecord.closingDate ? formatDate(detail.portfolioRecord.closingDate) : 'Sin fecha registrada' }}</dd></div><div><dt>Última modificación</dt><dd>{{ formatDateTime(detail.portfolioRecord.updatedAt) }}</dd></div>
+              <div><dt>Código</dt><dd>{{ detail.portfolioRecord.code }}</dd></div><div><dt>Tipo</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div><div><dt>Origen</dt><dd>{{ detail.portfolioRecord.originCode }}</dd></div>@if (isPreexistingProject()) {<div><dt>Tipo de solución</dt><dd>{{ detail.portfolioRecord.solutionType }}</dd></div>}<div><dt>Unidad Ejecutora</dt><dd class="executing-unit-value">{{ formatExecutingUnit(detail.portfolioRecord.executingUnit) }}</dd></div><div><dt>Estado</dt><dd>{{ detail.portfolioRecord.status }}</dd></div><div><dt>Producto final</dt><dd>{{ detail.portfolioRecord.finalProductType }}</dd></div><div><dt>Fecha de cierre</dt><dd>{{ detail.portfolioRecord.closingDate ? formatDate(detail.portfolioRecord.closingDate) : 'Sin fecha registrada' }}</dd></div><div><dt>Última modificación</dt><dd>{{ formatDateTime(detail.portfolioRecord.updatedAt) }}</dd></div>
             </dl>
           </aside>
         </div>

@@ -907,6 +907,7 @@ function toPortfolioRecord(value: ApiPortfolioRecord): PiipPortfolioRecord {
     projectManagementDocumentation: value.projectManagementDocumentation ?? '',
     finalClosureReport: value.finalClosureReport ?? '',
     executingUnitId: value.executingUnitId,
+    executingUnit: value.executingUnit,
     version: value.version,
     updatedAt: value.updatedAt,
     recordTypeReference, solutionTypeReference, sourceReference, peiObjectiveReference, poiActivityReference,

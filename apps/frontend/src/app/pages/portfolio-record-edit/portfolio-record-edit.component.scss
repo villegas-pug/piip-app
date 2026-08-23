@@ -48,6 +48,7 @@
 .metadata-grid div { display: grid; grid-template-columns: minmax(82px, .8fr) minmax(0, 1.2fr); gap: 8px; padding: 10px 0; border-top: 1px solid #e1e7e2; }
 .metadata-grid dt { color: #6b7970; font-size: 11px; }
 .metadata-grid dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: #293e32; font-size: 12px; font-weight: 750; text-align: right; }
+.metadata-grid .executing-unit-value { white-space: normal; overflow-wrap: anywhere; word-break: normal; }
 .edit-footer { position: sticky; z-index: 6; bottom: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; margin: 20px -20px calc(-120px + env(safe-area-inset-bottom)); padding: 12px max(20px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); border-top: 1px solid #d8e1da; background: rgba(255, 255, 255, .97); box-shadow: 0 -8px 22px rgba(23, 53, 36, .09); backdrop-filter: blur(12px); }
 .footer-feedback { min-width: 0; }
 .form-error, .save-notice { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 13px; }

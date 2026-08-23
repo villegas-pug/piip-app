@@ -90,6 +90,8 @@ export interface PiipPortfolioRecord {
   projectManagementDocumentation: string;
   finalClosureReport: string;
   executingUnitId?: number;
+  /** Nombre de la Unidad Ejecutora entregado por el contrato. */
+  executingUnit?: string;
   recordTypeReference?: TechnicalCatalogOption;
   solutionTypeReference?: HistoricalCatalogReference;
   sourceReference?: HistoricalCatalogReference;

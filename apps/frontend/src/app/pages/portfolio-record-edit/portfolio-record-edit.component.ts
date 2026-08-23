@@ -123,6 +123,14 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
     return this.form.dirty && !this.submitting();
   }
 
+  scrollToSection(sectionId: string, event: Event): void {
+    event.preventDefault();
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.history.replaceState(window.history.state, '', `#${encodeURIComponent(sectionId)}`);
+  }
+
   confirmPendingChanges(): Observable<boolean> {
     if (!this.pendingChangesDialogRef) {
       const dialogRef = this.dialog.open(PendingChangesDialogComponent, {
@@ -268,6 +276,10 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
       timeStyle: 'short',
       timeZone: 'America/Lima',
     }).format(date);
+  }
+
+  formatExecutingUnit(value?: string): string {
+    return value?.trim() ? value : 'Sin información registrada';
   }
 
   private initialize(record: PiipPortfolioRecord): void {

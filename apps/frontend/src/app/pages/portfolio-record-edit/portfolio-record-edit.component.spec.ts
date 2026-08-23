@@ -60,6 +60,24 @@ describe('PortfolioRecordEditComponent', () => {
     component.form.controls.name.markAsDirty();
   }
 
+  it('desplaza suavemente al submenú solicitado sin iniciar una navegación Angular', async () => {
+    const { component, fixture, router } = await setup();
+    const section = fixture.nativeElement.querySelector('#clasificacion') as HTMLElement;
+    const scrollIntoView = vi.fn();
+    section.scrollIntoView = scrollIntoView;
+    const event = { preventDefault: vi.fn() } as unknown as Event;
+    const replaceState = vi.spyOn(window.history, 'replaceState').mockImplementation(() => undefined);
+    const navigate = vi.spyOn(router, 'navigate');
+
+    component.scrollToSection('clasificacion', event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    expect(replaceState).toHaveBeenCalledWith(window.history.state, '', '#clasificacion');
+    expect(navigate).not.toHaveBeenCalled();
+    replaceState.mockRestore();
+  });
+
   it('carga la variante iniciativa y envía un body sparse con confirmación y navegación al detalle', async () => {
     const { component, fixture, repository, router, code } = await setup();
     const current = repository.getInitiativeDetail(code)!.portfolioRecord;
@@ -156,6 +174,30 @@ describe('PortfolioRecordEditComponent', () => {
     repository.portfolioRecords.update((records) => records.map((record) => record.code === code ? { ...record, updatedAt: 'fecha-inválida' } : record));
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Sin información registrada');
+  });
+
+  it('muestra el nombre de la Unidad Ejecutora sin sustituirlo por su identificador', async () => {
+    const executingUnit = 'Programa de Desarrollo Productivo Agrario Rural — AGRO RURAL';
+    const { component, fixture } = await setup('Iniciativa', 'I-024-2026', (repository) => {
+      repository.portfolioRecords.update((records) => records.map((record) => record.code === 'I-024-2026'
+        ? { ...record, executingUnitId: 987, executingUnit }
+        : record));
+    });
+    const value = fixture.nativeElement.querySelector('.executing-unit-value') as HTMLElement;
+
+    expect(value.textContent?.trim()).toBe(executingUnit);
+    expect(value.textContent).not.toContain('987');
+    expect(component.record()?.executingUnitId).toBe(987);
+  });
+
+  it.each([undefined, '', '   '])('usa el fallback explícito cuando la Unidad Ejecutora no está informada (%s)', async (executingUnit) => {
+    const { fixture } = await setup('Iniciativa', 'I-024-2026', (repository) => {
+      repository.portfolioRecords.update((records) => records.map((record) => record.code === 'I-024-2026'
+        ? { ...record, executingUnit }
+        : record));
+    });
+
+    expect(fixture.nativeElement.querySelector('.executing-unit-value')?.textContent.trim()).toBe('Sin información registrada');
   });
 
   it('no genera PATCH cuando solo permanece la versión baseline', async () => {

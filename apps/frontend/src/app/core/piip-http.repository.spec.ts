@@ -360,14 +360,16 @@ describe('PiipHttpRepository', () => {
       responsibleUnits: [], description: 'Descripción', keyResults: null, note: null, status: 'Presentado',
       finalProductType: 'NA', digitalComponent: 'No', closingDate: null, technicalOpinionReport: null,
       formalApprovalDecision: null, finalProductApprovalDocument: null, projectManagementDocumentation: null,
-      finalClosureReport: null, executingUnitId: 1, executingUnit: 'UE-001', updatedAt: '2026-08-22T10:00:00Z', version: 2,
+      finalClosureReport: null, executingUnitId: 1, executingUnit: '  Unidad Ejecutora de Prueba  ', updatedAt: '2026-08-22T10:00:00Z', version: 2,
     };
     const portfolio = TestBed.inject(PortfolioControllerService);
     vi.spyOn(portfolio, 'updateInitiative').mockReturnValue(of(response as unknown as PortfolioRecordResponse));
     const refreshAudit = vi.spyOn(repository as unknown as { loadAudit: () => Promise<void> }, 'loadAudit').mockResolvedValue();
 
     const updatedInitiative = await repository.updateInitiative('I-006-2026', { version: 1, name: 'Iniciativa actualizada' });
+    expect(updatedInitiative.executingUnit).toBe('  Unidad Ejecutora de Prueba  ');
     expect(updatedInitiative.updatedAt).toBe('2026-08-22T10:00:00Z');
+    expect(repository.portfolioRecords().find((record) => record.code === 'I-006-2026')?.executingUnit).toBe('  Unidad Ejecutora de Prueba  ');
     expect(repository.portfolioRecords().find((record) => record.code === 'I-006-2026')?.updatedAt).toBe('2026-08-22T10:00:00Z');
     expect(refreshAudit).toHaveBeenCalledOnce();
 
