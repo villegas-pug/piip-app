@@ -1,3 +1,4 @@
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { provideRouter, Router } from '@angular/router';
@@ -8,6 +9,7 @@ import { ProjectsComponent } from './projects.component';
 
 describe('ProjectsComponent', () => {
   const open = vi.fn();
+  let overlayContainer: OverlayContainer;
 
   beforeEach(async () => {
     open.mockReset();
@@ -15,6 +17,11 @@ describe('ProjectsComponent', () => {
       imports: [ProjectsComponent],
       providers: [provideRouter([]), PiipMockRepository, { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository }, { provide: MatDialog, useValue: { open } }],
     }).compileComponents();
+    overlayContainer = TestBed.inject(OverlayContainer);
+  });
+
+  afterEach(() => {
+    overlayContainer.getContainerElement().innerHTML = '';
   });
 
   it('opens the configured dialog and navigates to the selected initiative', async () => {
@@ -140,6 +147,38 @@ describe('ProjectsComponent', () => {
     fixture.detectChanges();
     const openLink = fixture.nativeElement.querySelector('tbody tr a.secondary-button') as HTMLAnchorElement;
     expect(openLink.getAttribute('href')).toBe('/proyectos/P-003-2026');
+    expect(openLink.textContent).toContain('Ver detalle');
+    expect(fixture.nativeElement.querySelector('thead th.action-column')?.textContent?.trim()).toBe('Acciones');
+  });
+
+  it('presenta un grupo de acciones contextual, iconos decorativos y menú sin detalle duplicado', () => {
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.detectChanges();
+    const row = fixture.nativeElement.querySelector('tbody tr') as HTMLElement;
+    const actionGroup = row.querySelector('.row-actions') as HTMLElement;
+
+    expect(actionGroup.getAttribute('role')).toBe('group');
+    expect(actionGroup.getAttribute('aria-label')).toBe('Acciones para el proyecto P-003-2026');
+    expect(row.querySelector('a.secondary-button mat-icon')?.getAttribute('aria-hidden')).toBe('true');
+    expect(row.querySelector('button[aria-label="Más acciones del proyecto P-003-2026"]')).not.toBeNull();
+    expect(row.querySelector('button[aria-label="Más acciones del proyecto P-003-2026"] mat-icon')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('abre el menú contextual con las acciones aplicables al primer proyecto', async () => {
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const trigger = host.querySelector<HTMLButtonElement>('button[aria-label="Más acciones del proyecto P-003-2026"]');
+
+    trigger?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const menuText = overlayContainer.getContainerElement().textContent ?? '';
+    expect(menuText).toContain('Ver documentos');
+    expect(menuText).toContain('Ver iniciativa origen');
+    expect(menuText).toContain('Ver auditoría');
+    expect(menuText).not.toContain('Ver detalle');
   });
 
   it('filtra por la identidad resuelta de Unidad Orgánica y conserva los filtros existentes', () => {
@@ -176,7 +215,7 @@ describe('ProjectsComponent', () => {
     const detailLink = row.querySelector('a.secondary-button') as HTMLAnchorElement;
 
     expect(detailLink?.getAttribute('href')).toBe('/proyectos/P-003-2026');
-    expect(row.querySelector('button[aria-label="Acciones de P-003-2026"]')).not.toBeNull();
+    expect(row.querySelector('button[aria-label="Más acciones del proyecto P-003-2026"]')).not.toBeNull();
     expect(row.querySelector('a[href*="/editar"]')).toBeNull();
     expect(row.textContent).not.toContain('Editar');
     expect(row.textContent).toContain('Proyecto en ejecución');

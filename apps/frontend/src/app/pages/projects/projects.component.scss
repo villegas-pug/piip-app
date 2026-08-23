@@ -27,6 +27,10 @@
 .clear-button mat-icon { width: 19px; height: 19px; font-size: 19px; line-height: 19px; }
 th, td { padding: 9px 10px; font-size: 12px; }
 td { height: 52px; }
+.action-column, .action-cell { min-width: 164px; white-space: nowrap; }
+.action-column { position: sticky; right: 0; z-index: 2; background: #f7f8f7; box-shadow: -8px 0 12px rgba(23, 53, 36, .08); }
+.action-cell { position: sticky; right: 0; z-index: 1; background: #fff; box-shadow: -8px 0 12px rgba(23, 53, 36, .06); }
+tbody tr:hover .action-cell { background: #fbfdfb; }
 .project-name { max-width: 150px; line-height: 1.25; }
 .origin-value { display: grid; justify-items: start; gap: 4px; }
 .origin-value small { padding: 3px 7px; border: 1px solid #d8b65e; border-radius: 10px; color: #745100; background: #fff5d8; font-size: 10px; font-weight: 700; }
@@ -39,9 +43,12 @@ td { height: 52px; }
 .status-tag[data-tone='neutral'] { color: #59635e; background: #ecefed; }
 .status-tag[data-tone='warning'] { color: #935d00; background: #fff0d5; }
 .status-tag[data-tone='danger'] { color: #8f2d2d; background: var(--piip-red-soft); }
-.row-actions { display: flex; align-items: center; }
-.row-actions .secondary-button { min-height: 32px; padding-inline: 10px; font-size: 13px; }
+.row-actions { display: inline-flex; align-items: center; gap: 6px; }
+.row-actions .secondary-button { min-height: 44px; padding-inline: 10px; font-size: 13px; }
 .row-actions a.secondary-button { text-decoration: none; }
+.row-actions .icon-action { width: 44px; height: 44px; padding: 0; border: 1px solid transparent; border-radius: 6px; }
+.row-actions .icon-action:hover { background: var(--piip-mint-soft); }
+.row-actions .icon-action:focus-visible { outline: 3px solid rgba(230, 169, 0, .4); outline-offset: 2px; border-color: var(--piip-green-700); }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: 15px; min-height: 62px; padding: 12px 4px 0; font-size: 13px; }
 .pagination select { height: 36px; margin-left: 8px; border: 1px solid var(--piip-border); border-radius: 4px; background: #fff; }
 .pagination div { display: flex; gap: 6px; }
@@ -84,4 +91,5 @@ td { height: 52px; }
   .project-filters { grid-template-columns: 1fr; }
   .search-field { grid-column: auto; }
   .clear-button { width: 100%; }
+  .action-column, .action-cell { min-width: 156px; }
 }
