@@ -62,7 +62,7 @@
 
 **Decisión**: agregar métodos de comportamiento explícitos a `PortfolioRecordEntity` y operaciones JPA estándar a repositorios; no cambiar anotaciones, columnas, relaciones ni DDL.
 
-**Razón**: todos los campos, `FECHA_MODIFICACION`, `VERSION`, la asociación ordenada y `DETALLE_JSON` ya existen. Los métodos de dominio protegen identidad, UE, origen, estado, cierre y creador mejor que setters públicos genéricos.
+**Razón**: todos los campos, `FECHA_MODIFICACION`, `VERSION`, la asociación hija y `DETALLE_JSON` ya existen. Los métodos de dominio protegen identidad, UE, origen, estado, cierre y creador mejor que setters públicos genéricos.
 
 **Alternativas consideradas**:
 
@@ -71,9 +71,9 @@
 
 ## 7. Referencias y sustitución de Unidades Orgánicas
 
-**Decisión**: resolver todas las referencias incluidas antes de escribir. Para UO, validar lista no vacía, IDs únicos, activo y misma UE; comparar identidades y orden; solo si cambia, reemplazar el conjunto completo después de flush de eliminaciones.
+**Decisión**: resolver todas las referencias incluidas antes de escribir. Para UO, validar exactamente un ID activo de la misma UE; conservar el arreglo HTTP y la posición técnica `1`, y solo si cambia reemplazar la asociación después de flush de eliminaciones.
 
-**Razón**: la lista representa un agregado ordenado. Validar primero evita cambios parciales; liberar las posiciones antiguas antes de insertar evita conflicto con `UK_RUR_REGISTRO_ORDEN`. Una edición solo de UO actualiza también el padre para avanzar versión y fecha.
+**Razón**: el contrato y la tabla existentes representan una asociación hija, pero las altas de la interfaz solo permiten una UO. Validar primero evita cambios parciales; conservar la posición técnica `1` evita introducir una regla de orden que la experiencia de alta no ofrece. Una edición solo de UO actualiza también el padre para avanzar versión y fecha.
 
 **Alternativas consideradas**:
 
@@ -85,7 +85,7 @@
 
 **Decisión**: usar eventos `INICIATIVA_ACTUALIZADA` y `PROYECTO_ACTUALIZADO`. `cambios` será un mapa ordenado por clave de campo con `{anterior,nuevo}`; catálogos se fotografían con `id/code/name` y UO con `id/code/name/displayOrder`.
 
-**Razón**: produce evidencia estable y legible sin guardar el body completo. Comparar snapshots resueltos evita auditar IDs sin contexto y reconoce el reordenamiento como cambio. Value objects o `LinkedHashMap` admiten nuevos valores nulos; `Map.of` no.
+**Razón**: produce evidencia estable y legible sin guardar el body completo. Comparar snapshots resueltos evita auditar IDs sin contexto y registra el reemplazo de una única UO. Value objects o `LinkedHashMap` admiten nuevos valores nulos; `Map.of` no.
 
 **Alternativas consideradas**:
 
@@ -105,17 +105,17 @@
 - Cambiar automáticamente la UE activa: altera el contexto de navegación y no es una autorización.
 - Mantener una segunda versión dentro del formulario sin sincronizar repositorio: crea estados divergentes.
 
-## 10. Componente de edición y UO ordenables
+## 10. Componente de edición y UO única
 
-**Decisión**: crear un único `PortfolioRecordEditComponent` para las rutas de iniciativa/proyecto, con matriz computada por tipo/origen y un editor de UO con agregar, retirar y botones accesibles subir/bajar.
+**Decisión**: crear un único `PortfolioRecordEditComponent` para las rutas de iniciativa/proyecto, con matriz computada por tipo/origen y un selector accesible de una sola UO.
 
-**Razón**: las tres variantes comparten interacción, carga y la mayoría de campos. Una matriz explícita conserva diferencias sin duplicar tres componentes. Los controles de orden no dependen exclusivamente de drag-and-drop y son utilizables con teclado/tecnologías de asistencia.
+**Razón**: las tres variantes comparten interacción, carga y la mayoría de campos. Una matriz explícita conserva diferencias sin duplicar tres componentes. El selector mantiene la misma regla de alta y elimina una interacción de orden que no representa una decisión funcional.
 
 **Alternativas consideradas**:
 
 - Reutilizar formularios de alta: arrastraría borradores, documentos y confirmaciones que edición excluye.
 - Tres formularios de edición: duplicaría validación, conflicto, descarte y mapping sparse.
-- Solo drag-and-drop: reduce accesibilidad y dificulta pruebas deterministas.
+- Editor de múltiples UO: contradice la regla vigente de alta y permite cambios de orden sin significado funcional.
 
 ## 11. Referencias históricas inactivas
 

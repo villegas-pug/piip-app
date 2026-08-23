@@ -33,6 +33,6 @@
 
 - Validación final: la estructura, el alcance, los escenarios, las dependencias y los resultados medibles están completos.
 - Las respuestas Q1-A, Q2-A y Q3-A del 2026-08-22 resolvieron la matriz de campos por tipo/origen, los estados editables y el detalle mínimo de auditoría.
-- La sesión `/speckit-clarify` del 2026-08-22 resolvió selección y orden de múltiples UO responsables, ausencia de motivo adicional, retorno al detalle y descarte supervisado sin borrador local.
+- La corrección del 2026-08-22 confirmó una sola UO responsable, sin orden de presentación funcional, además de ausencia de motivo adicional, retorno al detalle y descarte supervisado sin borrador local.
 - `PATCH` y los estados HTTP se documentan como comportamiento contractual observable pedido expresamente, no como decisión de framework o estructura interna.
 - No quedan marcadores `NEEDS CLARIFICATION` ni ítems incompletos; la especificación está lista para `/speckit-plan`.

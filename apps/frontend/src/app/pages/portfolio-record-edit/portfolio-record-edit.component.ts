@@ -7,7 +7,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import type { CatalogBundle, InitiativeDetail, InitiativeUpdateInput, PiipPortfolioRecord, PiipRecordType, ProjectDetail, ProjectUpdateInput } from '../../core/piip.models';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { canEditInitiative, canEditProject } from '../../core/portfolio-edit-permissions';
-import { ResponsibleUnitOrderEditorComponent } from './responsible-unit-order-editor.component';
+import type { OrganizationalUnit } from '../../core/piip.models';
 import type { PendingChangesAware } from '../../core/pending-changes.guard';
 
 interface EditSnapshot {
@@ -29,7 +29,7 @@ interface EditSnapshot {
 @Component({
   selector: 'app-portfolio-record-edit',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, MatIconModule, ResponsibleUnitOrderEditorComponent],
+  imports: [ReactiveFormsModule, RouterLink, MatIconModule],
   templateUrl: './portfolio-record-edit.component.html',
   styleUrl: './portfolio-record-edit.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -114,9 +114,38 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
     event.returnValue = '';
   }
 
-  setResponsibleUnitIds(ids: number[]): void {
-    this.form.controls.responsibleUnitIds.setValue([...ids]);
+  setResponsibleUnitIds(ids: readonly number[]): void {
+    if (this.hasMultipleResponsibleUnits()) return;
+    this.form.controls.responsibleUnitIds.setValue(ids.length ? [ids[0]] : []);
     this.form.controls.responsibleUnitIds.markAsDirty();
+  }
+
+  setResponsibleUnitFromEvent(event: Event): void {
+    const rawValue = (event.target as HTMLSelectElement).value;
+    const id = Number(rawValue);
+    this.setResponsibleUnitIds(Number.isInteger(id) && id > 0 ? [id] : []);
+  }
+
+  selectedResponsibleUnitId(): string {
+    const ids = this.form.controls.responsibleUnitIds.value;
+    return ids.length === 1 ? String(ids[0]) : '';
+  }
+
+  hasMultipleResponsibleUnits(): boolean {
+    return (this.baseline()?.responsibleUnitIds.length ?? 0) > 1;
+  }
+
+  responsibleUnitOptions(): readonly OrganizationalUnit[] {
+    const currentIds = this.baseline()?.responsibleUnitIds ?? [];
+    const candidates = [...this.units(), ...(this.record()?.responsibleUnitReferences ?? [])];
+    return candidates.filter((unit, index, all) =>
+      (unit.active || currentIds.includes(unit.id)) && all.findIndex((candidate) => candidate.id === unit.id) === index,
+    );
+  }
+
+  currentResponsibleUnits(): readonly OrganizationalUnit[] {
+    const ids = this.baseline()?.responsibleUnitIds ?? this.form.controls.responsibleUnitIds.value;
+    return ids.flatMap((id) => this.responsibleUnitOptions().filter((unit) => unit.id === id));
   }
 
   isHistorical(id: string, field: 'solutionTypeId' | 'sourceId' | 'peiObjectiveId' | 'poiActivityId'): boolean {

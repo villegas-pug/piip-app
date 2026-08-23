@@ -20,7 +20,7 @@ Una asignación reúne tres elementos que se evalúan juntos:
 - **Institución:** límite organizacional al que pertenece la asignación.
 - **Unidad Ejecutora (UE):** alcance más específico de la asignación; cuando la asignación es institucional, cubre las UE de esa institución.
 
-No se debe confundir la UE con las **unidades de organización responsables** que se registran en una iniciativa o proyecto: estas últimas son uno de los campos del portafolio y no constituyen el ámbito de autorización.
+No se debe confundir la UE con la **Unidad Orgánica responsable** que se registra en una iniciativa o proyecto: es un campo del portafolio y no constituye el ámbito de autorización.
 
 El contexto activo de la UE determina qué acciones se ofrecen. Un usuario puede tener `Consulta externa` en una UE y `Administrador PIIP` en otra; el rol privilegiado no se traslada ni se combina con la cobertura de la otra UE. Sobre la misma UE, `Administrador PIIP` prevalece como rol efectivo frente a `Consulta externa`.
 
@@ -79,7 +79,7 @@ Los datos se organizan alrededor de los 23 campos canónicos: identificación, f
 
 Antes de habilitar el registro, PIIP obtiene del backend las opciones vigentes de Tipo de solución, Fuente u origen, Objetivo PEI, Actividad POI y Tipo documental. Tipo de registro también procede del backend como catálogo técnico; la opción **Todos** pertenece únicamente a los filtros de la interfaz. Objetivo PEI y Actividad POI son selecciones independientes y opcionales: elegir una no filtra, exige ni modifica la otra.
 
-La persona selecciona las opciones por su nombre, pero PIIP conserva y envía sus identidades. Las unidades responsables se consultan después de conocer la Unidad Ejecutora y solo incluyen Unidades Orgánicas activas de esa UE. Si la carga continúa, queda vacía o falla, la pantalla lo diferencia y no reemplaza la respuesta con listas locales. Un campo requerido sin opciones válidas bloquea la confirmación y ofrece reintentar la consulta.
+La persona selecciona las opciones por su nombre, pero PIIP conserva y envía sus identidades. La Unidad Orgánica responsable se consulta después de conocer la Unidad Ejecutora y solo incluye opciones activas de esa UE. Si la carga continúa, queda vacía o falla, la pantalla lo diferencia y no reemplaza la respuesta con listas locales. Un campo requerido sin opciones válidas bloquea la confirmación y ofrece reintentar la consulta.
 
 Al registrar la iniciativa se crea su expediente documental y una tarea pendiente para registrar la decisión. También se genera un aviso para la persona asignada y evidencia de auditoría del registro y de la tarea.
 
@@ -101,7 +101,7 @@ Al aprobar, la tarea de decisión pendiente se completa y se crea una nueva tare
 
 Un proyecto derivado se crea explícitamente desde una iniciativa aprobada. El sistema exige que la iniciativa esté en `Iniciativa aprobada`, que el actor sea `Administrador PIIP` en la UE de esa iniciativa y que todavía no exista otro proyecto derivado para el mismo origen. Por lo tanto, la relación es de una iniciativa elegible a un único proyecto derivado.
 
-El nuevo proyecto es un segundo registro vinculado, con código propio y código de origen no editable. La interfaz precarga y permite revisar o editar antes de registrar estos datos comunes de la iniciativa: nombre, tipo de solución, fuente u origen, responsable, unidades de organización responsables, objetivo PEI, actividad POI, descripción y componente digital.
+El nuevo proyecto es un segundo registro vinculado, con código propio y código de origen no editable. La interfaz precarga y permite revisar o editar antes de registrar estos datos comunes de la iniciativa: nombre, tipo de solución, fuente u origen, responsable, Unidad Orgánica responsable, objetivo PEI, actividad POI, descripción y componente digital.
 
 Si una referencia heredada dejó de estar activa, permanece visible como contexto histórico, pero no sirve como selección para la nueva escritura. La persona debe reemplazarla por una opción vigente antes de confirmar el proyecto. PIIP no sustituye automáticamente esa elección ni vuelve a ofrecer el elemento inactivo entre las opciones.
 
@@ -115,7 +115,7 @@ Desde que existe el proyecto vinculado, la iniciativa conserva `Iniciativa aprob
 
 La acción **Editar** solo se muestra defensivamente a un `Administrador PIIP` que cubre la UE real del registro. La autorización efectiva se vuelve a comprobar en el backend; abrir directamente la ruta no evita las reglas. Una iniciativa se puede editar únicamente en `Presentado` y sin proyecto derivado. Un proyecto se puede editar únicamente en `Proyecto en ejecución`, tanto si es derivado como preexistente.
 
-El formulario carga una copia fresca, conserva la identidad, el código, el origen, el estado, la relación y la UE, y envía únicamente propiedades modificadas junto con la `version` esperada. La ausencia de una propiedad conserva su valor; PEI, POI y nota pueden enviarse explícitamente como nulos. Las Unidades Orgánicas responsables se reemplazan como una lista completa, no vacía, sin duplicados, ordenada y perteneciente a la UE del registro. Las referencias nuevas deben estar activas; un valor histórico inactivo permanece visible como contexto y no se reutiliza para escribir.
+El formulario carga una copia fresca, conserva la identidad, el código, el origen, el estado, la relación y la UE, y envía únicamente propiedades modificadas junto con la `version` esperada. La ausencia de una propiedad conserva su valor; PEI, POI y nota pueden enviarse explícitamente como nulos. La Unidad Orgánica responsable se reemplaza por una única referencia activa perteneciente a la UE del registro; el contrato conserva el arreglo `responsibleUnits` por compatibilidad, con un solo elemento. Las referencias nuevas deben estar activas; un valor histórico inactivo permanece visible como contexto y no se reutiliza para escribir.
 
 Un cambio efectivo devuelve la representación completa con nueva fecha de modificación y versión superior, y genera un único evento funcional con actor, UE, versiones y diff estable sin cuerpo HTTP. Un envío sin cambios produce `422`; una referencia o lista inválida produce `422`; la falta de autorización produce `403`; una ruta inexistente produce `404`; y una versión obsoleta produce `409` sin reintento automático. Ante `409`, la pantalla conserva la copia local y ofrece **Recargar versión vigente**. La navegación o el cierre de la pestaña advierten solo si existen cambios pendientes y no se persisten borradores locales.
 

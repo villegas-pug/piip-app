@@ -1,8 +1,6 @@
 package pe.gob.midagri.piip.portfolio.application;
 
 import java.util.List;
-import java.util.HashSet;
-import java.util.Set;
 import org.springframework.stereotype.Service;
 import pe.gob.midagri.piip.organization.persistence.OrganizationalUnitRepository;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ResponsibleUnitInput;
@@ -23,6 +21,7 @@ public class ResponsibleUnitService {
     }
 
     public void save(PortfolioRecordEntity record, List<ResponsibleUnitInput> inputs) {
+        requireExactlyOne(inputs);
         int order = 1;
         for (ResponsibleUnitInput input : inputs) {
             var unit = organizationalUnits.findHistoricalById(input.organizationalUnitId())
@@ -43,19 +42,11 @@ public class ResponsibleUnitService {
 
     /** Valida la lista completa antes de tocar las asociaciones persistidas. */
     public void replace(PortfolioRecordEntity record, List<ResponsibleUnitUpdate> inputs) {
-        if (inputs == null || inputs.isEmpty()) {
-            throw new InvalidReferenceException("Debe existir al menos una Unidad Orgánica responsable",
-                "responsibleUnits", null, "EMPTY");
-        }
+        requireExactlyOne(inputs);
         if (organizationalUnits == null) {
             throw new IllegalStateException("No se configuró el repositorio de Unidades Orgánicas");
         }
-        Set<Long> seen = new HashSet<>();
         var resolved = inputs.stream().map(input -> {
-            if (!seen.add(input.organizationalUnitId())) {
-                throw new InvalidReferenceException("La Unidad Orgánica está repetida", "responsibleUnits",
-                    input.organizationalUnitId(), "DUPLICATE");
-            }
             var unit = organizationalUnits.findHistoricalById(input.organizationalUnitId())
                 .orElseThrow(() -> new InvalidReferenceException("La Unidad Orgánica no existe", "responsibleUnits",
                     input.organizationalUnitId(), "NOT_FOUND"));
@@ -81,5 +72,12 @@ public class ResponsibleUnitService {
             responsibleUnits.save(new ResponsibleUnitEntity(record, unit, unit.getName(), i + 1));
         }
         responsibleUnits.flush();
+    }
+
+    private static void requireExactlyOne(List<?> inputs) {
+        if (inputs == null || inputs.size() != 1) {
+            throw new InvalidReferenceException("Debe existir exactamente una Unidad Orgánica responsable",
+                "responsibleUnits", inputs == null ? null : Long.valueOf(inputs.size()), "INVALID_SIZE");
+        }
     }
 }

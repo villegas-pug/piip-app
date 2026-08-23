@@ -27,12 +27,12 @@ class PortfolioUpdateReferenceTest {
         ResponsibleUnitService service = new ResponsibleUnitService(responsible, mock(OrganizationalUnitRepository.class));
 
         assertThatThrownBy(() -> service.replace(record(), List.of()))
-            .isInstanceOf(InvalidReferenceException.class).hasMessageContaining("al menos una");
+            .isInstanceOf(InvalidReferenceException.class).hasMessageContaining("exactamente una");
         verifyNoInteractions(responsible);
     }
 
     @Test
-    void rejectsDuplicatesBeforeTouchingPersistence() {
+    void rejectsMultipleResponsibleUnitsBeforeTouchingPersistence() {
         ResponsibleUnitRepository responsible = mock(ResponsibleUnitRepository.class);
         OrganizationalUnitRepository organizational = mock(OrganizationalUnitRepository.class);
         OrganizationalUnitEntity unit = organizationalUnit(8L, executingUnit(5L), true);
@@ -40,43 +40,38 @@ class PortfolioUpdateReferenceTest {
         ResponsibleUnitService service = new ResponsibleUnitService(responsible, organizational);
 
         assertThatThrownBy(() -> service.replace(record(), List.of(new ResponsibleUnitUpdate(8L), new ResponsibleUnitUpdate(8L))))
-            .isInstanceOf(InvalidReferenceException.class).hasMessageContaining("repetida");
+            .isInstanceOf(InvalidReferenceException.class).hasMessageContaining("exactamente una");
         verifyNoInteractions(responsible);
     }
 
     @Test
-    void validatesEveryReferenceBeforeReplacingTheOrderedSet() {
+    void rejectsMoreThanOneResponsibleUnitBeforeTouchingPersistence() {
         ResponsibleUnitRepository responsible = mock(ResponsibleUnitRepository.class);
         OrganizationalUnitRepository organizational = mock(OrganizationalUnitRepository.class);
         ExecutingUnitEntity same = executingUnit(5L);
-        ExecutingUnitEntity other = executingUnit(6L);
         when(organizational.findHistoricalById(8L)).thenReturn(Optional.of(organizationalUnit(8L, same, true)));
-        when(organizational.findHistoricalById(9L)).thenReturn(Optional.of(organizationalUnit(9L, other, true)));
         ResponsibleUnitService service = new ResponsibleUnitService(responsible, organizational);
 
         assertThatThrownBy(() -> service.replace(record(), List.of(new ResponsibleUnitUpdate(8L), new ResponsibleUnitUpdate(9L))))
-            .isInstanceOf(InvalidReferenceException.class).hasMessageContaining("otra Unidad Ejecutora");
+            .isInstanceOf(InvalidReferenceException.class).hasMessageContaining("exactamente una");
         verifyNoInteractions(responsible);
     }
 
     @Test
-    void replacesWithTheSubmittedOrderAndRejectsInactiveReferences() {
+    void replacesWithTheSubmittedUnitAndRejectsInactiveReferences() {
         ResponsibleUnitRepository responsible = mock(ResponsibleUnitRepository.class);
         OrganizationalUnitRepository organizational = mock(OrganizationalUnitRepository.class);
         ExecutingUnitEntity same = executingUnit(5L);
         OrganizationalUnitEntity first = organizationalUnit(8L, same, true);
-        OrganizationalUnitEntity second = organizationalUnit(9L, same, true);
         when(organizational.findHistoricalById(8L)).thenReturn(Optional.of(first));
-        when(organizational.findHistoricalById(9L)).thenReturn(Optional.of(second));
         when(responsible.findByRecordIdOrderByDisplayOrder(any())).thenReturn(List.of());
         ResponsibleUnitService service = new ResponsibleUnitService(responsible, organizational);
 
-        service.replace(record(), List.of(new ResponsibleUnitUpdate(9L), new ResponsibleUnitUpdate(8L)));
+        service.replace(record(), List.of(new ResponsibleUnitUpdate(8L)));
 
-        verify(responsible).save(argThat(value -> value.getOrganizationalUnit() == second && value.getDisplayOrder() == 1));
-        verify(responsible).save(argThat(value -> value.getOrganizationalUnit() == first && value.getDisplayOrder() == 2));
-        ReflectionTestUtils.setField(second, "active", false);
-        assertThatThrownBy(() -> service.replace(record(), List.of(new ResponsibleUnitUpdate(9L))))
+        verify(responsible).save(argThat(value -> value.getOrganizationalUnit() == first && value.getDisplayOrder() == 1));
+        ReflectionTestUtils.setField(first, "active", false);
+        assertThatThrownBy(() -> service.replace(record(), List.of(new ResponsibleUnitUpdate(8L))))
             .isInstanceOf(InvalidReferenceException.class).hasMessageContaining("inactiva");
     }
 

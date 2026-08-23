@@ -95,6 +95,15 @@ class ResponsibleUnitValidationTest {
             && saved.getOriginalDesignation().equals("Unidad válida") && saved.getDisplayOrder() == 1));
     }
 
+    @Test void rechazaMasDeUnaUnidadOrganicaAntesDeConsultarOCrearAsociaciones() {
+        TestContext context = context();
+
+        assertThatThrownBy(() -> context.responsibleService().save(context.record(),
+            List.of(new ResponsibleUnitInput(8L), new ResponsibleUnitInput(9L))))
+            .isInstanceOf(InvalidReferenceException.class).hasMessageContaining("exactamente una");
+        verifyNoInteractions(context.organizational(), context.responsible());
+    }
+
     @Test void lasCreacionesConResponsablesConservanFronteraTransaccional() throws NoSuchMethodException {
         Transactional transactional = InitiativeApplicationService.class
             .getMethod("create", InitiativeCreateRequest.class).getAnnotation(Transactional.class);

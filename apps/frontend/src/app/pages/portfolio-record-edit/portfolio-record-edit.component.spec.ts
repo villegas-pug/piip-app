@@ -61,23 +61,23 @@ describe('PortfolioRecordEditComponent', () => {
     expect(navigate).toHaveBeenCalledWith(['/iniciativas', code], { queryParams: { updated: '1' } });
   });
 
-  it('carga la variante proyecto y conserva keyResults en el PATCH ordenado', async () => {
+  it('carga la variante proyecto y envía una sola Unidad Orgánica en el PATCH', async () => {
     const { component, repository, router, code } = await setup('Proyecto', 'P-005-2026');
     const current = repository.getProjectDetail(code)!.portfolioRecord;
     repository.organizationalUnits.set([
       ...repository.organizationalUnits(),
       { id: 102, code: 'UO-102', name: 'Unidad secundaria', acronym: 'US', parentId: null, executingUnitId: 1, active: true },
     ]);
-    const updated = { ...current, keyResults: 'Resultado actualizado', responsibleUnitReferences: [repository.organizationalUnits()[0], repository.organizationalUnits()[1]], version: 1 } as PiipPortfolioRecord;
+    const updated = { ...current, keyResults: 'Resultado actualizado', responsibleUnitReferences: [repository.organizationalUnits()[1]], version: 1 } as PiipPortfolioRecord;
     const update = vi.spyOn(repository, 'updateProject').mockResolvedValue(updated);
     vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     component.form.controls.keyResults.setValue('Resultado actualizado');
     component.form.controls.keyResults.markAsDirty();
-    component.setResponsibleUnitIds([101, 102]);
+    component.setResponsibleUnitIds([102]);
     await component.save();
 
-    expect(update).toHaveBeenCalledWith(code, expect.objectContaining({ keyResults: 'Resultado actualizado', responsibleUnitIds: [101, 102] }));
+    expect(update).toHaveBeenCalledWith(code, expect.objectContaining({ keyResults: 'Resultado actualizado', responsibleUnitIds: [102] }));
   });
 
   it('no genera PATCH cuando solo permanece la versión baseline', async () => {
@@ -90,7 +90,7 @@ describe('PortfolioRecordEditComponent', () => {
     expect(component.errorMessage()).toBe('No hay cambios efectivos para guardar.');
   });
 
-  it('envía referencias opcionales como null y permite conservar el orden de UO', async () => {
+  it('envía referencias opcionales como null y conserva la UO única', async () => {
     const { component, repository, code } = await setup();
     const current = repository.getInitiativeDetail(code)!.portfolioRecord;
     const update = vi.spyOn(repository, 'updateInitiative').mockResolvedValue({ ...current, peiObjectiveReference: null, poiActivityReference: null, version: 1 });
@@ -179,5 +179,51 @@ describe('PortfolioRecordEditComponent', () => {
     const unrelatedHistorical = Array.from(host.querySelectorAll<HTMLOptionElement>('select[formcontrolname="solutionTypeId"] option'))
       .find((option) => option.value === '99');
     expect(unrelatedHistorical?.disabled).toBe(true);
+  });
+
+  it('muestra un selector único y no renderiza el editor de orden', async () => {
+    const { fixture, component, repository } = await setup();
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('select[aria-label="Unidad Orgánica responsable"]')).not.toBeNull();
+    expect(host.querySelectorAll('select').length).toBe(6);
+    expect(host.querySelectorAll('input[type="checkbox"]').length).toBe(0);
+    expect(host.textContent).not.toContain('Orden de presentación');
+    expect(host.textContent).not.toContain('Opciones disponibles');
+    expect(component.selectedResponsibleUnitId()).toBe('101');
+    expect((host.querySelector('select[aria-label="Unidad Orgánica responsable"]') as HTMLSelectElement).value).toBe('101');
+
+    repository.organizationalUnits.update((units) => units.map((unit) => unit.id === 101 ? { ...unit, active: false } : unit));
+    fixture.detectChanges();
+    const historicalOption = host.querySelector<HTMLOptionElement>('select[aria-label="Unidad Orgánica responsable"] option[value="101"]');
+    expect(historicalOption?.disabled).toBe(true);
+  });
+
+  it('conserva varias UO históricas como contexto y no las envía al editar otro campo', async () => {
+    const { fixture, component, repository, code } = await setup();
+    const current = repository.getInitiativeDetail(code)!.portfolioRecord;
+    const secondUnit = { id: 102, code: 'UO-102', name: 'Unidad histórica', acronym: 'UH', parentId: null, executingUnitId: 1, active: true };
+    repository.organizationalUnits.set([...repository.organizationalUnits(), secondUnit]);
+    repository.portfolioRecords.update((records) => records.map((record) => record.code === code
+      ? { ...record, responsibleUnitReferences: [repository.organizationalUnits()[0], secondUnit] }
+      : record));
+    component.baseline.set({
+      version: current.version ?? 0, name: current.name, solutionTypeId: current.solutionTypeReference?.id ?? null, sourceId: current.sourceReference?.id ?? null,
+      startDate: current.startDate, responsible: current.responsible, peiObjectiveId: current.peiObjectiveReference?.id ?? null, poiActivityId: current.poiActivityReference?.id ?? null,
+      responsibleUnitIds: [101, 102], description: current.description, keyResults: current.keyResults, note: current.note, digitalComponent: current.digitalComponent,
+    });
+    component.form.controls.responsibleUnitIds.setValue([101, 102]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('varias Unidades Orgánicas responsables históricas');
+    expect(fixture.nativeElement.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Orden de presentación');
+
+    const update = vi.spyOn(repository, 'updateInitiative').mockResolvedValue({ ...current, note: 'Nota editada', version: 1 });
+    component.form.controls.note.setValue('Nota editada');
+    component.form.controls.note.markAsDirty();
+    await component.save();
+
+    expect(update.mock.calls[0]?.[1]).not.toHaveProperty('responsibleUnitIds');
   });
 });

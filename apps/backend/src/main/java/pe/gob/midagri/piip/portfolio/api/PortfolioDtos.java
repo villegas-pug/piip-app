@@ -32,7 +32,7 @@ public final class PortfolioDtos {
         @NotBlank @Size(max = 1000) String description,
         @Size(max = 600) String note,
         @NotNull DigitalComponent digitalComponent,
-        @NotEmpty List<@Valid ResponsibleUnitInput> responsibleUnits) {}
+        @NotEmpty @Size(max = 1) List<@Valid ResponsibleUnitInput> responsibleUnits) {}
 
     public record ApprovalRequest(@NotNull Long version, @Size(max = 1000) String observation) {}
 
@@ -59,7 +59,7 @@ public final class PortfolioDtos {
         @Size(max = 1000) String keyResults,
         @Size(max = 600) String note,
         @NotNull DigitalComponent digitalComponent,
-        @NotEmpty List<@Valid ResponsibleUnitInput> responsibleUnits) {}
+        @NotEmpty @Size(max = 1) List<@Valid ResponsibleUnitInput> responsibleUnits) {}
 
     public record PreexistingProjectRequest(
         @NotNull Long executingUnitId,
@@ -73,7 +73,7 @@ public final class PortfolioDtos {
         @Size(max = 1000) String keyResults,
         @Size(max = 600) String note,
         @NotNull DigitalComponent digitalComponent,
-        @NotEmpty List<@Valid ResponsibleUnitInput> responsibleUnits) {}
+        @NotEmpty @Size(max = 1) List<@Valid ResponsibleUnitInput> responsibleUnits) {}
 
     /** Request PATCH con presencia JSON preservada para diferenciar ausente de null. */
     @JsonIgnoreProperties(ignoreUnknown = false)
@@ -108,7 +108,7 @@ public final class PortfolioDtos {
         @JsonSetter("peiObjectiveId") public void setPeiObjectiveId(Long value) { present.add("peiObjectiveId"); peiObjectiveId = value; }
         @Positive public Long getPoiActivityId() { return poiActivityId; }
         @JsonSetter("poiActivityId") public void setPoiActivityId(Long value) { present.add("poiActivityId"); poiActivityId = value; }
-        @Valid public List<ResponsibleUnitInput> getResponsibleUnits() { return responsibleUnits; }
+        @Size(min = 1, max = 1) @Valid public List<ResponsibleUnitInput> getResponsibleUnits() { return responsibleUnits; }
         @JsonSetter("responsibleUnits") public void setResponsibleUnits(List<ResponsibleUnitInput> value) { present.add("responsibleUnits"); responsibleUnits = value; }
         @Size(max = 1000) public String getDescription() { return description; }
         @JsonSetter("description") public void setDescription(String value) { present.add("description"); description = value; }
@@ -129,7 +129,7 @@ public final class PortfolioDtos {
                 && (!has("startDate") || startDate != null)
                 && (!has("responsible") || responsible != null && !responsible.isBlank())
                 && (!has("description") || description != null && !description.isBlank())
-                && (!has("responsibleUnits") || responsibleUnits != null && !responsibleUnits.isEmpty())
+                && (!has("responsibleUnits") || responsibleUnits != null && responsibleUnits.size() == 1)
                 && (!has("digitalComponent") || digitalComponent != null);
         }
     }
@@ -167,7 +167,7 @@ public final class PortfolioDtos {
         @JsonSetter("peiObjectiveId") public void setPeiObjectiveId(Long value) { present.add("peiObjectiveId"); peiObjectiveId = value; }
         @Positive public Long getPoiActivityId() { return poiActivityId; }
         @JsonSetter("poiActivityId") public void setPoiActivityId(Long value) { present.add("poiActivityId"); poiActivityId = value; }
-        @Valid public List<ResponsibleUnitInput> getResponsibleUnits() { return responsibleUnits; }
+        @Size(min = 1, max = 1) @Valid public List<ResponsibleUnitInput> getResponsibleUnits() { return responsibleUnits; }
         @JsonSetter("responsibleUnits") public void setResponsibleUnits(List<ResponsibleUnitInput> value) { present.add("responsibleUnits"); responsibleUnits = value; }
         @Size(max = 1000) public String getDescription() { return description; }
         @JsonSetter("description") public void setDescription(String value) { present.add("description"); description = value; }
@@ -190,7 +190,7 @@ public final class PortfolioDtos {
                 && (!has("startDate") || startDate != null)
                 && (!has("responsible") || responsible != null && !responsible.isBlank())
                 && (!has("description") || description != null && !description.isBlank())
-                && (!has("responsibleUnits") || responsibleUnits != null && !responsibleUnits.isEmpty())
+                && (!has("responsibleUnits") || responsibleUnits != null && responsibleUnits.size() == 1)
                 && (!has("digitalComponent") || digitalComponent != null);
         }
     }

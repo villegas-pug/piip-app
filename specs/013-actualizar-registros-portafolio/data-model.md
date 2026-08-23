@@ -37,7 +37,7 @@ REGISTRO_PORTAFOLIO 1 ─── * EVENTO_AUDITORIA (por tipo/código de entidad)
 | `keyResults` | `RESULTADOS_CLAVE` | No | Sí | Sí | Sí |
 | `note` | `NOTA` | Sí | Sí | Sí | Sí |
 | `digitalComponent` | `COMPONENTE_DIGITAL` | Sí | Sí | Sí | No |
-| `responsibleUnits` | Asociación hija | Sí | Sí | Sí | No; lista no vacía |
+| `responsibleUnits` | Asociación hija | Sí | Sí | Sí | No; lista de exactamente un elemento |
 
 ### Campos protegidos
 
@@ -91,7 +91,7 @@ Reglas:
 - `present = true, value = null`: retirar solo PEI, POI, nota o resultados clave de proyecto.
 - ningún campo editable presente: 422.
 - candidato completo igual al snapshot vigente: 422.
-- la igualdad de UO incluye identidad y posición; reordenar es un cambio.
+- la igualdad de UO compara la única identidad; su posición técnica permanece fija en `1`.
 
 ## `ResponsibleUnitEntity` / `REGISTRO_UNIDAD_RESPONSABLE`
 
@@ -100,17 +100,17 @@ La tabla existente es el único modelo de responsabilidad organizacional.
 | Campo | Regla durante reemplazo |
 |-------|--------------------------|
 | `ID_REGISTRO` | Conserva el mismo registro padre. |
-| `ID_UNIDAD_ORGANICA` | Debe existir, estar activa, no repetirse y pertenecer a la UE del padre. |
+| `ID_UNIDAD_ORGANICA` | Debe existir, estar activa y pertenecer a la UE del padre; las nuevas escrituras contienen exactamente una identidad. |
 | `DENOMINACION_ORIGINAL` | Se fotografía desde el nombre vigente de la UO aceptada. |
-| `ORDEN_PRESENTACION` | Se asigna `1..n` según el orden del request. |
+| `ORDEN_PRESENTACION` | Se conserva por compatibilidad y vale `1` para nuevas asociaciones; no es una opción funcional de edición. |
 
 Algoritmo atómico:
 
-1. Resolver y validar toda la lista sin escribir.
-2. Comparar IDs y orden con el conjunto actual.
+1. Resolver y validar la única referencia sin escribir.
+2. Comparar su identidad con el conjunto actual.
 3. Si es igual, no tocar filas.
 4. Si cambia, eliminar el conjunto anterior y hacer flush.
-5. Insertar el conjunto validado en orden.
+5. Insertar la única asociación con posición técnica `1`.
 6. Cambiar `updatedAt` del padre y hacer flush para avanzar `VERSION`.
 
 Cualquier error revierte el conjunto completo.
@@ -175,12 +175,10 @@ Forma aprobada:
     },
     "responsibleUnits": {
       "anterior": [
-        { "id": 31, "code": "UO-01", "name": "Unidad A", "displayOrder": 1 },
-        { "id": 32, "code": "UO-02", "name": "Unidad B", "displayOrder": 2 }
+        { "id": 31, "code": "UO-01", "name": "Unidad A", "displayOrder": 1 }
       ],
       "nuevo": [
-        { "id": 32, "code": "UO-02", "name": "Unidad B", "displayOrder": 1 },
-        { "id": 31, "code": "UO-01", "name": "Unidad A", "displayOrder": 2 }
+        { "id": 32, "code": "UO-02", "name": "Unidad B", "displayOrder": 1 }
       ]
     }
   },
@@ -192,13 +190,13 @@ Actor y fecha permanecen en `ACTOR_SUBJECT`/`ID_USUARIO` y `FECHA_EVENTO`. El JS
 
 ## Response y modelo de presentación
 
-`PortfolioRecordResponse` continúa siendo la representación completa. Contiene referencias resueltas, UO en orden, `updatedAt` y nueva `version`.
+`PortfolioRecordResponse` continúa siendo la representación completa. Contiene referencias resueltas, la UO responsable, `updatedAt` y nueva `version`.
 
 Angular proyecta el response a un modelo editable con:
 
 - identidad y metadatos read-only;
 - referencias actuales, incluidas históricas inactivas;
-- lista ordenada de UO;
+- la UO responsable como arreglo compatible de un elemento;
 - `version` de la copia fresca;
 - variante `INITIATIVE`, `DERIVED_PROJECT` o `PREEXISTING_PROJECT`.
 

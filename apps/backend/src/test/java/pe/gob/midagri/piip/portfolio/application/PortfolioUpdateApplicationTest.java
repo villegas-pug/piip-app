@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,12 +29,14 @@ import pe.gob.midagri.piip.identity.persistence.UserRepository;
 import pe.gob.midagri.piip.organization.persistence.ExecutingUnitEntity;
 import pe.gob.midagri.piip.organization.persistence.ExecutingUnitRepository;
 import pe.gob.midagri.piip.organization.persistence.InstitutionEntity;
+import pe.gob.midagri.piip.organization.persistence.OrganizationalUnitEntity;
 import pe.gob.midagri.piip.organization.persistence.OrganizationalUnitRepository;
 import pe.gob.midagri.piip.portfolio.application.PortfolioUpdateCommands.FieldUpdate;
 import pe.gob.midagri.piip.portfolio.application.PortfolioUpdateCommands.InitiativeUpdateCommand;
 import pe.gob.midagri.piip.portfolio.application.PortfolioUpdateCommands.ProjectUpdateCommand;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitEntity;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 import pe.gob.midagri.piip.work.persistence.NotificationRepository;
@@ -96,6 +99,33 @@ class PortfolioUpdateApplicationTest {
         verify(records).flush();
         verify(audit).event(eq("INICIATIVA_ACTUALIZADA"), eq("REGISTRO_PORTAFOLIO"), eq("I-UPD-2026"), any(),
             eq("actor-update"));
+    }
+
+    @Test
+    void editingOtherFieldsPreservesHistoricalMultipleResponsibleUnits() {
+        PortfolioRecordEntity initiative = PortfolioRecordTestBuilder.transientReferences()
+            .initiative("I-HIST-2026", unit, "Iniciativa histórica");
+        ReflectionTestUtils.setField(initiative, "id", 105L);
+        OrganizationalUnitEntity firstUnit = new OrganizationalUnitEntity(unit, "UO-HIST-1", "Unidad histórica 1", "UH1");
+        OrganizationalUnitEntity secondUnit = new OrganizationalUnitEntity(unit, "UO-HIST-2", "Unidad histórica 2", "UH2");
+        ReflectionTestUtils.setField(firstUnit, "id", 81L);
+        ReflectionTestUtils.setField(secondUnit, "id", 82L);
+        ResponsibleUnitEntity first = new ResponsibleUnitEntity(initiative, firstUnit, firstUnit.getName(), 1);
+        ResponsibleUnitEntity second = new ResponsibleUnitEntity(initiative, secondUnit, secondUnit.getName(), 2);
+        List<ResponsibleUnitEntity> historical = List.of(first, second);
+        when(records.findByCodeIgnoreCaseAndRecordTypeForUpdate("I-HIST-2026", pe.gob.midagri.piip.portfolio.domain.RecordType.INITIATIVE))
+            .thenReturn(Optional.of(initiative));
+        when(responsibleUnits.findByRecordIdOrderByDisplayOrder(105L)).thenReturn(historical);
+
+        initiatives.update("I-HIST-2026", new InitiativeUpdateCommand(0L,
+            FieldUpdate.absent(), FieldUpdate.absent(), FieldUpdate.absent(), FieldUpdate.absent(), FieldUpdate.absent(),
+            FieldUpdate.absent(), FieldUpdate.absent(), FieldUpdate.absent(), FieldUpdate.absent(),
+            FieldUpdate.of("Nota histórica actualizada"), FieldUpdate.absent()));
+
+        assertThat(initiative.getNote()).isEqualTo("Nota histórica actualizada");
+        assertThat(historical).containsExactly(first, second);
+        verify(responsibleUnits, never()).save(any());
+        verify(responsibleUnits, never()).deleteAll(any(Iterable.class));
     }
 
     @Test

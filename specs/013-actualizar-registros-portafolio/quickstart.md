@@ -32,7 +32,7 @@ Artefactos:
 
 - Agregar métodos de dominio explícitos sin cambiar mapping JPA.
 - Agregar búsqueda bloqueante que verifique tipo de ruta.
-- Extender `ResponsibleUnitService` para validar y reemplazar listas ordenadas de forma atómica.
+- Extender `ResponsibleUnitService` para validar y reemplazar exactamente una UO de forma atómica.
 - No modificar `database/generated/piip-oracle.sql`.
 
 ### 4. Implementar casos de uso backend
@@ -62,7 +62,7 @@ Artefactos:
 - Agregar `/iniciativas/:code/editar` y `/proyectos/:code/editar` antes de las rutas de detalle.
 - Cargar registro fresco y UO activas por la UE real.
 - Mostrar matriz y metadatos read-only por variante.
-- Implementar lista múltiple ordenable con agregar, retirar, subir y bajar.
+- Implementar selector único de UO responsable, sin controles de ordenamiento.
 - Mostrar referencias históricas inactivas sin permitir escribirlas de nuevo.
 - Construir body sparse por comparación con baseline.
 - Conservar cambios ante 409 y recargar solo a solicitud del usuario.
@@ -80,9 +80,9 @@ Artefactos:
 ### Edición válida de iniciativa
 
 1. Abrir una iniciativa `Presentado` con un administrador autorizado distinto del creador.
-2. Cambiar nombre, retirar PEI y reordenar dos UO responsables.
+2. Cambiar nombre, retirar PEI y reemplazar la única UO responsable.
 3. Confirmar que el request incluye `version`, solo esos campos y `peiObjectiveId: null`.
-4. Verificar retorno al detalle, confirmación visible, nueva fecha/versión y orden nuevo.
+4. Verificar retorno al detalle, confirmación visible y nueva fecha/versión, sin sección de ordenamiento.
 5. Verificar un evento `INICIATIVA_ACTUALIZADA` con tres entradas de diff.
 
 ### Matrices de proyecto
@@ -103,8 +103,9 @@ Artefactos:
 
 1. Mantener una referencia histórica inactiva sin tocar el campo: debe preservarse.
 2. Incluir una referencia inactiva/inexistente/de catálogo equivocado: 422 con propiedades de referencia.
-3. Enviar UO duplicada, inactiva, vacía o de otra UE: 422 y conjunto anterior intacto.
-4. Reordenar los mismos IDs: debe avanzar versión y auditar el orden anterior/nuevo.
+3. Enviar UO duplicada, inactiva, vacía, de otra UE o más de una referencia: 422 y conjunto anterior intacto.
+4. Editar otros campos sin enviar `responsibleUnits` en un registro histórico con varias UO: la asociación debe permanecer intacta.
+5. En una sesión autenticada, comprobar que edición muestra un único selector, que la UO vigente queda seleccionada, que una UO histórica inactiva solo se muestra como contexto y que no aparecen checkboxes ni "Orden de presentación".
 
 ### Concurrencia
 
@@ -180,7 +181,7 @@ La integración Oracle no es necesaria para el diseño porque no hay cambio estr
 
 ## Estado de implementación — 2026-08-22
 
-Se implementaron los PATCH backend, la validación de autorización/estado/versión, el reemplazo ordenado de UO, la auditoría de cambios, el repositorio mock y la experiencia Angular de edición, incluyendo guard de cambios pendientes y recarga explícita ante `409`. El contrato runtime se generó y revisó con `OpenApiGenerationTest`; el cliente Angular se regeneró sin edición manual y `PiipHttpRepository` ya invoca los PATCH generados, construye cuerpos sparse, conserva la versión y reconcilia los signals con la respuesta exitosa. La guía funcional fue actualizada y `graphify update .` regeneró `graphify-out/` con 3597 nodos y 9422 aristas.
+Se implementaron los PATCH backend, la validación de autorización/estado/versión, el reemplazo de una única UO, la auditoría de cambios, el repositorio mock y la experiencia Angular de edición, incluyendo guard de cambios pendientes y recarga explícita ante `409`. El contrato runtime se generó y revisó con `OpenApiGenerationTest`; el cliente Angular se regeneró sin edición manual y `PiipHttpRepository` ya invoca los PATCH generados, construye cuerpos sparse, conserva la versión y reconcilia los signals con la respuesta exitosa. La guía funcional fue actualizada y `graphify update .` regeneró `graphify-out/` con 3597 nodos y 9422 aristas.
 
 Validaciones autorizadas ejecutadas:
 

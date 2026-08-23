@@ -25,7 +25,7 @@ Cada tarea usa `- [ ] T### [P?] [US# y/o FR-###] Acción concreta en ruta/archiv
 | US1 / FR-001 | Existen altas y consultas separadas, pero ningún PATCH general | `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/api/PortfolioController.java` | Extender el controller y los servicios propietarios; no reconstruir `PortfolioService`. |
 | US1 / FR-016 | El registro ya conserva `@Version` y fecha de modificación | `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/persistence/PortfolioRecordEntity.java` | Reutilizar el control optimista; no crear token o tabla adicional. |
 | US2 / FR-003 | La autorización exacta por rol y UE real ya existe | `apps/backend/src/main/java/pe/gob/midagri/piip/identity/application/LocalAuthorizationService.java` | Revalidar dentro del caso de uso y no depender del creador. |
-| US4 / FR-014 | Las UO responsables ya están normalizadas y ordenadas | `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/persistence/ResponsibleUnitEntity.java` | Reemplazar atómicamente la asociación existente; no crear otro modelo. |
+| US4 / FR-014 | La UO responsable ya está normalizada y la posición técnica se conserva | `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/persistence/ResponsibleUnitEntity.java` | Reemplazar atómicamente una única asociación; no crear otro modelo. |
 | US5 / FR-021 | La auditoría funcional vigente es append-only y transaccional | `apps/backend/src/main/java/pe/gob/midagri/piip/audit/application/AuditService.java` | Agregar un evento por cambio efectivo sin guardar el body HTTP. |
 | US1 / FR-018 | Angular conserva versiones y reconcilia responses en signals | `apps/frontend/src/app/core/piip-http.repository.ts` | Extender el repositorio sin crear una segunda fuente de versión. |
 | US6 / FR-026 | Altas, aprobación, derivación y transiciones ya tienen cobertura | `apps/backend/src/test/java/pe/gob/midagri/piip/portfolio/` | Tratar esos recorridos como regresión, no como funcionalidad por reimplementar. |
@@ -49,8 +49,8 @@ Cada tarea usa `- [ ] T### [P?] [US# y/o FR-###] Acción concreta en ruta/archiv
 - [X] T004 [FR-013A] [FR-030] Crear `FieldUpdate<T>`, `InitiativeUpdateCommand` y `ProjectUpdateCommand` independientes de HTTP en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/PortfolioUpdateCommands.java`
 - [X] T005 [FR-008] [FR-009] [FR-010] [FR-010A] [FR-018A] Agregar operaciones de dominio explícitas para aplicar candidatos editables y actualizar automáticamente `updatedAt` sin exponer setters técnicos en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/persistence/PortfolioRecordEntity.java`
 - [X] T006 [FR-001] [FR-016] Agregar lectura bloqueante por código y tipo de ruta, preservando `@Version`, en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/persistence/PortfolioRecordRepository.java`
-- [X] T007 [FR-014] [FR-015] Incorporar lectura ordenada, eliminación con flush y reemplazo validado no vacío de UO responsables en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/persistence/ResponsibleUnitRepository.java` y `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/ResponsibleUnitService.java`
-- [X] T008 [FR-021] [FR-022] [FR-022A] Crear los value objects de snapshot y diff ordenado para campos, catálogos y UO en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/PortfolioUpdateAuditDetail.java`
+- [X] T007 [FR-014] [FR-015] Incorporar lectura determinista, eliminación con flush y reemplazo validado de una única UO responsable en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/persistence/ResponsibleUnitRepository.java` y `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/ResponsibleUnitService.java`
+- [X] T008 [FR-021] [FR-022] [FR-022A] Crear los value objects de snapshot y diff estable para campos, catálogos y la única UO en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/PortfolioUpdateAuditDetail.java`
 - [X] T009 [FR-019] [FR-020] [FR-030] Completar el mapeo de request inválido, no-op y conflicto de persistencia a `ProblemDetail` 400/409/422 en `apps/backend/src/main/java/pe/gob/midagri/piip/shared/api/ApiExceptionHandler.java`
 
 **Checkpoint**: ausencia, nulo explícito, versión, mutación de dominio, UO y diff tienen propietarios definidos sin cambios JPA/DDL.
@@ -132,19 +132,19 @@ Cada tarea usa `- [ ] T### [P?] [US# y/o FR-###] Acción concreta en ruta/archiv
 
 ## Phase 6: User Story 4 — Validar referencias y pertenencia organizacional (Priority: P1)
 
-**Objetivo**: aceptar solo catálogos activos correctos y una lista no vacía, única, ordenada y perteneciente a la UE inmutable del registro.
+**Objetivo**: aceptar solo catálogos activos correctos y una única UO activa perteneciente a la UE inmutable del registro.
 
-**Prueba independiente**: confirmar referencias y UO válidas, luego repetir con referencia inactiva/equivocada y UO vacía/duplicada/de otra UE; solo el conjunto válido cambia y el reordenamiento avanza versión.
+**Prueba independiente**: confirmar referencias y una UO válida, luego repetir con referencia inactiva/equivocada y UO vacía/múltiple/de otra UE; solo el caso válido cambia.
 
-- [X] T042 [P] [US4] [FR-012] [FR-013] [FR-014] [FR-015] Crear pruebas de catálogos, PEI/POI independientes, nulos permitidos, UO múltiples, orden, duplicados, inactividad, otra UE y rollback en `apps/backend/src/test/java/pe/gob/midagri/piip/portfolio/application/PortfolioUpdateReferenceTest.java`
-- [X] T043 [US4] [FR-012] [FR-013] [FR-014] [FR-015] Resolver solo referencias presentes, validar toda la lista de UO antes de escribir y aplicar su reemplazo ordenado dentro de ambos casos de uso en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/PortfolioApplicationSupport.java`, `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/ResponsibleUnitService.java`, `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/InitiativeApplicationService.java` y `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/ProjectApplicationService.java`
-- [X] T044 [P] [US4] [FR-014] Crear el editor standalone de UO responsables con agregar, retirar, subir y bajar mediante controles accesibles en `apps/frontend/src/app/pages/portfolio-record-edit/responsible-unit-order-editor.component.ts`
-- [X] T045 [P] [US4] [FR-014] Crear template y estilos del editor ordenado, con posición visible y errores por vacío/duplicado, en `apps/frontend/src/app/pages/portfolio-record-edit/responsible-unit-order-editor.component.html` y `apps/frontend/src/app/pages/portfolio-record-edit/responsible-unit-order-editor.component.scss`
-- [X] T046 [US4] [FR-014] Probar selección múltiple, teclado, reordenamiento, vacío, duplicado y emisión determinista de IDs en `apps/frontend/src/app/pages/portfolio-record-edit/responsible-unit-order-editor.component.spec.ts`
+- [X] T042 [P] [US4] [FR-012] [FR-013] [FR-014] [FR-015] Crear pruebas de catálogos, PEI/POI independientes, nulos permitidos, UO única/múltiple, inactividad, otra UE y rollback en `apps/backend/src/test/java/pe/gob/midagri/piip/portfolio/application/PortfolioUpdateReferenceTest.java`
+- [X] T043 [US4] [FR-012] [FR-013] [FR-014] [FR-015] Resolver solo referencias presentes, validar exactamente una UO antes de escribir y aplicar su reemplazo dentro de ambos casos de uso en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/PortfolioApplicationSupport.java`, `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/ResponsibleUnitService.java`, `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/InitiativeApplicationService.java` y `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/ProjectApplicationService.java`
+- [X] T044 [US4] [FR-014] Integrar el selector standalone de una única UO responsable con control accesible en `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.ts`
+- [X] T045 [US4] [FR-014] Crear template y estilos del selector único, sin posición ni ordenamiento, en `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.html` y `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.scss`
+- [X] T046 [US4] [FR-014] Probar selección única, teclado, vacío, múltiples referencias rechazadas y emisión de un ID en `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.spec.ts`
 - [X] T047 [US4] [FR-012] [FR-013] Integrar catálogos activos por UE real, PEI/POI independientes y valores históricos inactivos no reescribibles en `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.ts` y `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.html`
-- [X] T048 [US4] [FR-013A] [FR-014] Probar retiros nulos, referencia histórica omitida, carga de UO por UE real y PATCH ordenado en `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.spec.ts`
+- [X] T048 [US4] [FR-013A] [FR-014] Probar retiros nulos, referencia histórica omitida, carga de UO por UE real, PATCH con una sola UO y preservación de históricos en `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.spec.ts`
 
-**Checkpoint**: un elemento inválido revierte el conjunto completo y la respuesta conserva el orden explícito confirmado.
+**Checkpoint**: un elemento inválido revierte el conjunto completo y la respuesta conserva la única asociación confirmada con posición técnica `1`.
 
 ---
 
@@ -154,8 +154,8 @@ Cada tarea usa `- [ ] T### [P?] [US# y/o FR-###] Acción concreta en ruta/archiv
 
 **Prueba independiente**: actualizar un registro, comprobar un único evento nuevo con actor, UE, versiones y solo cambios efectivos, y forzar un fallo de auditoría para verificar rollback total.
 
-- [X] T049 [US5] [FR-021] [FR-022] [FR-022A] Crear pruebas de diff escalar, catálogo, retiro nulo, reordenamiento UO, eventos previos intactos y ausencia de motivo en `apps/backend/src/test/java/pe/gob/midagri/piip/portfolio/application/PortfolioUpdateAuditTest.java`
-- [X] T050 [US5] [FR-022] [FR-022A] [FR-022B] Implementar snapshots `{id, code, name}`, UO ordenadas y serialización estable con valores nulos en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/PortfolioUpdateAuditDetail.java`
+- [X] T049 [US5] [FR-021] [FR-022] [FR-022A] Crear pruebas de diff escalar, catálogo, reemplazo de UO única, eventos previos intactos y ausencia de motivo en `apps/backend/src/test/java/pe/gob/midagri/piip/portfolio/application/PortfolioUpdateAuditTest.java`
+- [X] T050 [US5] [FR-022] [FR-022A] [FR-022B] Implementar snapshots `{id, code, name}`, UO única con posición técnica `1` y serialización estable con valores nulos en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/PortfolioUpdateAuditDetail.java`
 - [X] T051 [US5] [FR-021] [FR-023] [FR-024] Emitir `INICIATIVA_ACTUALIZADA` o `PROYECTO_ACTUALIZADO` después del flush y antes de completar la transacción, sin body HTTP ni datos sensibles, en `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/InitiativeApplicationService.java` y `apps/backend/src/main/java/pe/gob/midagri/piip/portfolio/application/ProjectApplicationService.java`
 - [X] T052 [US5] [FR-021] [FR-024] Probar exactamente un evento por cambio, cero por 400/403/404/409/422 y rollback de registro/UO/versión ante fallo de auditoría en `apps/backend/src/test/java/pe/gob/midagri/piip/portfolio/application/PortfolioUpdateAuditTest.java`
 
@@ -171,7 +171,7 @@ Cada tarea usa `- [ ] T### [P?] [US# y/o FR-###] Acción concreta en ruta/archiv
 
 - [X] T053 [P] [US6] [FR-025] [FR-026] [FR-028] Ampliar regresión backend de alta, aprobación, derivación, preexistente, consultas y transiciones sin cambios de esquema en `apps/backend/src/test/java/pe/gob/midagri/piip/portfolio/PortfolioFlowPersistenceTest.java` y `apps/backend/src/test/java/pe/gob/midagri/piip/portfolio/PortfolioTransitionTest.java`
 - [X] T054 [P] [US6] [FR-025] [FR-026] Verificar por pruebas frontend que detalle, listados y acciones de ciclo de vida mantienen sus contratos fuera de edición en `apps/frontend/src/app/pages/initiative-detail/initiative-detail.component.spec.ts`, `apps/frontend/src/app/pages/project-detail/project-detail.component.spec.ts`, `apps/frontend/src/app/pages/initiatives/initiatives.component.spec.ts` y `apps/frontend/src/app/pages/projects/projects.component.spec.ts`
-- [X] T055 [P] [US6] [FR-029] Documentar acción, matrices, UE real, UO ordenadas, errores, conflicto, descarte y auditoría sin ampliar el flujo vigente en `docs/funcional/guia-funcional-piip.md`
+- [X] T055 [P] [US6] [FR-029] Documentar acción, matrices, UE real, UO única, errores, conflicto, descarte y auditoría sin ampliar el flujo vigente en `docs/funcional/guia-funcional-piip.md`
 
 **Checkpoint**: la edición es una mutación acotada y la guía funcional refleja su impacto observable.
 
@@ -179,7 +179,7 @@ Cada tarea usa `- [ ] T### [P?] [US# y/o FR-###] Acción concreta en ruta/archiv
 
 ## Phase 9: Pulido y controles transversales
 
-- [X] T056 [US1] [FR-007] Revisar accesibilidad, foco, etiquetas, orden por teclado, estados de carga/error y responsive del editor en `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.html`, `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.scss` y `apps/frontend/src/app/pages/portfolio-record-edit/responsible-unit-order-editor.component.html`
+- [X] T056 [US1] [FR-007] Revisar accesibilidad, foco, etiquetas, orden por teclado, estados de carga/error y responsive del editor en `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.html` y `apps/frontend/src/app/pages/portfolio-record-edit/portfolio-record-edit.component.scss`
 - [X] T057 [FR-027] [FR-028] Auditar estáticamente el diff para confirmar ausencia de cambios en `database/generated/piip-oracle.sql`, DDL, CRUD excluidos, borradores, edición inline y archivos generados manualmente desde `F:/work-space/piip-monorepo`
 - [X] T058 [FR-026] Actualizar el índice estructural después de los cambios materiales de código mediante `graphify update .` desde `F:/work-space/piip-monorepo` y revisar el resultado en `graphify-out/` antes del checkpoint de sesión
 

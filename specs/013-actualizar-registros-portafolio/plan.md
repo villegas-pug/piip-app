@@ -10,7 +10,7 @@
 
 Incorporar edición parcial y controlada de iniciativas, proyectos derivados y proyectos preexistentes mediante `PATCH /initiatives/{code}` y `PATCH /projects/{code}`. El backend extenderá los casos de uso propietarios creados por la feature 012, distinguirá propiedades ausentes de valores nulos explícitos, autorizará por `ADMINISTRADOR_PIIP` sobre la Unidad Ejecutora real, aplicará las matrices de campo y estado, conservará `@Version` como único control optimista y registrará un diff append-only dentro de la misma transacción.
 
-Angular añadirá una pantalla dedicada y adaptable de edición, accesible principalmente desde el detalle. Cargará una copia fresca del registro y su versión, enviará solo cambios efectivos, permitirá seleccionar y ordenar varias Unidades Orgánicas responsables, protegerá cambios sin guardar, resolverá `409` mediante recarga explícita y volverá al detalle con confirmación visible. Backend define primero el contrato; OpenAPI y el cliente generado preceden a su consumo frontend.
+Angular añadirá una pantalla dedicada y adaptable de edición, accesible principalmente desde el detalle. Cargará una copia fresca del registro y su versión, enviará solo cambios efectivos, permitirá seleccionar exactamente una Unidad Orgánica responsable mediante el mismo selector de las altas, protegerá cambios sin guardar, resolverá `409` mediante recarga explícita y volverá al detalle con confirmación visible. Backend define primero el contrato; OpenAPI y el cliente generado preceden a su consumo frontend.
 
 ## Baseline y evidencia existente
 
@@ -21,7 +21,7 @@ Angular añadirá una pantalla dedicada y adaptable de edición, accesible princ
 | El repositorio dispone de lectura con `PESSIMISTIC_WRITE` por código y la creación derivada usa ese mismo lock. | `portfolio/persistence/PortfolioRecordRepository.java`; `ProjectApplicationService.createDerived(...)` | Serializar edición con derivación y conservar la comparación de versión esperada. |
 | La autorización vigente valida una asignación exacta de rol y ámbito sobre la UE real. | `identity/application/LocalAuthorizationService.java`; `identity/application/RoleScopeGrant.java` | Reutilizar `requireUnit(ADMINISTRADOR_PIIP, record.executingUnit.id)` dentro de la transacción; no consultar al creador. |
 | Las referencias de catálogo se resuelven por identidad, catálogo y activo. PEI/POI admiten nulo. | `catalogs/application/CatalogReferenceService.java`; `specs/011-centralizar-catalogos-piip/**` | Resolver solo campos presentes; una referencia histórica omitida permanece, pero una incluida debe estar activa. |
-| `REGISTRO_UNIDAD_RESPONSABLE` conserva identidad, denominación y orden; el servicio actual valida activo y UE al crear. | `portfolio/{application/ResponsibleUnitService.java,persistence/ResponsibleUnitEntity.java,persistence/ResponsibleUnitRepository.java}` | Extender el servicio con validación completa y sustitución atómica ordenada; no crear otra asociación. |
+| `REGISTRO_UNIDAD_RESPONSABLE` conserva identidad, denominación y posición técnica; el servicio actual valida activo y UE al crear. | `portfolio/{application/ResponsibleUnitService.java,persistence/ResponsibleUnitEntity.java,persistence/ResponsibleUnitRepository.java}` | Extender el servicio con validación completa y sustitución atómica de una única UO; no crear otro modelo. |
 | `AuditService.event` guarda JSON en `EVENTO_AUDITORIA.DETALLE_JSON` y participa en la transacción funcional. | `audit/application/AuditService.java`; `audit/persistence/AuditEventEntity.java` | Agregar un único evento por actualización efectiva y hacer rollback conjunto ante fallo. |
 | `ApiExceptionHandler` ya traduce autorización, ausencia, versión, negocio y referencias. | `shared/api/ApiExceptionHandler.java`; `shared/application/error/**` | Reutilizar `ProblemDetail`; agregar tratamiento tipado de request PATCH inválido solo si la validación condicional lo necesita. |
 | Angular conserva versiones en `PiipHttpRepository`, actualiza signals desde responses y presenta un mensaje específico para `409`. | `apps/frontend/src/app/core/{piip.repository.ts,piip-http.repository.ts,piip.models.ts}` | Incorporar comandos de edición, recarga focalizada y reconciliación por response; no crear un segundo versionado. |
@@ -52,7 +52,7 @@ Angular añadirá una pantalla dedicada y adaptable de edición, accesible princ
 
 **Restricciones**: no modificar alta, consulta, aprobación, derivación, transiciones, documentos, tareas o notificaciones; no editar inline; no reutilizar borradores de alta; no inferir la UE desde la selección activa; no exponer entidades JPA; no guardar cuerpos HTTP, secretos o contenido documental en auditoría; no editar código generado manualmente.
 
-**Escala/alcance**: 2 endpoints PATCH, 2 requests parciales, 3 matrices de campos, 2 eventos funcionales, 2 rutas Angular que reutilizan 1 componente de edición adaptable, 1 editor ordenado de UO, 0 cambios lógicos de esquema y 0 mecanismos nuevos de versión.
+**Escala/alcance**: 2 endpoints PATCH, 2 requests parciales, 3 matrices de campos, 2 eventos funcionales, 2 rutas Angular que reutilizan 1 componente de edición adaptable, 1 selector único de UO, 0 cambios lógicos de esquema y 0 mecanismos nuevos de versión.
 
 ## Verificación de la constitución
 
@@ -73,7 +73,7 @@ Aprobado. [research.md](./research.md) resuelve ausencia frente a nulo, transacc
 
 ## Dependencias y secuencia
 
-- **Propietario canónico**: backend `portfolio/api` para el contrato HTTP; `InitiativeApplicationService` y `ProjectApplicationService` para reglas/transacciones; `PortfolioRecordEntity` para invariantes de mutación; `ResponsibleUnitService` para la asociación ordenada.
+- **Propietario canónico**: backend `portfolio/api` para el contrato HTTP; `InitiativeApplicationService` y `ProjectApplicationService` para reglas/transacciones; `PortfolioRecordEntity` para invariantes de mutación; `ResponsibleUnitService` para la asociación única.
 - **Consumidores**: OpenAPI generado, cliente Angular, `PiipRepository`/`PiipHttpRepository`, pantalla de edición, detalles y guía funcional.
 - **Orden obligatorio**: caracterización → DTO/commands y error 400 → dominio/repositorios/UO → casos de uso y auditoría → controllers/contrato → generación OpenAPI autorizada → cliente Angular → repositorio/modelos → UI/rutas/guard → guía → regresión autorizada.
 - **Paralelización permitida**: solo pruebas o estilos que no compartan DTO, contrato, estado de repositorio, rutas ni fixtures. Backend, OpenAPI y frontend son dependientes y no se implementan en paralelo.
@@ -84,11 +84,11 @@ Aprobado. [research.md](./research.md) resuelve ausencia frente a nulo, transacc
 |------------|-------------------------------|--------------|-----------------------|
 | 0. Baseline | Caracterizar requests/responses, errores, versión, autorización, UO y auditoría existentes. | Ninguna | No agregar PATCH si un comportamiento requerido carece de prueba o evidencia. |
 | 1. Contrato parcial | Agregar DTO API con tracking de presencia, commands de application y validación condicional. | Incremento 0 | Ausente, nulo y propiedad inválida deben diferenciarse como especifica el contrato. |
-| 2. Persistencia funcional | Agregar métodos de dominio, lectura bloqueante tipada y reemplazo validado/ordenado de UO. | Incremento 1 | Cero cambio JPA estructural; cualquier cambio de esquema detiene el incremento. |
+| 2. Persistencia funcional | Agregar métodos de dominio, lectura bloqueante tipada y reemplazo validado de una UO. | Incremento 1 | Cero cambio JPA estructural; cualquier cambio de esquema detiene el incremento. |
 | 3. Casos de uso | Implementar update de iniciativa/proyecto, no-op, versión, fecha y diff auditado en una transacción. | Incrementos 1-2 | Rechazos no cambian registro/UO/versión ni crean evento; fallo de auditoría revierte todo. |
 | 4. Publicación HTTP | Exponer los dos PATCH y documentar 200/400/403/404/409/422; estabilizar OpenAPI. | Incremento 3 | Los endpoints existentes conservan contrato y regresión. |
 | 5. Cliente y repositorio | Regenerar cliente con autorización; agregar comandos sparse, recarga fresca por código/UE y upsert de la respuesta. | Incremento 4 | El generado no se edita manualmente y no aparece un segundo mapa de versiones. |
-| 6. Interfaz | Agregar rutas, componente adaptable, UO ordenadas, visibilidad por UE/estado, conflicto y descarte supervisado. | Incremento 5 | Sin borrador, sin mutación inline y sin depender de la UE activa para autorizar. |
+| 6. Interfaz | Agregar rutas, componente adaptable, selector único de UO, visibilidad por UE/estado, conflicto y descarte supervisado. | Incremento 5 | Sin borrador, sin mutación inline y sin depender de la UE activa para autorizar. |
 | 7. Cierre funcional | Actualizar detalles, guía y verificaciones autorizadas. | Incrementos 0-6 | Cero regresión en altas, lifecycle, documentos, tareas y notificaciones. |
 
 ## Estructura del proyecto
@@ -142,14 +142,14 @@ docs/funcional/guia-funcional-piip.md
 - El controller convierte el DTO a `InitiativeUpdateCommand` o `ProjectUpdateCommand` con `FieldUpdate<T>(present, value)`. Los commands no dependen de Jackson ni de tipos HTTP.
 - `version` es obligatoria y no negativa. Propiedades desconocidas o técnicas y nulos en campos obligatorios producen 400. Solo PEI, POI, nota y resultados clave de proyecto admiten nulo explícito.
 - El request de proyecto incluye `solutionTypeId` porque aplica al derivado; si el registro real es preexistente, incluirlo produce 422. Iniciativa no declara `keyResults`, de modo que ese intento es un request cerrado inválido.
-- Ausente conserva; presente resuelve y propone; sin campo editable o sin diferencia efectiva produce 422. La lista `responsibleUnits` representa el reemplazo total y su orden de arreglo es el orden explícito.
+- Ausente conserva; presente resuelve y propone; sin campo editable o sin diferencia efectiva produce 422. `responsibleUnits` conserva la forma de arreglo por compatibilidad, pero una escritura válida contiene exactamente un elemento.
 
 ### Dominio, transacción y concurrencia
 
 - Agregar operaciones de dominio explícitas por iniciativa, proyecto derivado y proyecto preexistente; ninguna acepta código, tipo, origen, UE, estado, producto final, cierre, creador o fechas técnicas como input.
 - Buscar con lock por código y tipo de ruta. Código inexistente o de otro tipo produce 404; luego autorizar UE real, comparar versión, validar estado/origen y resolver todas las referencias antes de mutar.
 - La secuencia autoritativa es autorización → versión → estado/vínculo → campos permitidos → referencias/UO → diff. Así una copia obsoleta produce 409 antes de reinterpretar sus datos.
-- Validar toda la nueva lista de UO antes de eliminar. Si cambia, eliminar hijos, hacer flush de las bajas para liberar el orden único y guardar posiciones `1..n`; si no cambia, no tocar la asociación.
+- Validar la única nueva UO antes de eliminar. Si cambia, eliminar el hijo, hacer flush de la baja y guardar la asociación con posición técnica `1`; si no cambia, no tocar la asociación. Si la lectura histórica contiene varias UO y el campo está ausente, conservarlas.
 - Calcular el candidato y diff antes de cambiar `updatedAt`. Una edición exclusiva de UO también actualiza el padre para que `@Version` avance.
 - Ejecutar `records.flush()` antes de formar el evento para capturar la versión nueva real. `OptimisticLockException` y el control explícito mantienen 409.
 
@@ -158,13 +158,13 @@ docs/funcional/guia-funcional-piip.md
 - Usar `INICIATIVA_ACTUALIZADA` o `PROYECTO_ACTUALIZADO` y entidad `REGISTRO_PORTAFOLIO`.
 - El detalle será un objeto ordenado con `tipoRegistro`, `unidadEjecutoraId`, `unidadEjecutora`, `versionAnterior`, `versionNueva`, `cambios` y `resultado: EXITOSO`.
 - `cambios` será un mapa por clave estable de campo; cada entrada contiene `anterior` y `nuevo`. Se usarán value objects o `LinkedHashMap`, no `Map.of`, porque los retiros admiten nulo.
-- Catálogos se fotografían como `{id, code, name}` y UO como listas `{id, code, name, displayOrder}`. Comparar la secuencia completa hace efectivo un reordenamiento.
+- Catálogos se fotografían como `{id, code, name}` y la UO como una lista compatible de un elemento `{id, code, name, displayOrder: 1}`. Comparar la identidad completa hace efectivo un reemplazo.
 - El evento se inserta después del flush del registro y antes de completar la transacción. Cualquier fallo revierte escalares, UO, fecha, versión y evento.
 
 ### Repositorio Angular y cliente generado
 
 - Generar el OpenAPI real y después `api/generated/**`; no editar esos archivos a mano. Ambos pasos requieren autorización expresa en el turno de ejecución.
-- Agregar modelos de presentación `InitiativeUpdateInput` y `ProjectUpdateInput` con campos opcionales, nulos explícitos permitidos y `responsibleUnitIds` ordenados. La versión del detalle debe quedar disponible al formulario sin crear un segundo control de versión.
+- Agregar modelos de presentación `InitiativeUpdateInput` y `ProjectUpdateInput` con campos opcionales, nulos explícitos permitidos y `responsibleUnitIds` de un único elemento. La versión del detalle debe quedar disponible al formulario sin crear un segundo control de versión.
 - `PiipRepository` expondrá carga fresca y actualización por tipo/código. `PiipHttpRepository` construye un body sparse, invoca el cliente, actualiza `recordVersions` y hace upsert del response en los signals de registro/listado.
 - La apertura de edición fuerza GET del detalle aunque exista caché. La carga de UO usa la UE del registro mediante el endpoint existente, sin cambiar ni usar como sustituto la UE activa.
 - El mock implementará las nuevas firmas, reglas mínimas, versión y evento solo para conservar paridad de desarrollo; no se convierte en autoridad funcional.
@@ -188,7 +188,7 @@ docs/funcional/guia-funcional-piip.md
 | FR-006 | Acción inicial únicamente en detalle; no hay mutación inline y la acción de listado permanece opcional | Navegación del detalle y ausencia de PATCH desde la fila |
 | FR-007A, FR-007B, FR-018B | Carga fresca, guard de cambios pendientes, `beforeunload`, descarte supervisado, sin borrador y retorno al detalle tras guardar | Pruebas de navegación, cierre, cancelación, éxito y reapertura |
 | FR-012, FR-013, FR-013A | Resolución de referencias por catálogo/actividad y representación de presencia con `FieldUpdate<T>` | Ausente, nulo explícito, catálogo incorrecto/inactivo y PEI/POI independientes |
-| FR-014, FR-015 | Reemplazo total ordenado de UO, validado antes de mutar y aplicado atómicamente | Múltiples UO, orden, duplicados, vacío, otra UE y rollback |
+| FR-014, FR-015 | Reemplazo de una única UO, validado antes de mutar y aplicado atómicamente | UO única, múltiple, vacío, otra UE, histórico y rollback |
 | FR-016, FR-017 | Versión obligatoria, comparación tras autorización y 409 sin reintento automático | Dos copias concurrentes y recarga explícita de la versión vigente |
 | FR-018, FR-018A, FR-030 | Response completo, diff previo, actualización automática de fecha/versión y rechazo de no-op | Response/versionado, edición exclusiva de UO y request sin cambio efectivo |
 | FR-019, FR-020 | Matriz HTTP 400/403/404/409/422 sobre el mecanismo de errores vigente | Contrato MVC y mensajes con campo, referencia y causa |
@@ -202,11 +202,11 @@ docs/funcional/guia-funcional-piip.md
 2. **Autorización**: administrador distinto del creador, grants cruzados, institución/UE y revocación después de abrir.
 3. **Matrices**: iniciativa presentada sin derivado; proyecto derivado/preexistente en ejecución; solución prohibida para preexistente; campos técnicos rechazados.
 4. **Referencias**: catálogo equivocado/inactivo/inexistente, PEI/POI independientes y retiros nulos.
-5. **UO**: múltiples, orden, reordenamiento, vacío, duplicado, inactivo, otra UE y rollback íntegro.
+5. **UO**: única, múltiple, vacío, duplicado, inactiva, otra UE, histórico y rollback íntegro.
 6. **Concurrencia**: dos PATCH con la misma versión, edición frente a transición y edición de iniciativa frente a creación derivada.
 7. **Auditoría**: diff exacto, snapshots enriquecidos, retiro nulo, versiones, un evento, cero en rechazo y rollback ante fallo.
 8. **Repositorio Angular**: body sparse, versión vigente, llamada generada, upsert, carga fresca por UE real, 409 sin retry y recarga explícita.
-9. **UI Angular**: rutas, matriz/read-only, UO ordenables, inactivos históricos, visibilidad por rol/UE/estado, success, guard y `beforeunload` sin borrador.
+9. **UI Angular**: rutas, matriz/read-only, selector de UO única, inactivos históricos, visibilidad por rol/UE/estado, success, guard y `beforeunload` sin borrador.
 10. **Regresión y documentación**: altas, detalles, aprobación, derivación, transiciones, documentos, tareas y notificaciones; guía funcional consistente.
 11. **Aceptación de usabilidad**: ejecuciones cronometradas desde detalle cargado hasta confirmación visible para SC-005 y cuestionario de clasificación completa por variante para SC-006, con muestra no vacía aprobada previamente y evidencia agregada sin datos sensibles.
 

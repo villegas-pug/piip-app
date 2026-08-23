@@ -15,7 +15,7 @@
 - PIIP expone alta y consulta para iniciativas, proyectos derivados y proyectos preexistentes; también expone aprobación de iniciativas y transiciones separadas para iniciativas y proyectos.
 - No existe un endpoint general `PUT`, `PATCH` o `DELETE` para iniciativas o proyectos, ni una operación de actualización en `PiipRepository` o en el cliente Angular generado.
 - `REGISTRO_PORTAFOLIO` representa iniciativas y proyectos, conserva el código único, la relación opcional y única con una iniciativa origen, la Unidad Ejecutora, los datos operativos, el estado, las fechas de creación/modificación y una columna `VERSION` gestionada como versión optimista.
-- `REGISTRO_UNIDAD_RESPONSABLE` normaliza las Unidades Orgánicas responsables y conserva identidad, denominación original y orden de presentación.
+- `REGISTRO_UNIDAD_RESPONSABLE` normaliza la Unidad Orgánica responsable y conserva identidad y denominación original; el orden persistido se mantiene por compatibilidad y queda fijo en `1` para nuevas asociaciones.
 - Los contratos de alta usan identidades persistentes para Tipo de solución, Fuente u origen, Objetivo PEI, Actividad POI y Unidad Orgánica responsable. PEI y POI son opcionales e independientes.
 - La validación vigente de una Unidad Orgánica responsable comprueba existencia, estado activo y pertenencia a la misma Unidad Ejecutora del registro.
 - Las mutaciones vigentes de portafolio exigen una asignación activa de `ADMINISTRADOR_PIIP` que cubra la Unidad Ejecutora real del registro. La comprobación no depende de `CREADO_POR`.
@@ -61,10 +61,10 @@
 
 ### Session 2026-08-22
 
-- Q: ¿Qué campos pueden editarse en cada tipo de registro? → A: Se permiten los campos de negocio capturados en el alta aplicable a cada tipo; código, tipo, origen, Unidad Ejecutora, estado y datos técnicos permanecen inmutables. PEI y POI pueden asignarse, cambiarse o retirarse independientemente. Las Unidades Orgánicas responsables pueden sustituirse de forma atómica por un conjunto no vacío, ordenado, activo y perteneciente a la misma UE.
+- Q: ¿Qué campos pueden editarse en cada tipo de registro? → A: Se permiten los campos de negocio capturados en el alta aplicable a cada tipo; código, tipo, origen, Unidad Ejecutora, estado y datos técnicos permanecen inmutables. PEI y POI pueden asignarse, cambiarse o retirarse independientemente. La Unidad Orgánica responsable puede sustituirse de forma atómica por una única referencia activa perteneciente a la misma UE.
 - Q: ¿En qué estados se permite editar y qué ocurre después de la derivación? → A: Una iniciativa solo puede editarse en `Presentado` y sin proyecto derivado; un proyecto derivado o preexistente solo puede editarse en `Proyecto en ejecución`. Una iniciativa deja de ser editable al aprobarse y, por consecuencia, tampoco admite edición después de tener un proyecto derivado.
 - Q: ¿Qué debe conservar la auditoría funcional? → A: Cada actualización exitosa registra los campos efectivamente modificados con sus valores anterior y nuevo, además del actor, UE, versiones anterior y nueva y resultado; no guarda el request completo, tokens, archivos ni contenido documental.
-- Q: ¿Cuántas Unidades Orgánicas responsables puede seleccionar el usuario y cómo se determina su orden? → A: Puede seleccionar varias Unidades Orgánicas responsables y definir explícitamente su orden de presentación.
+- Q: ¿Cuántas Unidades Orgánicas responsables puede seleccionar el usuario y cómo se determina su orden? → A: Puede seleccionar exactamente una Unidad Orgánica responsable. No existe una selección múltiple ni una decisión funcional de orden de presentación; el valor persistido conserva la posición técnica `1`.
 - Q: ¿La edición debe solicitar un motivo u observación adicional? → A: No. El contrato no solicita motivo; la auditoría conserva únicamente los valores efectivamente modificados y el contexto aprobado.
 - Q: ¿A qué superficie navega el usuario después de guardar una edición? → A: Vuelve al detalle actualizado del registro y recibe una confirmación visible de éxito.
 - Q: ¿Qué ocurre si el usuario intenta salir con cambios sin guardar? → A: La interfaz solicita confirmación antes de descartarlos y no crea un borrador local de edición.
@@ -82,7 +82,7 @@
 - Los eventos se distinguen como actualización de iniciativa o actualización de proyecto y se asocian al código del registro.
 - El detalle conserva `tipoRegistro`, `unidadEjecutoraId`, `unidadEjecutora`, `versionAnterior`, `versionNueva`, `cambios` y `resultado`.
 - `cambios` contiene únicamente los campos cuyo valor efectivo cambió. Cada entrada conserva `anterior` y `nuevo`; un retiro permitido de PEI o POI se representa explícitamente con valor nuevo nulo.
-- Las referencias de catálogo se representan con identidad, código y nombre; las Unidades Orgánicas responsables se representan como listas ordenadas con identidad, código, nombre y posición.
+- Las referencias de catálogo se representan con identidad, código y nombre; la Unidad Orgánica responsable se representa como una lista compatible de un solo elemento con identidad, código, nombre y posición técnica `1`.
 - Actor y fecha permanecen en los atributos propios del evento vigente. No se duplica el request completo ni se registra información excluida por seguridad.
 - La actualización no solicita ni registra un motivo u observación adicional; los valores anterior y nuevo constituyen la evidencia funcional del cambio.
 
@@ -152,10 +152,10 @@ Al editar referencias, PIIP acepta únicamente selecciones válidas para escritu
 
 1. **Given** un campo de catálogo incluido en la actualización, **When** la referencia existe, pertenece al catálogo correcto y está activa, **Then** se acepta su identidad y se devuelve la referencia resuelta.
 2. **Given** una referencia inexistente, inactiva o de catálogo incorrecto, **When** se confirma la edición, **Then** se responde `422` indicando el campo y la causa y no se aplican otros cambios.
-3. **Given** varias Unidades Orgánicas responsables activas y pertenecientes a la UE del registro, **When** el usuario las selecciona y define su orden, **Then** el conjunto confirmado conserva todas sus identidades y el orden explícito de presentación.
-4. **Given** una Unidad Orgánica inexistente, inactiva o perteneciente a otra UE, **When** se confirma, **Then** se responde `422` y se conserva completo el conjunto anterior.
+3. **Given** una Unidad Orgánica responsable activa y perteneciente a la UE del registro, **When** el usuario la selecciona, **Then** la asociación confirmada conserva esa única identidad y posición técnica `1`.
+4. **Given** una Unidad Orgánica inexistente, inactiva o perteneciente a otra UE, o más de una referencia, **When** se confirma, **Then** se responde `422` y se conserva completo el conjunto anterior.
 5. **Given** PEI y POI dentro de la matriz editable, **When** se modifica uno sin el otro, **Then** la operación no exige ni deriva una relación entre ambos.
-6. **Given** el mismo conjunto de Unidades Orgánicas en un orden diferente, **When** el usuario confirma el nuevo orden, **Then** se considera un cambio efectivo y la respuesta y auditoría conservan la secuencia confirmada.
+6. **Given** un registro histórico que contiene más de una Unidad Orgánica, **When** se editan otros campos sin incluir `responsibleUnits`, **Then** la asociación histórica se conserva sin migración automática.
 
 ---
 
@@ -229,7 +229,7 @@ La nueva capacidad convive con las operaciones vigentes sin modificar creación,
 - **FR-012**: La actualización DEBE validar cualquier referencia incluida mediante su identidad, catálogo correcto y disponibilidad activa para escritura.
 - **FR-013**: PEI y POI DEBEN permanecer opcionales e independientes; modificar, asignar o retirar uno NO DEBE condicionar el otro.
 - **FR-013A**: Un campo ausente DEBE conservar su valor; un valor nulo explícito DEBE retirar únicamente Objetivo PEI, Actividad POI, Nota o Resultados clave cuando ese campo opcional pertenezca al tipo de registro. Un campo obligatorio nulo DEBE rechazarse como request inválido.
-- **FR-014**: La interfaz DEBE permitir seleccionar varias Unidades Orgánicas responsables y definir explícitamente su orden de presentación. La sustitución DEBE exigir un conjunto no vacío y validar que cada unidad exista, esté activa, pertenezca a la UE del registro y no esté duplicada; la persistencia, respuesta y auditoría DEBEN conservar el orden enviado.
+- **FR-014**: La interfaz DEBE permitir seleccionar exactamente una Unidad Orgánica responsable, igual que las pantallas de alta. La sustitución DEBE exigir una única referencia, validar que exista, esté activa y pertenezca a la UE del registro; el contrato conserva el arreglo `responsibleUnits` por compatibilidad, con un solo elemento y posición técnica `1`.
 - **FR-015**: La sustitución de Unidades Orgánicas responsables DEBE ser atómica: un elemento inválido conserva el conjunto anterior completo.
 - **FR-015A**: Una iniciativa DEBE aceptar edición únicamente en `Presentado` y mientras no tenga proyecto derivado; cualquier otro estado o vínculo DEBE producir `422`.
 - **FR-015B**: Un proyecto derivado o preexistente DEBE aceptar edición únicamente en `Proyecto en ejecución`; cualquier otro estado DEBE producir `422`.
@@ -242,7 +242,7 @@ La nueva capacidad convive con las operaciones vigentes sin modificar creación,
 - **FR-020**: Los errores DEBEN ser comprensibles y preservar las propiedades vigentes que identifican campo, referencia y causa cuando corresponda.
 - **FR-021**: Cada actualización con al menos un cambio efectivo DEBE agregar exactamente un evento funcional append-only en la misma unidad atómica que el cambio del registro.
 - **FR-022**: El evento DEBE identificar el tipo y código de registro y conservar actor, fecha, UE, versión anterior, versión nueva, resultado exitoso y únicamente los campos efectivamente modificados con sus valores anterior y nuevo.
-- **FR-022A**: En auditoría, una referencia de catálogo DEBE conservar identidad, código y nombre; el conjunto de Unidades Orgánicas responsables DEBE conservar listas ordenadas de identidad, código, nombre y posición; un PEI o POI retirado DEBE representar explícitamente el nuevo valor nulo.
+- **FR-022A**: En auditoría, una referencia de catálogo DEBE conservar identidad, código y nombre; la Unidad Orgánica responsable DEBE conservar una lista compatible de un solo elemento con identidad, código, nombre y posición técnica `1`; un PEI o POI retirado DEBE representar explícitamente el nuevo valor nulo.
 - **FR-022B**: El request de actualización NO DEBE incluir un motivo u observación de edición y el evento funcional NO DEBE inventar ese dato; la trazabilidad se compone de los valores anterior/nuevo y del contexto aprobado de registro, actor, UE, fecha y versiones.
 - **FR-023**: La auditoría NO DEBE guardar tokens, cuerpos HTTP completos, archivos ni contenido documental, y NO DEBE modificar o eliminar eventos anteriores.
 - **FR-024**: Un intento rechazado NO DEBE crear un evento funcional de actualización exitosa; la auditoría de acceso vigente conserva método, ruta, estado HTTP y correlación.
@@ -260,7 +260,7 @@ La nueva capacidad convive con las operaciones vigentes sin modificar creación,
 - **Proyecto derivado**: Proyecto vinculado de manera única a una iniciativa y con Unidad Ejecutora heredada; su origen y vínculo no son datos de edición general.
 - **Proyecto preexistente**: Proyecto sin iniciativa predecesora, con modo preexistente y código de origen `NA`.
 - **Unidad Ejecutora**: Ámbito real del registro usado para autorización y coherencia organizacional.
-- **Unidad Orgánica responsable**: Referencia ordenada y normalizada asociada al registro, válida solo si pertenece a la misma UE y está activa al escribir.
+- **Unidad Orgánica responsable**: Referencia única y normalizada asociada al registro, válida solo si pertenece a la misma UE y está activa al escribir.
 - **Referencia de catálogo**: Identidad persistente de Tipo de solución, Fuente u origen, Objetivo PEI o Actividad POI, validada dentro de su catálogo y estado.
 - **Versión del registro**: Valor que identifica la copia abierta por el usuario y evita que una actualización antigua sobrescriba una nueva.
 - **Evento de auditoría**: Evidencia append-only de una actualización confirmada, asociada al registro y actor sin contener secretos ni contenido documental.
