@@ -98,6 +98,8 @@ export interface PiipPortfolioRecord {
   responsibleUnitReferences?: OrganizationalUnit[];
   /** Versión de concurrencia entregada por el backend. */
   version?: number;
+  /** Instante ISO de la última modificación confirmada. */
+  updatedAt?: string;
 }
 
 export interface InitiativeRecord {

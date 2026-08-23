@@ -8,7 +8,11 @@ import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PortfolioRecordEditComponent } from './portfolio-record-edit.component';
 
 describe('PortfolioRecordEditComponent', () => {
-  async function setup(recordType: PiipRecordType = 'Iniciativa', code = 'I-024-2026') {
+  async function setup(
+    recordType: PiipRecordType = 'Iniciativa',
+    code = 'I-024-2026',
+    configure?: (repository: PiipMockRepository) => void,
+  ) {
     const paramMap = convertToParamMap({ code });
     await TestBed.configureTestingModule({
       imports: [PortfolioRecordEditComponent],
@@ -25,6 +29,8 @@ describe('PortfolioRecordEditComponent', () => {
       ],
     }).compileComponents();
 
+    const repository = TestBed.inject(PiipMockRepository);
+    configure?.(repository);
     const fixture = TestBed.createComponent(PortfolioRecordEditComponent);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -32,7 +38,7 @@ describe('PortfolioRecordEditComponent', () => {
     return {
       fixture,
       component: fixture.componentInstance,
-      repository: TestBed.inject(PiipMockRepository),
+      repository,
       router: TestBed.inject(Router),
       code,
     };
@@ -44,7 +50,7 @@ describe('PortfolioRecordEditComponent', () => {
   }
 
   it('carga la variante iniciativa y envía un body sparse con confirmación y navegación al detalle', async () => {
-    const { component, repository, router, code } = await setup();
+    const { component, fixture, repository, router, code } = await setup();
     const current = repository.getInitiativeDetail(code)!.portfolioRecord;
     const updated = { ...current, name: 'Nombre actualizado', version: 1 } as PiipPortfolioRecord;
     const update = vi.spyOn(repository, 'updateInitiative').mockResolvedValue(updated);
@@ -57,12 +63,14 @@ describe('PortfolioRecordEditComponent', () => {
     const body = update.mock.calls[0]![1] as unknown as Record<string, unknown>;
     expect(body).not.toHaveProperty('startDate');
     expect(body).not.toHaveProperty('sourceId');
+    expect(component.variant()).toBe('INITIATIVE');
+    expect(fixture.nativeElement.querySelector('select[formcontrolname="solutionTypeId"]')).not.toBeNull();
     expect(component.form.pristine).toBe(true);
     expect(navigate).toHaveBeenCalledWith(['/iniciativas', code], { queryParams: { updated: '1' } });
   });
 
   it('carga la variante proyecto y envía una sola Unidad Orgánica en el PATCH', async () => {
-    const { component, repository, router, code } = await setup('Proyecto', 'P-005-2026');
+    const { component, fixture, repository, router, code } = await setup('Proyecto', 'P-005-2026');
     const current = repository.getProjectDetail(code)!.portfolioRecord;
     repository.organizationalUnits.set([
       ...repository.organizationalUnits(),
@@ -74,10 +82,69 @@ describe('PortfolioRecordEditComponent', () => {
 
     component.form.controls.keyResults.setValue('Resultado actualizado');
     component.form.controls.keyResults.markAsDirty();
+    component.form.controls.solutionTypeId.setValue('1');
+    component.form.controls.solutionTypeId.markAsDirty();
     component.setResponsibleUnitIds([102]);
     await component.save();
 
     expect(update).toHaveBeenCalledWith(code, expect.objectContaining({ keyResults: 'Resultado actualizado', responsibleUnitIds: [102] }));
+    expect(update.mock.calls[0]![1]).not.toHaveProperty('solutionTypeId');
+    expect(component.variant()).toBe('PREEXISTING_PROJECT');
+    expect(fixture.nativeElement.querySelector('select[formcontrolname="solutionTypeId"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Tipo de solución');
+    expect(fixture.nativeElement.textContent).toContain('No aplica');
+  });
+
+  it('expone y emite Tipo de solución para un proyecto derivado', async () => {
+    const { component, fixture, repository, router, code } = await setup('Proyecto', 'P-003-2026', (repository) => {
+      const preexisting = repository.portfolioRecords().find((record) => record.code === 'P-005-2026')!;
+      const solutionTypeReference = repository.catalogs().value.solutionTypes.find((option) => option.id === 1)!;
+      repository.portfolioRecords.update((records) => [...records, {
+        ...preexisting,
+        code: 'P-003-2026',
+        originCode: 'I-012-2026',
+        solutionType: 'Solución potencial o adaptable',
+        solutionTypeReference,
+      }]);
+    });
+
+    expect(component.variant()).toBe('DERIVED_PROJECT');
+    expect(fixture.nativeElement.querySelector('select[formcontrolname="solutionTypeId"]')).not.toBeNull();
+
+    const current = repository.getProjectDetail(code)!.portfolioRecord;
+    const solutionTypeReference = repository.catalogs().value.solutionTypes.find((option) => option.id === 2)!;
+    const update = vi.spyOn(repository, 'updateProject').mockResolvedValue({
+      ...current,
+      solutionType: 'Solución por definir',
+      solutionTypeReference,
+      version: 1,
+    });
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    component.form.controls.solutionTypeId.setValue('2');
+    component.form.controls.solutionTypeId.markAsDirty();
+
+    await component.save();
+
+    expect(update).toHaveBeenCalledWith(code, expect.objectContaining({ version: 0, solutionTypeId: 2 }));
+  });
+
+  it('muestra updatedAt en hora de Lima y usa fallback si está ausente o es inválido', async () => {
+    const updatedAt = '2026-08-22T10:00:00Z';
+    const { component, fixture, repository, code } = await setup('Iniciativa', 'I-024-2026', (mock) => {
+      mock.portfolioRecords.update((records) => records.map((record) => record.code === 'I-024-2026' ? { ...record, updatedAt } : record));
+    });
+    const expected = new Intl.DateTimeFormat('es-PE', {
+      dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Lima',
+    }).format(new Date(updatedAt));
+
+    expect(component.formatDateTime(updatedAt)).toBe(expected);
+    expect(fixture.nativeElement.textContent).toContain(expected);
+    expect(component.formatDateTime()).toBe('Sin información registrada');
+    expect(component.formatDateTime('fecha-inválida')).toBe('Sin información registrada');
+
+    repository.portfolioRecords.update((records) => records.map((record) => record.code === code ? { ...record, updatedAt: 'fecha-inválida' } : record));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Sin información registrada');
   });
 
   it('no genera PATCH cuando solo permanece la versión baseline', async () => {

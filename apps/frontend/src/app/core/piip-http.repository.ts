@@ -908,6 +908,7 @@ function toPortfolioRecord(value: ApiPortfolioRecord): PiipPortfolioRecord {
     finalClosureReport: value.finalClosureReport ?? '',
     executingUnitId: value.executingUnitId,
     version: value.version,
+    updatedAt: value.updatedAt,
     recordTypeReference, solutionTypeReference, sourceReference, peiObjectiveReference, poiActivityReference,
     responsibleUnitReferences,
   };

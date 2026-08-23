@@ -26,6 +26,8 @@ interface EditSnapshot {
   digitalComponent: PiipPortfolioRecord['digitalComponent'];
 }
 
+type PortfolioRecordEditVariant = 'INITIATIVE' | 'DERIVED_PROJECT' | 'PREEXISTING_PROJECT';
+
 @Component({
   selector: 'app-portfolio-record-edit',
   standalone: true,
@@ -48,6 +50,13 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
     ? this.repository.getInitiativeDetail(this.code())
     : this.repository.getProjectDetail(this.code()));
   readonly record = computed(() => this.detail()?.portfolioRecord);
+  readonly variant = computed<PortfolioRecordEditVariant | null>(() => {
+    if (this.recordType() === 'Iniciativa') return 'INITIATIVE';
+    const detail = this.detail() as ProjectDetail | undefined;
+    if (!detail) return null;
+    return detail.project.originMode === 'PREEXISTING' ? 'PREEXISTING_PROJECT' : 'DERIVED_PROJECT';
+  });
+  readonly isPreexistingProject = computed(() => this.variant() === 'PREEXISTING_PROJECT');
   readonly catalogState = this.repository.catalogs;
   readonly unitsState = this.repository.organizationalUnitsState;
   readonly units = this.repository.organizationalUnits;
@@ -219,6 +228,17 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
     return new Intl.DateTimeFormat('es-PE').format(new Date(`${value}T00:00:00`));
   }
 
+  formatDateTime(value?: string): string {
+    if (!value) return 'Sin información registrada';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Sin información registrada';
+    return new Intl.DateTimeFormat('es-PE', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'America/Lima',
+    }).format(date);
+  }
+
   private initialize(record: PiipPortfolioRecord): void {
     const snapshot = this.snapshot(record);
     this.baseline.set(snapshot);
@@ -244,7 +264,10 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
     const body: Record<string, unknown> = { version: baseline.version };
     const maybe = (key: keyof EditSnapshot, valueToSend: unknown) => { if (valueToSend !== baseline[key]) body[key] = valueToSend; };
     maybe('name', value.name); maybe('startDate', value.startDate); maybe('responsible', value.responsible); maybe('description', value.description); maybe('keyResults', value.keyResults); maybe('note', value.note); maybe('digitalComponent', value.digitalComponent);
-    const solutionTypeId = this.numberOrNull(value.solutionTypeId); if (solutionTypeId !== baseline.solutionTypeId) body['solutionTypeId'] = solutionTypeId;
+    if (!this.isPreexistingProject()) {
+      const solutionTypeId = this.numberOrNull(value.solutionTypeId);
+      if (solutionTypeId !== baseline.solutionTypeId) body['solutionTypeId'] = solutionTypeId;
+    }
     const sourceId = this.numberOrNull(value.sourceId); if (sourceId !== baseline.sourceId) body['sourceId'] = sourceId;
     const peiObjectiveId = this.numberOrNull(value.peiObjectiveId); if (peiObjectiveId !== baseline.peiObjectiveId) body['peiObjectiveId'] = peiObjectiveId;
     const poiActivityId = this.numberOrNull(value.poiActivityId); if (poiActivityId !== baseline.poiActivityId) body['poiActivityId'] = poiActivityId;

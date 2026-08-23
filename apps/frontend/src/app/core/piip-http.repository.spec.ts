@@ -366,7 +366,9 @@ describe('PiipHttpRepository', () => {
     vi.spyOn(portfolio, 'updateInitiative').mockReturnValue(of(response as unknown as PortfolioRecordResponse));
     const refreshAudit = vi.spyOn(repository as unknown as { loadAudit: () => Promise<void> }, 'loadAudit').mockResolvedValue();
 
-    await repository.updateInitiative('I-006-2026', { version: 1, name: 'Iniciativa actualizada' });
+    const updatedInitiative = await repository.updateInitiative('I-006-2026', { version: 1, name: 'Iniciativa actualizada' });
+    expect(updatedInitiative.updatedAt).toBe('2026-08-22T10:00:00Z');
+    expect(repository.portfolioRecords().find((record) => record.code === 'I-006-2026')?.updatedAt).toBe('2026-08-22T10:00:00Z');
     expect(refreshAudit).toHaveBeenCalledOnce();
 
     const projectResponse = { ...response, recordType: { ...response.recordType, code: 'PROJECT', name: 'Proyecto' }, code: 'P-004-2026', originCode: 'NA', status: 'Proyecto en ejecución' };
