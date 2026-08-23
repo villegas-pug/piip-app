@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, effect, inject, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, QueryList, ViewChildren, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Overlay } from '@angular/cdk/overlay';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -12,7 +12,7 @@ import { canEditInitiative, canEditProject } from '../../core/portfolio-edit-per
 import type { OrganizationalUnit } from '../../core/piip.models';
 import type { PendingChangesAware } from '../../core/pending-changes.guard';
 import { PendingChangesDialogComponent } from './pending-changes-dialog.component';
-import { finalize, map, Observable } from 'rxjs';
+import { finalize, map, Observable, Subscription } from 'rxjs';
 
 interface EditSnapshot {
   version: number;
@@ -31,6 +31,9 @@ interface EditSnapshot {
 }
 
 type PortfolioRecordEditVariant = 'INITIATIVE' | 'DERIVED_PROJECT' | 'PREEXISTING_PROJECT';
+const SECTION_IDS = ['datos-generales', 'clasificacion', 'responsabilidad', 'alineamiento', 'informacion-complementaria'] as const;
+type SectionId = typeof SECTION_IDS[number];
+const SECTION_ID_SET: ReadonlySet<string> = new Set(SECTION_IDS);
 
 @Component({
   selector: 'app-portfolio-record-edit',
@@ -40,7 +43,7 @@ type PortfolioRecordEditVariant = 'INITIATIVE' | 'DERIVED_PROJECT' | 'PREEXISTIN
   styleUrl: './portfolio-record-edit.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PortfolioRecordEditComponent implements PendingChangesAware {
+export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, PendingChangesAware {
   private readonly formBuilder = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -71,6 +74,8 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
   readonly conflict = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly baseline = signal<EditSnapshot | null>(null);
+  readonly selectedSection = signal<SectionId>(this.initialSection());
+  @ViewChildren('editSection', { read: ElementRef }) private readonly sectionElements!: QueryList<ElementRef<HTMLElement>>;
   readonly isEditable = computed(() => this.recordType() === 'Iniciativa'
     ? canEditInitiative(this.detail() as InitiativeDetail | undefined, this.repository.canAdministerExecutingUnit(this.record()?.executingUnitId))
     : canEditProject(this.detail() as ProjectDetail | undefined, this.repository.canAdministerExecutingUnit(this.record()?.executingUnitId)));
@@ -92,6 +97,21 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
 
   private loadedKey = '';
   private pendingChangesDialogRef: MatDialogRef<PendingChangesDialogComponent, boolean> | null = null;
+  private sectionObserver: IntersectionObserver | null = null;
+  private sectionObserverSubscription = new Subscription();
+  private readonly sectionEntries = new Map<SectionId, IntersectionObserverEntry>();
+
+  ngAfterViewInit(): void {
+    this.sectionObserverSubscription.add(this.sectionElements.changes.subscribe(() => this.configureSectionObserver()));
+    this.configureSectionObserver();
+  }
+
+  ngOnDestroy(): void {
+    this.sectionObserver?.disconnect();
+    this.sectionObserver = null;
+    this.sectionObserverSubscription.unsubscribe();
+    this.sectionEntries.clear();
+  }
 
   constructor() {
     effect(() => {
@@ -125,10 +145,14 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
 
   scrollToSection(sectionId: string, event: Event): void {
     event.preventDefault();
+    if (!this.isSectionId(sectionId)) return;
     const section = document.getElementById(sectionId);
     if (!section) return;
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    window.history.replaceState(window.history.state, '', `#${encodeURIComponent(sectionId)}`);
+    this.selectedSection.set(sectionId);
+    const url = `${window.location.pathname}${window.location.search}#${encodeURIComponent(sectionId)}`;
+    window.history.replaceState(window.history.state, '', url);
+    (event.currentTarget as HTMLAnchorElement | null)?.focus({ preventScroll: true });
   }
 
   confirmPendingChanges(): Observable<boolean> {
@@ -320,6 +344,44 @@ export class PortfolioRecordEditComponent implements PendingChangesAware {
 
   private numberOrNull(value: string): number | null { return value ? Number(value) : null; }
   private asString(value: number | null): string { return value === null ? '' : String(value); }
+
+  private initialSection(): SectionId {
+    try {
+      const sectionId = decodeURIComponent(window.location.hash.slice(1));
+      return this.isSectionId(sectionId) ? sectionId : 'datos-generales';
+    } catch {
+      return 'datos-generales';
+    }
+  }
+
+  private isSectionId(value: string): value is SectionId {
+    return SECTION_ID_SET.has(value);
+  }
+
+  private configureSectionObserver(): void {
+    this.sectionObserver?.disconnect();
+    this.sectionObserver = null;
+    this.sectionEntries.clear();
+    if (typeof IntersectionObserver === 'undefined' || !this.sectionElements) return;
+    const sections = this.sectionElements.toArray().map((element) => element.nativeElement).filter((element) => this.isSectionId(element.id));
+    if (!sections.length) return;
+    this.sectionObserver = new IntersectionObserver((entries) => this.updateSelectedSection(entries), {
+      root: null,
+      rootMargin: '-120px 0px -55% 0px',
+      threshold: [0, 0.25, 0.5, 0.75, 1],
+    });
+    sections.forEach((section) => this.sectionObserver?.observe(section));
+  }
+
+  private updateSelectedSection(entries: IntersectionObserverEntry[]): void {
+    entries.forEach((entry) => {
+      if (this.isSectionId(entry.target.id)) this.sectionEntries.set(entry.target.id, entry);
+    });
+    const active = [...this.sectionEntries.values()]
+      .filter((entry) => entry.isIntersecting)
+      .sort((left, right) => right.intersectionRatio - left.intersectionRatio || left.boundingClientRect.top - right.boundingClientRect.top)[0];
+    if (active && this.isSectionId(active.target.id)) this.selectedSection.set(active.target.id);
+  }
 
   private showError(error: unknown): void {
     const status = typeof error === 'object' && error !== null && 'status' in error ? Number((error as { status?: number }).status) : 0;

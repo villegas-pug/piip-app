@@ -60,22 +60,100 @@ describe('PortfolioRecordEditComponent', () => {
     component.form.controls.name.markAsDirty();
   }
 
-  it('desplaza suavemente al submenú solicitado sin iniciar una navegación Angular', async () => {
+  it('desplaza, conserva la ruta y enfoca el item activo sin navegación Angular', async () => {
+    const originalUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}?source=detail#datos-generales`);
     const { component, fixture, router } = await setup();
     const section = fixture.nativeElement.querySelector('#clasificacion') as HTMLElement;
+    const anchor = fixture.nativeElement.querySelector('a[href="#clasificacion"]') as HTMLAnchorElement;
     const scrollIntoView = vi.fn();
     section.scrollIntoView = scrollIntoView;
-    const event = { preventDefault: vi.fn() } as unknown as Event;
+    const focus = vi.spyOn(anchor, 'focus');
+    const event = { preventDefault: vi.fn(), currentTarget: anchor } as unknown as Event;
     const replaceState = vi.spyOn(window.history, 'replaceState').mockImplementation(() => undefined);
     const navigate = vi.spyOn(router, 'navigate');
 
     component.scrollToSection('clasificacion', event);
+    fixture.detectChanges();
 
     expect(event.preventDefault).toHaveBeenCalledOnce();
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
-    expect(replaceState).toHaveBeenCalledWith(window.history.state, '', '#clasificacion');
+    expect(replaceState).toHaveBeenCalledWith(window.history.state, '', `${window.location.pathname}${window.location.search}#clasificacion`);
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(document.activeElement).toBe(anchor);
+    expect(anchor.classList.contains('active')).toBe(true);
+    expect(anchor.getAttribute('aria-current')).toBe('location');
+    expect(fixture.nativeElement.querySelectorAll('.section-nav a[aria-current="location"]')).toHaveLength(1);
     expect(navigate).not.toHaveBeenCalled();
+
     replaceState.mockRestore();
+    window.history.replaceState(window.history.state, '', originalUrl);
+  });
+
+  it.each([
+    ['#alineamiento', 'alineamiento'],
+    ['#seccion-desconocida', 'datos-generales'],
+    ['#%E0%A4%A', 'datos-generales'],
+  ] as const)('inicializa la sección desde un hash válido o usa el fallback (%s)', async (hash, expectedSection) => {
+    const originalUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${hash}`);
+
+    const { component, fixture } = await setup();
+    const activeAnchor = fixture.nativeElement.querySelector('.section-nav a.active') as HTMLAnchorElement;
+
+    expect(component.selectedSection()).toBe(expectedSection);
+    expect(activeAnchor.getAttribute('href')).toBe(`#${expectedSection}`);
+    expect(activeAnchor.getAttribute('aria-current')).toBe('location');
+
+    window.history.replaceState(window.history.state, '', originalUrl);
+  });
+
+  it('ignora identificadores fuera del conjunto permitido', async () => {
+    const { component } = await setup();
+    const event = { preventDefault: vi.fn(), currentTarget: null } as unknown as Event;
+    const replaceState = vi.spyOn(window.history, 'replaceState');
+
+    component.scrollToSection('seccion-desconocida', event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(replaceState).not.toHaveBeenCalled();
+    expect(component.selectedSection()).toBe('datos-generales');
+    replaceState.mockRestore();
+  });
+
+  it('activa la sección visible sin robar el foco del campo en edición y desconecta el observer', async () => {
+    let observerCallback: IntersectionObserverCallback | undefined;
+    const disconnect = vi.fn();
+    const observe = vi.fn();
+    vi.stubGlobal('IntersectionObserver', vi.fn((callback: IntersectionObserverCallback) => {
+      observerCallback = callback;
+      return { disconnect, observe, unobserve: vi.fn() } as unknown as IntersectionObserver;
+    }));
+
+    try {
+      const { component, fixture } = await setup();
+      const input = fixture.nativeElement.querySelector('#record-name') as HTMLInputElement;
+      const section = fixture.nativeElement.querySelector('#clasificacion') as HTMLElement;
+      input.focus();
+      observerCallback?.([
+        {
+          target: section,
+          isIntersecting: true,
+          intersectionRatio: 0.8,
+          boundingClientRect: { top: 140 },
+        } as unknown as IntersectionObserverEntry,
+      ], {} as IntersectionObserver);
+      fixture.detectChanges();
+
+      expect(component.selectedSection()).toBe('clasificacion');
+      expect(fixture.nativeElement.querySelectorAll('.section-nav a[aria-current="location"]')).toHaveLength(1);
+      expect(document.activeElement).toBe(input);
+
+      fixture.destroy();
+      expect(disconnect).toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('carga la variante iniciativa y envía un body sparse con confirmación y navegación al detalle', async () => {

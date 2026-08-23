@@ -26,17 +26,17 @@
       <article class="panel state-card error-state" role="alert"><mat-icon aria-hidden="true">lock</mat-icon><h2>Este registro no puede editarse</h2><p>La acción requiere cobertura Administrador PIIP sobre la Unidad Ejecutora real y un estado editable.</p><a class="primary-button" [routerLink]="[recordType() === 'Iniciativa' ? '/iniciativas' : '/proyectos', code()]">Volver al detalle</a></article>
     } @else {
       <nav class="section-nav" aria-label="Secciones del formulario">
-        <a href="#datos-generales" (click)="scrollToSection('datos-generales', $event)"><span>01</span>Datos generales</a>
-        <a href="#clasificacion" (click)="scrollToSection('clasificacion', $event)"><span>02</span>Clasificación</a>
-        <a href="#responsabilidad" (click)="scrollToSection('responsabilidad', $event)"><span>03</span>Responsabilidad</a>
-        <a href="#alineamiento" (click)="scrollToSection('alineamiento', $event)"><span>04</span>Alineamiento</a>
-        <a href="#informacion-complementaria" (click)="scrollToSection('informacion-complementaria', $event)"><span>05</span>Información complementaria</a>
+        <a href="#datos-generales" (click)="scrollToSection('datos-generales', $event)" [class.active]="selectedSection() === 'datos-generales'" [attr.aria-current]="selectedSection() === 'datos-generales' ? 'location' : null"><span>01</span>Datos generales</a>
+        <a href="#clasificacion" (click)="scrollToSection('clasificacion', $event)" [class.active]="selectedSection() === 'clasificacion'" [attr.aria-current]="selectedSection() === 'clasificacion' ? 'location' : null"><span>02</span>Clasificación</a>
+        <a href="#responsabilidad" (click)="scrollToSection('responsabilidad', $event)" [class.active]="selectedSection() === 'responsabilidad'" [attr.aria-current]="selectedSection() === 'responsabilidad' ? 'location' : null"><span>03</span>Responsabilidad</a>
+        <a href="#alineamiento" (click)="scrollToSection('alineamiento', $event)" [class.active]="selectedSection() === 'alineamiento'" [attr.aria-current]="selectedSection() === 'alineamiento' ? 'location' : null"><span>04</span>Alineamiento</a>
+        <a href="#informacion-complementaria" (click)="scrollToSection('informacion-complementaria', $event)" [class.active]="selectedSection() === 'informacion-complementaria'" [attr.aria-current]="selectedSection() === 'informacion-complementaria' ? 'location' : null"><span>05</span>Información complementaria</a>
       </nav>
 
       <form [formGroup]="form" (ngSubmit)="save()" [attr.aria-busy]="submitting() ? 'true' : null" novalidate>
         <div class="editor-layout">
           <div class="editor-main">
-            <article id="datos-generales" class="panel edit-section" aria-labelledby="datos-generales-title">
+            <article #editSection id="datos-generales" class="panel edit-section" aria-labelledby="datos-generales-title">
               <header class="section-heading"><span aria-hidden="true">01</span><div><h3 id="datos-generales-title">Datos generales</h3><p>Información principal que identifica y describe el registro.</p></div></header>
               <div class="form-grid">
                 <label class="field span-2" for="record-name"><span>Nombre *</span><input id="record-name" formControlName="name" [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid ? 'true' : null" aria-describedby="name-help name-error" /><small id="name-help">Hasta 180 caracteres.</small>@if (form.controls.name.touched && form.controls.name.invalid) {<small id="name-error" class="error" role="alert">Ingresa un nombre válido.</small>}</label>
@@ -45,7 +45,7 @@
               </div>
             </article>
 
-            <article id="clasificacion" class="panel edit-section" aria-labelledby="clasificacion-title">
+            <article #editSection id="clasificacion" class="panel edit-section" aria-labelledby="clasificacion-title">
               <header class="section-heading"><span aria-hidden="true">02</span><div><h3 id="clasificacion-title">Clasificación</h3><p>Referencias funcionales utilizadas para caracterizar el registro.</p></div></header>
               <div class="form-grid">
                 @if (!isPreexistingProject()) {
@@ -56,7 +56,7 @@
               </div>
             </article>
 
-            <article id="responsabilidad" class="panel edit-section" aria-labelledby="responsabilidad-title">
+            <article #editSection id="responsabilidad" class="panel edit-section" aria-labelledby="responsabilidad-title">
               <header class="section-heading"><span aria-hidden="true">03</span><div><h3 id="responsabilidad-title">Responsabilidad</h3><p>Persona y Unidad Orgánica responsables del registro.</p></div></header>
               <div class="form-grid">
                 <label class="field span-2" for="responsible"><span>Responsable *</span><input id="responsible" formControlName="responsible" [attr.aria-invalid]="form.controls.responsible.touched && form.controls.responsible.invalid ? 'true' : null" aria-describedby="responsible-error" />@if (form.controls.responsible.touched && form.controls.responsible.invalid) {<small id="responsible-error" class="error" role="alert">Ingresa el responsable.</small>}</label>
@@ -71,7 +71,7 @@
               </div>
             </article>
 
-            <article id="alineamiento" class="panel edit-section" aria-labelledby="alineamiento-title">
+            <article #editSection id="alineamiento" class="panel edit-section" aria-labelledby="alineamiento-title">
               <header class="section-heading"><span aria-hidden="true">04</span><div><h3 id="alineamiento-title">Alineamiento</h3><p>Vinculación independiente con los instrumentos PEI y POI.</p></div></header>
               <div class="form-grid">
                 <label class="field" for="pei-objective"><span>Objetivo PEI</span><select id="pei-objective" formControlName="peiObjectiveId"><option value="">Sin selección</option>@for (option of catalogOptions('peiObjectiveId'); track option.id) {<option [value]="option.id" [disabled]="!isSelectableCatalogOption(option, 'peiObjectiveId')">{{ option.code }} — {{ option.name }}{{ option.active ? '' : ' · Histórico' }}</option>}</select>@if (isHistorical(form.controls.peiObjectiveId.value, 'peiObjectiveId')) {<small class="warning">Valor histórico conservado; elige una opción activa para reemplazarlo.</small>}</label>
@@ -79,7 +79,7 @@
               </div>
             </article>
 
-            <article id="informacion-complementaria" class="panel edit-section" aria-labelledby="informacion-complementaria-title">
+            <article #editSection id="informacion-complementaria" class="panel edit-section" aria-labelledby="informacion-complementaria-title">
               <header class="section-heading"><span aria-hidden="true">05</span><div><h3 id="informacion-complementaria-title">Información complementaria</h3><p>Resultados y observaciones adicionales del registro.</p></div></header>
               <div class="form-grid">
                 @if (recordType() === 'Proyecto') {<label class="field span-2" for="key-results"><span>Resultados clave</span><textarea id="key-results" formControlName="keyResults" rows="4"></textarea></label>}
