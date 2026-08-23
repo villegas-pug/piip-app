@@ -156,6 +156,93 @@ describe('PortfolioRecordEditComponent', () => {
     }
   });
 
+  it('mantiene el destino de un clic lejano mientras el scroll suave atraviesa otras secciones', async () => {
+    let observerCallback: IntersectionObserverCallback | undefined;
+    vi.stubGlobal('IntersectionObserver', vi.fn((callback: IntersectionObserverCallback) => {
+      observerCallback = callback;
+      return { disconnect: vi.fn(), observe: vi.fn(), unobserve: vi.fn() } as unknown as IntersectionObserver;
+    }));
+
+    try {
+      const { component, fixture } = await setup('Proyecto', 'P-005-2026');
+      const target = fixture.nativeElement.querySelector('#informacion-complementaria') as HTMLElement;
+      target.scrollIntoView = vi.fn();
+      const anchor = fixture.nativeElement.querySelector('a[href="#informacion-complementaria"]') as HTMLAnchorElement;
+      const event = { preventDefault: vi.fn(), currentTarget: anchor } as unknown as Event;
+
+      component.scrollToSection('informacion-complementaria', event);
+      observerCallback?.([{
+        target: fixture.nativeElement.querySelector('#clasificacion'),
+        isIntersecting: true,
+        intersectionRatio: 0.9,
+        boundingClientRect: { top: 130 },
+      } as unknown as IntersectionObserverEntry], {} as IntersectionObserver);
+
+      expect(component.selectedSection()).toBe('informacion-complementaria');
+      document.dispatchEvent(new Event('scrollend'));
+      observerCallback?.([{
+        target: fixture.nativeElement.querySelector('#clasificacion'),
+        isIntersecting: true,
+        intersectionRatio: 0.9,
+        boundingClientRect: { top: 130 },
+      } as unknown as IntersectionObserverEntry], {} as IntersectionObserver);
+
+      expect(component.selectedSection()).toBe('informacion-complementaria');
+      expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('libera el bloqueo del destino anterior cuando se selecciona otra sección', async () => {
+    const { component, fixture } = await setup();
+    const firstTarget = fixture.nativeElement.querySelector('#alineamiento') as HTMLElement;
+    const secondTarget = fixture.nativeElement.querySelector('#informacion-complementaria') as HTMLElement;
+    firstTarget.scrollIntoView = vi.fn();
+    secondTarget.scrollIntoView = vi.fn();
+    const firstAnchor = fixture.nativeElement.querySelector('a[href="#alineamiento"]') as HTMLAnchorElement;
+    const secondAnchor = fixture.nativeElement.querySelector('a[href="#informacion-complementaria"]') as HTMLAnchorElement;
+
+    component.scrollToSection('alineamiento', { preventDefault: vi.fn(), currentTarget: firstAnchor } as unknown as Event);
+    component.scrollToSection('informacion-complementaria', { preventDefault: vi.fn(), currentTarget: secondAnchor } as unknown as Event);
+    document.dispatchEvent(new Event('scrollend'));
+
+    expect(firstTarget.scrollIntoView).toHaveBeenCalledOnce();
+    expect(secondTarget.scrollIntoView).toHaveBeenCalledOnce();
+    expect(component.selectedSection()).toBe('informacion-complementaria');
+  });
+
+  it('retoma el scroll manual después de completar la navegación programática', async () => {
+    let observerCallback: IntersectionObserverCallback | undefined;
+    vi.stubGlobal('IntersectionObserver', vi.fn((callback: IntersectionObserverCallback) => {
+      observerCallback = callback;
+      return { disconnect: vi.fn(), observe: vi.fn(), unobserve: vi.fn() } as unknown as IntersectionObserver;
+    }));
+    vi.useFakeTimers();
+
+    try {
+      const { component, fixture } = await setup();
+      const target = fixture.nativeElement.querySelector('#alineamiento') as HTMLElement;
+      target.scrollIntoView = vi.fn();
+      const anchor = fixture.nativeElement.querySelector('a[href="#alineamiento"]') as HTMLAnchorElement;
+
+      component.scrollToSection('alineamiento', { preventDefault: vi.fn(), currentTarget: anchor } as unknown as Event);
+      document.dispatchEvent(new Event('scrollend'));
+      vi.advanceTimersByTime(120);
+      observerCallback?.([{
+        target: fixture.nativeElement.querySelector('#responsabilidad'),
+        isIntersecting: true,
+        intersectionRatio: 0.9,
+        boundingClientRect: { top: 130 },
+      } as unknown as IntersectionObserverEntry], {} as IntersectionObserver);
+
+      expect(component.selectedSection()).toBe('responsabilidad');
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('carga la variante iniciativa y envía un body sparse con confirmación y navegación al detalle', async () => {
     const { component, fixture, repository, router, code } = await setup();
     const current = repository.getInitiativeDetail(code)!.portfolioRecord;

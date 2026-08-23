@@ -100,6 +100,11 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
   private sectionObserver: IntersectionObserver | null = null;
   private sectionObserverSubscription = new Subscription();
   private readonly sectionEntries = new Map<SectionId, IntersectionObserverEntry>();
+  private programmaticScrollTarget: SectionId | null = null;
+  private programmaticScrollTimer: number | null = null;
+  private programmaticScrollEndListener: (() => void) | null = null;
+  private settledProgrammaticTarget: SectionId | null = null;
+  private settledProgrammaticTimer: number | null = null;
 
   ngAfterViewInit(): void {
     this.sectionObserverSubscription.add(this.sectionElements.changes.subscribe(() => this.configureSectionObserver()));
@@ -107,6 +112,8 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
   }
 
   ngOnDestroy(): void {
+    this.clearProgrammaticScroll();
+    this.clearSettledProgrammaticScroll();
     this.sectionObserver?.disconnect();
     this.sectionObserver = null;
     this.sectionObserverSubscription.unsubscribe();
@@ -148,6 +155,7 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
     if (!this.isSectionId(sectionId)) return;
     const section = document.getElementById(sectionId);
     if (!section) return;
+    this.startProgrammaticScroll(sectionId, section);
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     this.selectedSection.set(sectionId);
     const url = `${window.location.pathname}${window.location.search}#${encodeURIComponent(sectionId)}`;
@@ -374,6 +382,8 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
   }
 
   private updateSelectedSection(entries: IntersectionObserverEntry[]): void {
+    if (this.programmaticScrollTarget) return;
+    if (this.settledProgrammaticTarget) return;
     entries.forEach((entry) => {
       if (this.isSectionId(entry.target.id)) this.sectionEntries.set(entry.target.id, entry);
     });
@@ -381,6 +391,73 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
       .filter((entry) => entry.isIntersecting)
       .sort((left, right) => right.intersectionRatio - left.intersectionRatio || left.boundingClientRect.top - right.boundingClientRect.top)[0];
     if (active && this.isSectionId(active.target.id)) this.selectedSection.set(active.target.id);
+  }
+
+  private startProgrammaticScroll(sectionId: SectionId, section: HTMLElement): void {
+    this.clearProgrammaticScroll();
+    this.clearSettledProgrammaticScroll();
+    this.programmaticScrollTarget = sectionId;
+    this.selectedSection.set(sectionId);
+
+    const onScrollEnd = () => this.completeProgrammaticScroll(sectionId);
+    this.programmaticScrollEndListener = onScrollEnd;
+    document.addEventListener('scrollend', onScrollEnd, { once: true });
+    window.addEventListener('scrollend', onScrollEnd, { once: true });
+
+    // Some browsers do not emit scrollend for a clamped smooth scroll. The
+    // fallback also recognizes the last section when the document is already
+    // at its maximum scroll position.
+    const startedAt = Date.now();
+    const releaseWhenSettled = (): void => {
+      if (this.programmaticScrollTarget !== sectionId) return;
+      if (this.hasReachedProgrammaticTarget(sectionId, section) || Date.now() - startedAt >= 1800) {
+        this.completeProgrammaticScroll(sectionId);
+        return;
+      }
+      this.programmaticScrollTimer = window.setTimeout(releaseWhenSettled, 100);
+    };
+    this.programmaticScrollTimer = window.setTimeout(releaseWhenSettled, 120);
+  }
+
+  private completeProgrammaticScroll(sectionId: SectionId): void {
+    if (this.programmaticScrollTarget !== sectionId) return;
+    this.clearProgrammaticScroll();
+    this.selectedSection.set(sectionId);
+    this.settledProgrammaticTarget = sectionId;
+    this.settledProgrammaticTimer = window.setTimeout(() => this.clearSettledProgrammaticScroll(), 120);
+  }
+
+  private clearProgrammaticScroll(): void {
+    if (this.programmaticScrollTimer !== null) {
+      window.clearTimeout(this.programmaticScrollTimer);
+      this.programmaticScrollTimer = null;
+    }
+    if (this.programmaticScrollEndListener) {
+      document.removeEventListener('scrollend', this.programmaticScrollEndListener);
+      window.removeEventListener('scrollend', this.programmaticScrollEndListener);
+      this.programmaticScrollEndListener = null;
+    }
+    this.programmaticScrollTarget = null;
+  }
+
+  private clearSettledProgrammaticScroll(): void {
+    if (this.settledProgrammaticTimer !== null) {
+      window.clearTimeout(this.settledProgrammaticTimer);
+      this.settledProgrammaticTimer = null;
+    }
+    this.settledProgrammaticTarget = null;
+  }
+
+  private hasReachedProgrammaticTarget(sectionId: SectionId, section: HTMLElement): boolean {
+    const rect = section.getBoundingClientRect();
+    const sectionNav = document.querySelector('.section-nav') as HTMLElement | null;
+    const activeLine = sectionNav?.getBoundingClientRect().bottom ?? 0;
+    const reachedActiveZone = rect.top <= activeLine + 24 && rect.bottom > activeLine;
+    const scrollingElement = document.scrollingElement;
+    if (!scrollingElement) return reachedActiveZone;
+    const atDocumentEnd = scrollingElement.scrollTop + scrollingElement.clientHeight >= scrollingElement.scrollHeight - 2;
+    const visibleAtDocumentEnd = atDocumentEnd && rect.bottom > 0;
+    return reachedActiveZone || (sectionId === SECTION_IDS[SECTION_IDS.length - 1] && visibleAtDocumentEnd);
   }
 
   private showError(error: unknown): void {
