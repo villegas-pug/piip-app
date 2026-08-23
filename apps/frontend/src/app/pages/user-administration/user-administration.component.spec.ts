@@ -274,6 +274,77 @@ describe('UserAdministrationComponent operations', () => {
     expect(navigateByUrl).toHaveBeenCalledWith('/inicio');
   });
 
+  it('renders role and scope in ordered assignment rows with grouped accessible cells', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl, [{
+      id: 1,
+      subject: 'usuario-multiple',
+      fullName: 'Usuario múltiple',
+      email: 'multiple@midagri.gob.pe',
+      scopes: [
+        { ...activeScope(), id: 10, role: 'CONSULTA_EXTERNA', executingUnit: 'UE-002', executingUnitId: 2 },
+        { ...activeScope(), id: 11, role: 'ADMINISTRADOR_PIIP', executingUnit: 'Toda la institución', executingUnitId: undefined },
+      ],
+    }]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const headers = Array.from(element.querySelectorAll('thead th'));
+    const rows = Array.from(element.querySelectorAll('tbody > tr.user-row'));
+    expect(headers.map((header) => header.textContent?.trim())).toEqual(['Usuario', 'Rol', 'Ámbito', 'Estado', 'Acciones']);
+    expect(headers.every((header) => header.getAttribute('scope') === 'col')).toBe(true);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.querySelector('.role-value')?.textContent?.trim())).toEqual(['Consulta externa', 'Administrador PIIP']);
+    expect(rows.map((row) => row.querySelector('.scope-chip')?.textContent?.trim())).toEqual(['UE-002', 'Toda la institución']);
+    expect(rows.map((row) => row.textContent).join('')).not.toContain('·');
+    expect(element.querySelectorAll('tbody > tr.user-row .user-cell')).toHaveLength(1);
+    expect(element.querySelector('.user-cell')?.getAttribute('scope')).toBe('rowgroup');
+    expect(element.querySelector('.user-cell')?.getAttribute('rowspan')).toBe('2');
+    expect(element.querySelector('.group-status')?.getAttribute('rowspan')).toBe('2');
+    expect(element.querySelector('.actions')?.getAttribute('rowspan')).toBe('2');
+    expect(element.querySelector('.actions')?.textContent).toContain('Ver detalle');
+    expect(rows[1]?.querySelector('.scope-chip')?.classList.contains('scope-chip--institution')).toBe(true);
+  });
+
+  it('separates role, scope and institution in the expanded assignment detail', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl, [{
+      id: 1,
+      subject: 'usuario-detalle',
+      fullName: 'Usuario detalle',
+      email: 'detalle@midagri.gob.pe',
+      scopes: [
+        { ...activeScope(), id: 10 },
+        { ...activeScope(), id: 11, role: 'CONSULTA_EXTERNA', institution: 'Institución 2', executingUnit: 'UE-008', executingUnitId: 8 },
+      ],
+    }]);
+    await fixture.whenStable();
+    fixture.componentInstance.toggleGroup('usuario-detalle');
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const detailHeaders = Array.from(element.querySelectorAll('.assignment-detail-head span')).map((item) => item.textContent?.trim());
+    const detailRows = Array.from(element.querySelectorAll('.assignment-detail'));
+    expect(detailHeaders).toEqual(['Rol', 'Ámbito', 'Institución', 'Estado', 'Acciones']);
+    expect(element.querySelector('.assignment-detail-row td')?.getAttribute('colspan')).toBe('5');
+    expect(detailRows[0]?.querySelector('.role-value')?.textContent?.trim()).toBe('Administrador PIIP');
+    expect(detailRows[0]?.querySelector('.scope-chip')?.textContent?.trim()).toBe('UE-001');
+    expect(detailRows[0]?.querySelector('small')?.textContent?.trim()).toBe('MIDAGRI');
+    expect(element.querySelector('.user-row .actions')?.textContent).toContain('Ocultar detalle');
+  });
+
+  it('shows separate role and scope fallbacks for a user without assignments', async () => {
+    const fixture = TestBed.createComponent(UserAdministrationComponent);
+    flushAdministrationLoad(http, apiUrl, [{ id: 1, subject: 'sin-scope', fullName: 'Usuario sin scope', email: 'sin-scope@midagri.gob.pe', scopes: [] }]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const row = (fixture.nativeElement as HTMLElement).querySelector('tbody > tr.user-row');
+    expect(row?.querySelector('.role-cell')?.textContent?.trim()).toBe('Sin rol asignado');
+    expect(row?.querySelector('.scope-cell')?.textContent?.trim()).toBe('Sin ámbito asignado');
+  });
+
   it('paginates users as grouped assignments', async () => {
     const fixture = TestBed.createComponent(UserAdministrationComponent);
     const users = Array.from({ length: 6 }, (_, index) => ({

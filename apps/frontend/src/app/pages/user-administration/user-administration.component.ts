@@ -235,9 +235,14 @@ export class UserAdministrationComponent {
     return names.slice(0, 2).map((name) => name[0]).join('').toUpperCase();
   }
 
-  scopeLabel(scope: UserScope): string {
-    const role = scope.role === 'ADMINISTRADOR_PIIP' ? 'Administrador PIIP' : 'Consulta externa';
-    return `${role} · ${scope.executingUnit ?? 'Toda la institución'}`;
+  roleLabel(scope: UserScope): string {
+    if (scope.role === 'ADMINISTRADOR_PIIP') return 'Administrador PIIP';
+    if (scope.role === 'CONSULTA_EXTERNA') return 'Consulta externa';
+    return 'Sin rol asignado';
+  }
+
+  scopeAreaLabel(scope: UserScope): string {
+    return scope.executingUnitId === undefined ? 'Toda la institución' : scope.executingUnit ?? 'Ámbito no disponible';
   }
 
   activeAssignments(group: UserAssignmentGroup): number {
