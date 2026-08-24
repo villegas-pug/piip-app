@@ -15,4 +15,14 @@ class ApplicationBoundaryTest {
             }
         }
     }
+
+    @Test
+    void applicationDoesNotDependOnHttpAdapters() throws Exception {
+        try (var files = Files.walk(Path.of("src", "main", "java"))) {
+            for (Path file : files.filter(path -> path.toString().contains("\\application\\") && path.toString().endsWith(".java")).toList()) {
+                String source = Files.readString(file);
+                assertThat(source).as(file.toString()).doesNotContain("import pe.gob.midagri.piip.identity.api.");
+            }
+        }
+    }
 }

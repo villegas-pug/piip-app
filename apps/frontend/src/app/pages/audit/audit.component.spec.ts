@@ -57,4 +57,17 @@ describe('AuditComponent', () => {
     component.filters.patchValue({ eventType: 'Creación' });
     expect(component.currentPage()).toBe(0);
   });
+
+  it('presenta el motivo seguro nullable de los accesos rechazados', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.auditAccesses.set([
+      { correlationId: 'corr-1', occurredAt: '2026-08-23T12:00:00Z', subject: 'subject', roles: '', method: 'GET', path: '/admin/users', status: 403, durationMs: 12, safeReason: 'FORBIDDEN_SCOPE' },
+      { correlationId: 'corr-2', occurredAt: '2026-08-23T12:01:00Z', subject: 'subject', roles: '', method: 'GET', path: '/admin/users', status: 403, durationMs: 10, safeReason: null },
+    ]);
+    const fixture = TestBed.createComponent(AuditComponent);
+    fixture.detectChanges();
+
+    const reasons = Array.from(fixture.nativeElement.querySelectorAll('.access-reasons li')).map((item) => (item as Element).textContent?.trim());
+    expect(reasons).toEqual(['info_outline/admin/users: FORBIDDEN_SCOPE', 'info_outline/admin/users: Motivo no disponible']);
+  });
 });

@@ -333,9 +333,58 @@ export interface AuditAccess {
   path: string;
   status: number;
   recordCode?: string;
+  safeReason?: string | null;
   correlationId: string;
   durationMs: number;
   occurredAt: string;
+}
+
+export type AssignmentRole = 'ADMINISTRADOR_PIIP' | 'CONSULTA_EXTERNA';
+
+export interface UserAssignmentScope {
+  id: number;
+  role: AssignmentRole;
+  institutionId: number;
+  institution: string;
+  executingUnitId?: number;
+  executingUnit?: string;
+  active: boolean;
+  validFrom?: string;
+  validUntil?: string;
+  version: number;
+}
+
+export interface UserAdministrationUser {
+  id: number;
+  subject: string;
+  fullName: string;
+  email: string;
+  scopes: UserAssignmentScope[];
+}
+
+export interface UserAssignmentCandidate {
+  id: number;
+  subject: string;
+  fullName: string;
+  email: string;
+}
+
+export interface UserAdministrationSnapshot {
+  users: UserAdministrationUser[];
+  assignmentCandidates: UserAssignmentCandidate[];
+}
+
+export interface AssignmentMutationInput {
+  userSubject?: string;
+  role: AssignmentRole;
+  institutionId: number;
+  executingUnitId?: number;
+}
+
+export interface AssignmentMutationResult {
+  outcome: 'CREATED' | 'REACTIVATED' | 'UPDATED' | 'SUSPENDED';
+  scope?: UserAssignmentScope;
+  status: number;
 }
 
 export interface CurrentUser {

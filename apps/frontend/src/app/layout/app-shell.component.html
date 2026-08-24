@@ -81,6 +81,7 @@
     </header>
     <main>
       @if (auth.configurationError(); as error) {<div class="global-api-error" role="alert"><mat-icon>vpn_key_off</mat-icon><span>{{ error }}</span></div>}
+      @if (authorizationRecovery.active()) {<div class="global-api-error" role="alert" aria-live="assertive"><mat-icon>lock_reset</mat-icon><span>{{ authorizationRecovery.message() }}</span><button type="button" [disabled]="authorizationRecovery.retrying()" (click)="retryAuthorizationRecovery()">{{ authorizationRecovery.retrying() ? 'Rehidratando...' : 'Reintentar' }}</button></div>}
       @if (repository.lastError(); as error) {<div class="global-api-error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ error }}</span><button type="button" [disabled]="repository.loading() || activity.isBlocking()" (click)="retryConnection()">{{ repository.loading() || activity.isBlocking() ? 'Conectando...' : 'Reintentar' }}</button><button type="button" [disabled]="activity.isBlocking()" (click)="repository.clearError()">Cerrar</button></div>}
       <router-outlet />
     </main>

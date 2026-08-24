@@ -10,12 +10,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
-import { catchError, finalize, forkJoin, from, map, of, switchMap } from 'rxjs';
-import type { Observable } from 'rxjs';
-import { UserAdministrationControllerService } from '../../api/generated';
-import type { ScopeResponse, UserAssignmentCandidateResponse, UserResponse } from '../../api/generated';
-import { PiipApiError, resolveApiUrl } from '../../core/piip-http.repository';
-import type { AdministrableExecutingUnit } from '../../core/piip.models';
+import { catchError, from, map, of, switchMap } from 'rxjs';
+import { PiipApiError } from '../../core/piip-http.repository';
+import { AuthorizationRecoveryService } from '../../core/authorization-recovery.service';
+import type { AdministrableExecutingUnit, AssignmentRole, UserAdministrationUser, UserAssignmentCandidate, UserAssignmentScope } from '../../core/piip.models';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
@@ -23,10 +21,10 @@ import { EditUserAssignmentDialogComponent } from './edit-user-assignment-dialog
 import { NewUserAssignmentDialogComponent } from './new-user-assignment-dialog.component';
 import { SuspendUserAssignmentDialogComponent } from './suspend-user-assignment-dialog.component';
 
-type UserScope = ScopeResponse;
-type UserItem = UserResponse;
-type AssignmentCandidate = UserAssignmentCandidateResponse;
-type Role = NonNullable<UserScope['role']>;
+type UserScope = UserAssignmentScope;
+type UserItem = UserAdministrationUser;
+type AssignmentCandidate = UserAssignmentCandidate;
+type Role = AssignmentRole;
 interface UserAssignmentRow { user: UserItem; scope: UserScope | null; }
 interface UserAssignmentGroup { user: UserItem; scopes: UserScope[]; }
 export interface AssignmentUser { subject: string; fullName: string; email: string; withoutAssignments: boolean; }
@@ -40,13 +38,12 @@ interface InstitutionItem { id: number; code: string; name: string; }
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UserAdministrationComponent {
-  private readonly userAdministration = inject(UserAdministrationControllerService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
-  private readonly apiUrl = resolveApiUrl();
   readonly repository = inject(PIIP_REPOSITORY);
+  private readonly authorizationRecovery = inject(AuthorizationRecoveryService);
 
   readonly users = signal<UserItem[]>([]);
   readonly assignmentCandidates = signal<AssignmentCandidate[]>([]);
@@ -147,7 +144,6 @@ export class UserAdministrationComponent {
   });
 
   constructor() {
-    this.userAdministration.rootUrl = this.apiUrl;
     this.load();
   }
 
@@ -265,23 +261,27 @@ export class UserAdministrationComponent {
       return;
     }
     if (value.executingUnitId === 0 && !this.confirmInstitutionWide('editar', value.institutionId)) return;
+    const affectsCurrentUser = this.scopeBelongsToCurrentUser(scope);
+    const previousActiveExecutingUnitId = this.repository.selectedExecutingUnitId();
     this.savingScopeId.set(scope.id);
-    this.userAdministration.update({
-      scopeId: scope.id,
-      version: scope.version,
-      body: { role: value.role, institutionId: value.institutionId, executingUnitId: value.executingUnitId || undefined },
-    }).pipe(finalize(() => this.savingScopeId.set(null))).subscribe({
-      next: () => {
-        this.editingScope.set(null);
-        this.snackBar.open('Asignación actualizada.', 'Cerrar', { duration: 2600 });
-        this.load();
-      },
-      error: (response) => this.showOperationError(response, 'No se pudo actualizar la asignación.'),
+    from(Promise.resolve(this.repository.updateUserAssignment(scope.id, scope.version, {
+      role: value.role,
+      institutionId: value.institutionId,
+      executingUnitId: value.executingUnitId || undefined,
+    }))).subscribe({
+      next: () => void this.finishSuccessfulMutation(
+        'Asignación actualizada.',
+        affectsCurrentUser,
+        previousActiveExecutingUnitId,
+        () => this.editingScope.set(null),
+        () => this.savingScopeId.set(null),
+      ),
+      error: (response) => { this.savingScopeId.set(null); this.showOperationError(response, 'No se pudo actualizar la asignación.'); },
     });
   }
 
   suspend(scope: UserScope): void {
-    if (this.operationPending() || scope.id === undefined || scope.version === undefined || !scope.active) return;
+    if (this.operationPending() || scope.id === undefined || scope.version === undefined || !scope.active || this.isSelfAdministrator(scope)) return;
     const user = this.userForScope(scope);
     this.dialog.open(SuspendUserAssignmentDialogComponent, {
       data: {
@@ -306,54 +306,46 @@ export class UserAdministrationComponent {
     const affectsCurrentUser = this.scopeBelongsToCurrentUser(scope);
     const activeExecutingUnitId = this.repository.selectedExecutingUnitId();
     this.changingScopeId.set(scope.id);
-    const request: Observable<unknown> = action === 'SUSPEND'
-      ? this.userAdministration.suspend({ scopeId: scope.id, version: scope.version })
-      : this.userAdministration.reactivate({ scopeId: scope.id, version: scope.version });
-    request.pipe(
+    const request = action === 'SUSPEND'
+      ? this.repository.suspendUserAssignment(scope.id, scope.version)
+      : this.repository.reactivateUserAssignment(scope.id, scope.version);
+    from(Promise.resolve(request)).pipe(
       switchMap(() => affectsCurrentUser
         ? from(Promise.resolve(this.repository.refreshAuthorizationContext())).pipe(
             map(() => 'REFRESHED' as const),
             catchError(() => of('FAILED' as const)),
           )
         : of('NOT_REQUIRED' as const)),
-      finalize(() => this.changingScopeId.set(null)),
     )
       .subscribe({
-        next: (refreshState) => this.finishAssignmentStateChange(action, refreshState, activeExecutingUnitId),
-        error: (response) => this.showOperationError(
-          response,
-          action === 'SUSPEND' ? 'No se pudo suspender la asignación.' : 'No se pudo reactivar la asignación.',
-        ),
+        next: (refreshState) => void this.finishAssignmentStateChange(action, refreshState, activeExecutingUnitId),
+        error: (response) => {
+          this.changingScopeId.set(null);
+          this.showOperationError(response, action === 'SUSPEND' ? 'No se pudo suspender la asignación.' : 'No se pudo reactivar la asignación.');
+        },
       });
   }
 
-  private finishAssignmentStateChange(
+  private async finishAssignmentStateChange(
     action: 'SUSPEND' | 'REACTIVATE',
     refreshState: 'REFRESHED' | 'FAILED' | 'NOT_REQUIRED',
     previousActiveExecutingUnitId: number | null,
-  ): void {
-    if (refreshState === 'FAILED') {
-      this.snackBar.open(
-        'La asignación cambió, pero no fue posible actualizar tu acceso. Recarga la página para sincronizarlo.',
-        'Cerrar',
-        { duration: 5200 },
-      );
-      this.load();
-      return;
+  ): Promise<void> {
+    try {
+      if (refreshState === 'FAILED') {
+        throw new Error('No fue posible actualizar tu acceso.');
+      }
+      if (refreshState === 'REFRESHED' && !this.repository.canAdministerExecutingUnit(previousActiveExecutingUnitId)) {
+        await this.failClosed('Saliste de Administración de usuarios porque la UE activa ya no tiene rol Administrador PIIP.');
+        return;
+      }
+      await this.load();
+      this.snackBar.open(action === 'SUSPEND' ? 'Asignación suspendida.' : 'Asignación reactivada.', 'Cerrar', { duration: 2600 });
+    } catch {
+      await this.failClosed('La asignación cambió, pero no fue posible actualizar tu acceso. Se cerró esta vista por seguridad.');
+    } finally {
+      this.changingScopeId.set(null);
     }
-    if (refreshState === 'REFRESHED'
-        && !this.repository.canAdministerExecutingUnit(previousActiveExecutingUnitId)) {
-      this.clearAdministrationView();
-      this.snackBar.open(
-        'Saliste de Administración de usuarios porque la UE activa ya no tiene rol Administrador PIIP.',
-        'Cerrar',
-        { duration: 5200 },
-      );
-      void this.router.navigateByUrl('/inicio');
-      return;
-    }
-    this.snackBar.open(action === 'SUSPEND' ? 'Asignación suspendida.' : 'Asignación reactivada.', 'Cerrar', { duration: 2600 });
-    this.load();
   }
 
   private clearAdministrationView(): void {
@@ -368,6 +360,10 @@ export class UserAdministrationComponent {
   private scopeBelongsToCurrentUser(scope: UserScope): boolean {
     const subject = this.repository.currentUser()?.subject;
     return subject !== undefined && this.userForScope(scope)?.subject === subject;
+  }
+
+  isSelfAdministrator(scope: UserScope): boolean {
+    return scope.role === 'ADMINISTRADOR_PIIP' && this.scopeBelongsToCurrentUser(scope);
   }
 
   private userForScope(scope: UserScope): UserItem | undefined {
@@ -388,12 +384,24 @@ export class UserAdministrationComponent {
       return;
     }
     if (value.executingUnitId === 0 && !this.confirmInstitutionWide('crear', value.institutionId)) return;
+    const affectsCurrentUser = value.userSubject === this.repository.currentUser()?.subject;
+    const previousActiveExecutingUnitId = this.repository.selectedExecutingUnitId();
     this.assigning.set(true);
-    this.userAdministration.assign({ body: { ...value, executingUnitId: value.executingUnitId || undefined } })
-      .pipe(finalize(() => this.assigning.set(false)))
+    from(Promise.resolve(this.repository.assignUserRole({
+      userSubject: value.userSubject,
+      role: value.role,
+      institutionId: value.institutionId,
+      executingUnitId: value.executingUnitId || undefined,
+    })))
       .subscribe({
-        next: () => { this.snackBar.open('Rol asignado.', 'Cerrar', { duration: 2600 }); this.load(); },
-        error: (response) => this.showOperationError(response, 'No se pudo crear la asignación.'),
+        next: (result) => void this.finishSuccessfulMutation(
+          result.outcome === 'REACTIVATED' ? 'Asignación reactivada.' : 'Rol asignado.',
+          affectsCurrentUser,
+          previousActiveExecutingUnitId,
+          undefined,
+          () => this.assigning.set(false),
+        ),
+        error: (response) => { this.assigning.set(false); this.showOperationError(response, 'No se pudo crear la asignación.'); },
       });
   }
 
@@ -432,30 +440,51 @@ export class UserAdministrationComponent {
     );
   }
 
-  private load(): void {
+  private load(): Promise<void> {
     this.loading.set(true); this.error.set('');
-    forkJoin({
-      users: this.userAdministration.users().pipe(
-        switchMap((users) => this.readGeneratedList<UserItem>(users)),
-        catchError(() => { this.error.set('No fue posible consultar la API de usuarios.'); return of([] as UserItem[]); }),
-      ),
-      candidates: this.userAdministration.assignmentCandidates().pipe(
-        switchMap((candidates) => this.readGeneratedList<AssignmentCandidate>(candidates)),
-        catchError(() => of([] as AssignmentCandidate[])),
-      ),
-      administrableScopes: from(Promise.resolve(this.repository.loadAdministrableScopes())).pipe(
-        catchError((response) => {
-          const status = response instanceof HttpErrorResponse || response instanceof PiipApiError ? response.status : undefined;
-          this.error.set(status === 403
-            ? 'Ya no tienes autorización para consultar la administración de usuarios.'
-            : 'No fue posible consultar los ámbitos administrativos.');
-          return of(undefined);
-        }),
-      ),
-    }).pipe(finalize(() => this.loading.set(false))).subscribe(({ users, candidates }) => {
-      this.users.set(users);
-      this.assignmentCandidates.set(candidates);
-    });
+    return Promise.all([this.repository.loadUserAdministration(), this.repository.loadAdministrableScopes()])
+      .then(([snapshot]) => {
+        this.users.set(snapshot.users);
+        this.assignmentCandidates.set(snapshot.assignmentCandidates);
+      })
+      .catch((response: unknown) => {
+        const status = response instanceof PiipApiError ? response.status : undefined;
+        this.error.set(status === 403
+          ? 'Ya no tienes autorización para consultar la administración de usuarios.'
+          : 'No fue posible consultar la administración de usuarios.');
+      })
+      .finally(() => this.loading.set(false));
+  }
+
+  private async finishSuccessfulMutation(
+    message: string,
+    affectsCurrentUser: boolean,
+    previousActiveExecutingUnitId: number | null,
+    onReconciled: (() => void) | undefined,
+    releaseOperation: () => void,
+  ): Promise<void> {
+    try {
+      if (affectsCurrentUser) {
+        await Promise.resolve(this.repository.refreshAuthorizationContext());
+        if (!this.repository.canAdministerExecutingUnit(previousActiveExecutingUnitId)) {
+          await this.failClosed('Saliste de Administración de usuarios porque la UE activa ya no tiene rol Administrador PIIP.');
+          return;
+        }
+      }
+      onReconciled?.();
+      await this.load();
+      this.snackBar.open(message, 'Cerrar', { duration: 2600 });
+    } catch {
+      await this.failClosed('La operación cambió, pero no fue posible actualizar tu acceso. Se cerró esta vista por seguridad.');
+    } finally {
+      releaseOperation();
+    }
+  }
+
+  private async failClosed(message: string): Promise<void> {
+    this.clearAdministrationView();
+    await this.authorizationRecovery.enter(message, () => Promise.resolve(this.repository.initialize()));
+    await this.router.navigateByUrl('/inicio');
   }
 
   private hasVisibleActiveDuplicate(value: { userSubject: string; role: Role; institutionId: number; executingUnitId: number }): boolean {
@@ -471,13 +500,8 @@ export class UserAdministrationComponent {
     return executingUnitId || null;
   }
 
-  private readGeneratedList<T>(response: T[] | Blob): Observable<T[]> {
-    if (!(response instanceof Blob)) return of(response);
-    return from(response.text()).pipe(map((content) => JSON.parse(content) as T[]));
-  }
-
   private showOperationError(error: unknown, fallback: string): void {
-    const status = error instanceof HttpErrorResponse ? error.status : undefined;
+    const status = error instanceof HttpErrorResponse || error instanceof PiipApiError ? error.status : undefined;
     const message = status === 403
       ? 'No tienes autorización para realizar esta operación.'
       : status === 409

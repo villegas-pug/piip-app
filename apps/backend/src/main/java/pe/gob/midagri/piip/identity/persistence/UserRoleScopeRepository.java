@@ -40,6 +40,18 @@ public interface UserRoleScopeRepository extends JpaRepository<UserRoleScopeEnti
             @Param("institutionId") Long institutionId, @Param("unitId") Long unitId, @Param("now") Instant now);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"user", "role", "institution", "executingUnit"})
+    @Query("select scope from UserRoleScopeEntity scope where scope.user.id = :userId and scope.role.id = :roleId and scope.institution.id = :institutionId "
+        + "and ((:unitId is null and scope.executingUnit is null) or (:unitId is not null and scope.executingUnit.id = :unitId)) "
+        + "and scope.active = false and scope.validUntil is not null order by scope.validUntil desc, scope.id desc")
+    List<UserRoleScopeEntity> findSuspendedExactForUpdate(@Param("userId") Long userId, @Param("roleId") Long roleId,
+            @Param("institutionId") Long institutionId, @Param("unitId") Long unitId);
+
+    default Optional<UserRoleScopeEntity> findLatestSuspendedExactForUpdate(Long userId, Long roleId, Long institutionId, Long unitId) {
+        return findSuspendedExactForUpdate(userId, roleId, institutionId, unitId).stream().findFirst();
+    }
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"role", "institution", "executingUnit"})
     @Query("select scope from UserRoleScopeEntity scope where scope.user.id = :userId and scope.active = true and scope.validFrom <= :now and (scope.validUntil is null or scope.validUntil > :now)")
     List<UserRoleScopeEntity> findCurrentScopesByUserForUpdate(@Param("userId") Long userId, @Param("now") Instant now);

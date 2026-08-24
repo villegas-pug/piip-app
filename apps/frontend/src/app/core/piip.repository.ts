@@ -4,7 +4,8 @@ import {
   DocumentDossierSummary, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput, InitiativeUpdateInput,
   InitiativeRecord, InitiativeStatusTransitionInput, NotificationItem, OrganizationalUnit, PiipPortfolioRecord,
   PreexistingProjectInput, ProjectDetail, ProjectRecord, ProjectStatusTransitionInput, ProjectUpdateInput, PiipRecordType, UserRole, WorkItem,
-  HomePortfolioQuery, HomePortfolioResult, CatalogBundle, ResourceState,
+  HomePortfolioQuery, HomePortfolioResult, CatalogBundle, ResourceState, AssignmentMutationInput, AssignmentMutationResult,
+  UserAdministrationSnapshot,
 } from './piip.models';
 
 export type RepositoryOperation<T> = T | Promise<T>;
@@ -42,6 +43,11 @@ export abstract class PiipRepository {
   abstract reloadCatalogs(): RepositoryOperation<void>;
   abstract reloadOrganizationalUnits(): RepositoryOperation<void>;
   abstract loadAdministrableScopes(): RepositoryOperation<void>;
+  abstract loadUserAdministration(): RepositoryOperation<UserAdministrationSnapshot>;
+  abstract assignUserRole(input: AssignmentMutationInput): RepositoryOperation<AssignmentMutationResult>;
+  abstract updateUserAssignment(scopeId: number, version: number, input: AssignmentMutationInput): RepositoryOperation<AssignmentMutationResult>;
+  abstract suspendUserAssignment(scopeId: number, version: number): RepositoryOperation<AssignmentMutationResult>;
+  abstract reactivateUserAssignment(scopeId: number, version: number): RepositoryOperation<AssignmentMutationResult>;
   abstract clearError(): void;
   abstract canReadExecutingUnit(executingUnitId: number | null | undefined): boolean;
   abstract canAdministerExecutingUnit(executingUnitId: number | null | undefined): boolean;

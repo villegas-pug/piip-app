@@ -1,0 +1,351 @@
+openapi: 3.1.0
+info:
+  title: PIIP - Consolidación de asignaciones de usuarios
+  version: 0.1.0-design
+  description: >-
+    Contrato de diseño para administración local de asignaciones. Keycloak
+    autentica, pero no forma parte de las mutaciones definidas aquí.
+paths:
+  /api/v1/admin/users:
+    get:
+      operationId: users
+      summary: Lista usuarios y asignaciones dentro de instituciones administrables
+      responses:
+        '200':
+          description: Usuarios y asignaciones visibles
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/UserResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/admin/users/administrable-scopes:
+    get:
+      operationId: administrableScopes
+      summary: Lista instituciones y UEs administrables vigentes
+      responses:
+        '200':
+          description: Ámbitos disponibles para los formularios administrativos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdministrableScopeResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/admin/role-assignments:
+    post:
+      operationId: assign
+      summary: Crea una asignación o reactiva la coincidencia suspendida más reciente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoleAssignmentRequest' }
+      responses:
+        '201':
+          description: Asignación nueva creada y auditada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScopeResponse' }
+        '200':
+          description: Coincidencia suspendida existente reactivada y auditada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScopeResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /api/v1/admin/role-assignments/{scopeId}:
+    parameters:
+      - $ref: '#/components/parameters/ScopeId'
+      - $ref: '#/components/parameters/ExpectedVersion'
+    put:
+      operationId: update
+      summary: Edita rol, institución y UE de la misma asignación activa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoleAssignmentUpdateRequest' }
+      responses:
+        '200':
+          description: Asignación actualizada y auditada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScopeResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    delete:
+      operationId: suspend
+      summary: Suspende de forma reversible una asignación activa
+      responses:
+        '204':
+          description: Asignación suspendida y auditada; sin cuerpo
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /api/v1/admin/role-assignments/{scopeId}/reactivation:
+    parameters:
+      - $ref: '#/components/parameters/ScopeId'
+      - $ref: '#/components/parameters/ExpectedVersion'
+    put:
+      operationId: reactivate
+      summary: Reactiva una asignación suspendida
+      responses:
+        '200':
+          description: Asignación reactivada y auditada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScopeResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /api/v1/identity/me:
+    get:
+      operationId: me
+      summary: Reobtiene la identidad funcional y grants vigentes del actor
+      responses:
+        '200':
+          description: Contexto funcional vigente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CurrentUserResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/v1/audit/accesses:
+    get:
+      operationId: accesses
+      summary: Lista accesos HTTP auditados, incluido el motivo seguro de rechazos
+      parameters:
+        - name: executingUnitId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Accesos visibles dentro del ámbito autorizado
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AccessAuditResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+components:
+  parameters:
+    ScopeId:
+      name: scopeId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ExpectedVersion:
+      name: version
+      in: query
+      required: true
+      schema:
+        type: integer
+        format: int64
+  schemas:
+    RoleCode:
+      type: string
+      enum: [ADMINISTRADOR_PIIP, CONSULTA_EXTERNA]
+    RoleAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [userSubject, role, institutionId]
+      properties:
+        userSubject: { type: string, minLength: 1 }
+        role: { $ref: '#/components/schemas/RoleCode' }
+        institutionId: { type: integer, format: int64 }
+        executingUnitId: { type: [integer, 'null'], format: int64 }
+    RoleAssignmentUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [role, institutionId]
+      properties:
+        role: { $ref: '#/components/schemas/RoleCode' }
+        institutionId: { type: integer, format: int64 }
+        executingUnitId: { type: [integer, 'null'], format: int64 }
+    ScopeResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - role
+        - institutionId
+        - institution
+        - executingUnit
+        - active
+        - validFrom
+        - version
+      properties:
+        id: { type: integer, format: int64 }
+        role: { $ref: '#/components/schemas/RoleCode' }
+        institutionId: { type: integer, format: int64 }
+        institution: { type: string }
+        executingUnitId: { type: [integer, 'null'], format: int64 }
+        executingUnit: { type: string }
+        active: { type: boolean }
+        validFrom: { type: string, format: date-time }
+        validUntil: { type: [string, 'null'], format: date-time }
+        version: { type: integer, format: int64 }
+    UserResponse:
+      type: object
+      additionalProperties: false
+      required: [id, subject, fullName, email, scopes]
+      properties:
+        id: { type: integer, format: int64 }
+        subject: { type: string }
+        fullName: { type: string }
+        email: { type: string }
+        scopes:
+          type: array
+          items: { $ref: '#/components/schemas/ScopeResponse' }
+    AdministrableExecutingUnitResponse:
+      type: object
+      additionalProperties: false
+      required: [id, code, name]
+      properties:
+        id: { type: integer, format: int64 }
+        code: { type: string }
+        name: { type: string }
+    AdministrableScopeResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - institutionId
+        - institutionCode
+        - institutionName
+        - institutionWideAllowed
+        - executingUnits
+      properties:
+        institutionId: { type: integer, format: int64 }
+        institutionCode: { type: string }
+        institutionName: { type: string }
+        institutionWideAllowed: { type: boolean }
+        executingUnits:
+          type: array
+          items: { $ref: '#/components/schemas/AdministrableExecutingUnitResponse' }
+    RoleScopeResponse:
+      type: object
+      additionalProperties: false
+      required: [role, institutionId]
+      properties:
+        role: { $ref: '#/components/schemas/RoleCode' }
+        institutionId: { type: integer, format: int64 }
+        executingUnitId: { type: [integer, 'null'], format: int64 }
+    CurrentUserResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - subject
+        - fullName
+        - email
+        - roleScopes
+        - roles
+        - institutionIds
+        - executingUnitIds
+        - institutionWide
+      properties:
+        subject: { type: string }
+        fullName: { type: string }
+        email: { type: string }
+        roleScopes:
+          type: array
+          items: { $ref: '#/components/schemas/RoleScopeResponse' }
+        roles:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/RoleCode' }
+        institutionIds:
+          type: array
+          uniqueItems: true
+          items: { type: integer, format: int64 }
+        executingUnitIds:
+          type: array
+          uniqueItems: true
+          items: { type: integer, format: int64 }
+        institutionWide: { type: boolean }
+    AccessAuditResponse:
+      type: object
+      additionalProperties: false
+      required: [roles, method, path, status, correlationId, durationMs, occurredAt]
+      properties:
+        subject: { type: [string, 'null'] }
+        roles: { type: string }
+        method: { type: string }
+        path: { type: string }
+        status: { type: integer }
+        recordCode: { type: [string, 'null'] }
+        safeReason:
+          type: [string, 'null']
+          description: Código seguro; nunca contiene detail, body, token o credencial.
+        correlationId: { type: string }
+        durationMs: { type: integer, format: int64 }
+        occurredAt: { type: string, format: date-time }
+    ProblemCode:
+      type: string
+      enum:
+        - INVALID_REQUEST
+        - FORBIDDEN_SCOPE
+        - RESOURCE_NOT_FOUND
+        - STALE_VERSION
+        - ACTIVE_ASSIGNMENT_DUPLICATE
+        - SELF_ADMIN_SUSPENSION
+        - LAST_ACTIVE_ADMIN
+        - INCOMPATIBLE_ASSIGNMENT_STATE
+        - INVALID_ACTIVE_REFERENCE
+        - BUSINESS_RULE_VIOLATION
+    ProblemDetail:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, detail, problemCode]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri-reference }
+        problemCode: { $ref: '#/components/schemas/ProblemCode' }
+        field: { type: string }
+        referenceField: { type: string }
+        referenceId: { type: [integer, 'null'], format: int64 }
+        reason: { type: string }
+  responses:
+    BadRequest:
+      description: JSON, campo, tipo o valor no admitido (`INVALID_REQUEST`)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    Forbidden:
+      description: Actor sin grant administrador vigente o fuera de institución (`FORBIDDEN_SCOPE`)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    NotFound:
+      description: Usuario, asignación, rol, institución o UE inexistente (`RESOURCE_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    Conflict:
+      description: Versión desactualizada o conflicto optimista (`STALE_VERSION`)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    UnprocessableEntity:
+      description: >-
+        Duplicado activo, autosuspensión administrativa, última cobertura,
+        estado incompatible o referencia activa inválida.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }

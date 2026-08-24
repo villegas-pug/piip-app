@@ -204,6 +204,56 @@ describe('PiipHttpRepository', () => {
     expect(repository.role()).toBe('Administrador PIIP');
   });
 
+  it('carga usuarios y candidatos y mapea sus asignaciones al modelo de aplicación', async () => {
+    consumeStartup(http);
+    const loading = repository.loadUserAdministration();
+    http.expectOne('http://127.0.0.1:4001/api/v1/admin/users').flush(jsonBlob([{ id: 1, subject: 'user-1', fullName: 'Usuario 1', email: 'u1@example.pe', scopes: [scopeResponse()] }]));
+    http.expectOne('http://127.0.0.1:4001/api/v1/admin/users/assignment-candidates').flush([{ id: 2, subject: 'user-2', fullName: 'Usuario 2', email: 'u2@example.pe' }]);
+    await expect(loading).resolves.toEqual({
+      users: [expect.objectContaining({ subject: 'user-1', scopes: [expect.objectContaining({ id: 7, version: 3 })] })],
+      assignmentCandidates: [{ id: 2, subject: 'user-2', fullName: 'Usuario 2', email: 'u2@example.pe' }],
+    });
+  });
+
+  it('consume assign$Response y distingue creación 201 de auto-reactivación 200', async () => {
+    consumeStartup(http);
+    const created = repository.assignUserRole({ userSubject: 'user-1', role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 4 });
+    const request = http.expectOne('http://127.0.0.1:4001/api/v1/admin/role-assignments');
+    expect(request.request.body).toEqual({ userSubject: 'user-1', role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 4 });
+    request.flush(jsonBlob(scopeResponse()), { status: 201, statusText: 'Created' });
+    await expect(created).resolves.toMatchObject({ outcome: 'CREATED', status: 201, scope: { id: 7 } });
+
+    const reactivated = repository.assignUserRole({ userSubject: 'user-1', role: 'CONSULTA_EXTERNA', institutionId: 1 });
+    const reactivationRequest = http.expectOne('http://127.0.0.1:4001/api/v1/admin/role-assignments');
+    reactivationRequest.flush(jsonBlob(scopeResponse()), { status: 200, statusText: 'OK' });
+    await expect(reactivated).resolves.toMatchObject({ outcome: 'REACTIVATED', status: 200 });
+  });
+
+  it('valida 204 de suspensión sin inferir un cuerpo y exige ScopeResponse en reactivación', async () => {
+    consumeStartup(http);
+    const suspended = repository.suspendUserAssignment(7, 3);
+    const request = http.expectOne('http://127.0.0.1:4001/api/v1/admin/role-assignments/7?version=3');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await expect(suspended).resolves.toMatchObject({ outcome: 'SUSPENDED', status: 204 });
+
+    const reactivated = repository.reactivateUserAssignment(7, 4);
+    const reactivationRequest = http.expectOne('http://127.0.0.1:4001/api/v1/admin/role-assignments/7/reactivation?version=4');
+    reactivationRequest.flush(jsonBlob(scopeResponse()), { status: 200, statusText: 'OK' });
+    await expect(reactivated).resolves.toMatchObject({ outcome: 'REACTIVATED', scope: { id: 7 } });
+  });
+
+  it('usa problemCode para errores JSON y fallback por status para código desconocido', async () => {
+    consumeStartup(http);
+    const known = repository.assignUserRole({ userSubject: 'user-1', role: 'CONSULTA_EXTERNA', institutionId: 1 });
+    http.expectOne('http://127.0.0.1:4001/api/v1/admin/role-assignments').flush(jsonBlob({ problemCode: 'SELF_ADMIN_SUSPENSION', detail: 'detalle que no debe presentarse' }), { status: 422, statusText: 'Unprocessable Entity' });
+    await expect(known).rejects.toMatchObject({ status: 422, problemCode: 'SELF_ADMIN_SUSPENSION', message: 'No puedes suspender tu propia asignación de Administrador PIIP.' });
+
+    const unknown = repository.assignUserRole({ userSubject: 'user-1', role: 'CONSULTA_EXTERNA', institutionId: 1 });
+    http.expectOne('http://127.0.0.1:4001/api/v1/admin/role-assignments').flush(jsonBlob({ problemCode: 'NEW_CODE', detail: 'detalle no estable' }), { status: 409, statusText: 'Conflict' });
+    await expect(unknown).rejects.toMatchObject({ status: 409, problemCode: 'NEW_CODE', message: 'detalle no estable' });
+  });
+
   it('envía la UE por ID, filtra activo/pertenencia y descarta la respuesta tardía', async () => {
     http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush(
       { detail: 'Fin de preparación', status: 403 },
@@ -443,3 +493,26 @@ describe('PiipHttpRepository', () => {
     expect(repository.notificationsError()).toBe('Notificaciones no disponibles');
   });
 });
+
+function scopeResponse(): Record<string, unknown> {
+  return {
+    id: 7,
+    role: 'CONSULTA_EXTERNA',
+    institutionId: 1,
+    institution: 'Institución 1',
+    executingUnitId: 4,
+    executingUnit: 'UE-004',
+    active: true,
+    version: 3,
+    validFrom: '2026-08-23T10:00:00Z',
+    validUntil: null,
+  };
+}
+
+function consumeStartup(http: HttpTestingController): void {
+  http.expectOne('http://127.0.0.1:4001/api/v1/identity/me').flush({ detail: 'Fin de preparación', status: 403 }, { status: 403, statusText: 'Forbidden' });
+}
+
+function jsonBlob(value: unknown): Blob {
+  return new Blob([JSON.stringify(value)], { type: 'application/json' });
+}

@@ -58,5 +58,5 @@
 - Ningún especialista ejecuta pruebas, builds, generación OpenAPI, integración Oracle ni acciones destructivas sin autorización explícita del usuario en el turno actual.
 
 <!-- SPECKIT START -->
-Para la feature activa, leer `specs/013-actualizar-registros-portafolio/plan.md` antes de planificar o implementar.
+Para la feature activa, leer `specs/014-consolidar-asignaciones-usuarios/plan.md` antes de planificar o implementar.
 <!-- SPECKIT END -->

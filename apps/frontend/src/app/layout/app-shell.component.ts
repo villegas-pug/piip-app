@@ -8,6 +8,7 @@ import { filter } from 'rxjs';
 import { PIIP_REPOSITORY } from '../core/piip-repository.token';
 import { PiipAuthService } from '../core/piip-auth.service';
 import { PiipActivityService } from '../core/piip-activity.service';
+import { AuthorizationRecoveryService } from '../core/authorization-recovery.service';
 
 interface NavigationItem {
   label: string;
@@ -30,6 +31,7 @@ export class AppShellComponent {
   readonly activity = inject(PiipActivityService);
   readonly auth = inject(PiipAuthService);
   readonly repository = inject(PIIP_REPOSITORY);
+  readonly authorizationRecovery = inject(AuthorizationRecoveryService);
   readonly currentUrl = signal(this.router.url);
   readonly isHomeRoute = computed(() => this.currentUrl().split(/[?#]/, 1)[0] === '/inicio');
   readonly notificationPending = signal(false);
@@ -71,6 +73,7 @@ export class AppShellComponent {
   });
 
   constructor() {
+    this.authorizationRecovery.setRetryHandler(() => Promise.resolve(this.repository.initialize()));
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd), takeUntilDestroyed(this.destroyRef))
       .subscribe((event) => this.currentUrl.set(event.urlAfterRedirects));
@@ -93,6 +96,10 @@ export class AppShellComponent {
     } finally {
       this.notificationPending.set(false);
     }
+  }
+
+  async retryAuthorizationRecovery(): Promise<void> {
+    await this.authorizationRecovery.retry();
   }
 
   toggleRole(): void {

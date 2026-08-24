@@ -125,7 +125,7 @@ describe('PortfolioRecordEditComponent', () => {
     let observerCallback: IntersectionObserverCallback | undefined;
     const disconnect = vi.fn();
     const observe = vi.fn();
-    vi.stubGlobal('IntersectionObserver', vi.fn((callback: IntersectionObserverCallback) => {
+    vi.stubGlobal('IntersectionObserver', vi.fn(function (callback: IntersectionObserverCallback) {
       observerCallback = callback;
       return { disconnect, observe, unobserve: vi.fn() } as unknown as IntersectionObserver;
     }));
@@ -158,7 +158,7 @@ describe('PortfolioRecordEditComponent', () => {
 
   it('mantiene el destino de un clic lejano mientras el scroll suave atraviesa otras secciones', async () => {
     let observerCallback: IntersectionObserverCallback | undefined;
-    vi.stubGlobal('IntersectionObserver', vi.fn((callback: IntersectionObserverCallback) => {
+    vi.stubGlobal('IntersectionObserver', vi.fn(function (callback: IntersectionObserverCallback) {
       observerCallback = callback;
       return { disconnect: vi.fn(), observe: vi.fn(), unobserve: vi.fn() } as unknown as IntersectionObserver;
     }));
@@ -214,7 +214,7 @@ describe('PortfolioRecordEditComponent', () => {
 
   it('retoma el scroll manual después de completar la navegación programática', async () => {
     let observerCallback: IntersectionObserverCallback | undefined;
-    vi.stubGlobal('IntersectionObserver', vi.fn((callback: IntersectionObserverCallback) => {
+    vi.stubGlobal('IntersectionObserver', vi.fn(function (callback: IntersectionObserverCallback) {
       observerCallback = callback;
       return { disconnect: vi.fn(), observe: vi.fn(), unobserve: vi.fn() } as unknown as IntersectionObserver;
     }));
@@ -344,6 +344,12 @@ describe('PortfolioRecordEditComponent', () => {
   it('muestra el nombre de la Unidad Ejecutora sin sustituirlo por su identificador', async () => {
     const executingUnit = 'Programa de Desarrollo Productivo Agrario Rural — AGRO RURAL';
     const { component, fixture } = await setup('Iniciativa', 'I-024-2026', (repository) => {
+      repository.executingUnits.update((units) => [...units, { id: 987, code: 'UE-987', name: executingUnit, institutionId: 1 }]);
+      repository.currentUser.update((user) => user ? {
+        ...user,
+        executingUnitIds: [...user.executingUnitIds, 987],
+        roleScopes: [...user.roleScopes, { role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 987 }],
+      } : user);
       repository.portfolioRecords.update((records) => records.map((record) => record.code === 'I-024-2026'
         ? { ...record, executingUnitId: 987, executingUnit }
         : record));

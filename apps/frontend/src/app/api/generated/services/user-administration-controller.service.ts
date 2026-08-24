@@ -120,6 +120,10 @@ export class UserAdministrationControllerService extends BaseService {
   static readonly AssignPath = '/admin/role-assignments';
 
   /**
+   * Crea una asignación o reactiva una coincidencia suspendida.
+   *
+   *
+   *
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `assign()` instead.
    *
@@ -131,6 +135,10 @@ export class UserAdministrationControllerService extends BaseService {
   }
 
   /**
+   * Crea una asignación o reactiva una coincidencia suspendida.
+   *
+   *
+   *
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `assign$Response()` instead.
    *

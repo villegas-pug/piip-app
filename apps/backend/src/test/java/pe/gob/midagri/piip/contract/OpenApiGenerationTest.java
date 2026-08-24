@@ -48,11 +48,33 @@ class OpenApiGenerationTest {
             .contains("InitiativeStatusTransitionRequest", "ProjectStatusTransitionRequest")
             .contains("\"/initiatives/{code}/status-transitions\"", "\"/projects/{code}/status-transitions\"");
         JsonNode document = new ObjectMapper().readTree(response.body());
+        assertProblemDetailContract(document);
+        assertAssignmentMutationContract(document);
         assertPatchContract(document, "/initiatives/{code}", "InitiativeUpdateRequest");
         assertPatchContract(document, "/projects/{code}", "ProjectUpdateRequest");
         Path output = Path.of("target", "piip-openapi.json");
         Files.createDirectories(output.getParent());
         Files.writeString(output, response.body(), StandardCharsets.UTF_8);
+    }
+
+    private static void assertProblemDetailContract(JsonNode document) {
+        JsonNode schema = document.path("components").path("schemas").path("ProblemDetail");
+        assertThat(schema.path("required").toString()).contains("problemCode");
+        assertThat(schema.path("properties").path("problemCode").path("enum").toString())
+            .contains("INVALID_REQUEST", "FORBIDDEN_SCOPE", "RESOURCE_NOT_FOUND", "STALE_VERSION",
+                "ACTIVE_ASSIGNMENT_DUPLICATE", "SELF_ADMIN_SUSPENSION", "LAST_ACTIVE_ADMIN",
+                "INCOMPATIBLE_ASSIGNMENT_STATE", "INVALID_ACTIVE_REFERENCE", "BUSINESS_RULE_VIOLATION");
+    }
+
+    private static void assertAssignmentMutationContract(JsonNode document) {
+        JsonNode paths = document.path("paths");
+        JsonNode assign = paths.path("/admin/role-assignments").path("post");
+        assertThat(assign.path("responses").has("200")).isTrue();
+        assertThat(assign.path("responses").has("201")).isTrue();
+        assertThat(paths.path("/admin/role-assignments/{scopeId}").path("delete").path("responses").has("204")).isTrue();
+        assertThat(paths.path("/admin/role-assignments/{scopeId}/reactivation").path("put").path("responses").has("200")).isTrue();
+        assertThat(document.path("components").path("schemas").path("AccessResponse")
+            .path("properties").path("safeReason").isObject()).isTrue();
     }
 
     private static void assertPatchContract(JsonNode document, String path, String requestSchema) {

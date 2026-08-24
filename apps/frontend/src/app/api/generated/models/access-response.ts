@@ -9,6 +9,11 @@ export interface AccessResponse {
   path?: string;
   recordCode?: string;
   roles?: string;
+
+  /**
+   * Motivo seguro del rechazo, sin detalle HTTP
+   */
+  safeReason?: string;
   status?: number;
   subject?: string;
 }

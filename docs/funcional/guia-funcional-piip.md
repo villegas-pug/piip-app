@@ -176,11 +176,13 @@ Una asignación identifica a una persona local, un rol, una institución y, opci
 
 El administrador puede crear una primera asignación para una persona que ya se autenticó al menos una vez en PIIP y por ello tiene un usuario local. No consulta ni crea usuarios en el directorio Keycloak. La combinación vigente exacta de persona, rol, institución y ámbito no puede duplicarse; el backend además protege la operación ante concurrencia.
 
-Editar modifica la misma asignación: conserva su identidad y permite cambiar rol, institución o UE dentro de la cobertura institucional administrable. La actualización exige una versión esperada para evitar que un cambio desactualizado sobrescriba otro y deja evidencia de los valores antes y después.
+Editar modifica la misma asignación: conserva su identidad y permite cambiar rol, institución o UE dentro de la cobertura institucional administrable. La actualización exige una versión esperada para evitar que un cambio desactualizado sobrescriba otro y deja evidencia de los valores antes y después. Tras una mutación propia, la interfaz vuelve a obtener identidad, ámbitos y UEs; si no puede confirmar la UE original, limpia Administración y navega a Inicio.
 
 ### Suspender y reactivar
 
-Retirar una asignación es una suspensión reversible, no una eliminación de la evidencia. Una asignación suspendida puede reactivarse si no genera duplicidad. El sistema protege que no se suspenda ni se cambie la última asignación de `Administrador PIIP` que mantiene la cobertura requerida de un ámbito.
+Retirar una asignación es una suspensión reversible, no una eliminación de la evidencia. Una asignación suspendida puede reactivarse si no genera duplicidad y la respuesta devuelve la asignación confirmada. Una persona puede suspender su propia asignación `CONSULTA_EXTERNA` si conserva otro grant administrativo, pero la propia asignación `ADMINISTRADOR_PIIP` permanece visible y no ejecutable. El sistema protege que no se suspenda ni se cambie la última asignación de `Administrador PIIP` que mantiene la cobertura requerida de un ámbito.
+
+Las mutaciones distinguen errores mediante `problemCode` estable (`STALE_VERSION`, `FORBIDDEN_SCOPE`, `ACTIVE_ASSIGNMENT_DUPLICATE`, `SELF_ADMIN_SUSPENSION`, `LAST_ACTIVE_ADMIN`, `INCOMPATIBLE_ASSIGNMENT_STATE`, `INVALID_ACTIVE_REFERENCE`, entre otros). Los accesos rechazados pueden mostrar en Auditoría un `safeReason` nullable; no se persisten tokens, cuerpos HTTP ni el detalle libre del error.
 
 ### Límites frente a Keycloak
 

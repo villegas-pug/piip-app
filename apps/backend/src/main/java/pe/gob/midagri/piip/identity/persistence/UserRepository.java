@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
     Optional<UserEntity> findByKeycloakSubject(String subject);
@@ -25,4 +26,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select user from UserEntity user where user.id = :id")
     Optional<UserEntity> findByIdForUpdate(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select user from UserEntity user where user.id in :ids order by user.id asc")
+    List<UserEntity> findAllByIdForUpdate(@Param("ids") Collection<Long> ids);
 }

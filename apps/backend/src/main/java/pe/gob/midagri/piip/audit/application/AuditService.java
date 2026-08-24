@@ -21,8 +21,13 @@ public class AuditService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void access(String subject, String roles, String method, String path, int status, String recordCode, String ip, String correlationId, long durationMs) {
+        access(subject, roles, method, path, status, recordCode, ip, correlationId, durationMs, null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void access(String subject, String roles, String method, String path, int status, String recordCode, String ip, String correlationId, long durationMs, String safeReason) {
         UserEntity user = subject == null ? null : users.findByKeycloakSubject(subject).orElse(null);
-        accesses.save(new AccessAuditEntity(user, subject, roles, method, path, status, recordCode, ip, correlationId, durationMs));
+        accesses.save(new AccessAuditEntity(user, subject, roles, method, path, status, recordCode, ip, correlationId, durationMs, safeReason));
     }
 
     @Transactional

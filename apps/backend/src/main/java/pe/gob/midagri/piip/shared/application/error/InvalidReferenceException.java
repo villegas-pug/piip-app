@@ -6,7 +6,7 @@ public class InvalidReferenceException extends BusinessRuleException {
     private final String reason;
 
     public InvalidReferenceException(String message, String referenceField, Long referenceId, String reason) {
-        super(message);
+        super(ProblemCode.INVALID_ACTIVE_REFERENCE, message);
         this.referenceField = referenceField;
         this.referenceId = referenceId;
         this.reason = reason;

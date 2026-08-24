@@ -26,6 +26,8 @@ import {
   WorkItem,
   HomePortfolioQuery, HomePortfolioResult, HomePortfolioItem, HomePortfolioStatusCount, NotificationItem, PiipStatus,
   CatalogBundle, OrganizationalUnit, ResourceState,
+  AssignmentMutationInput, AssignmentMutationResult, UserAdministrationSnapshot,
+  UserAdministrationUser, UserAssignmentCandidate, UserAssignmentScope,
 } from './piip.models';
 import { PiipRepository } from './piip.repository';
 
@@ -62,6 +64,27 @@ export class PiipMockRepository extends PiipRepository {
   readonly lastError = signal<string | null>(null);
   readonly documentDossierSummaries = signal<DocumentDossierSummary[]>([]);
   readonly auditAccesses = signal<AuditAccess[]>([]);
+  readonly userAdministrationUsers = signal<UserAdministrationUser[]>([
+    {
+      id: 1,
+      subject: 'demo-admin',
+      fullName: 'Administrador PIIP',
+      email: 'admin.piip@midagri.gob.pe',
+      scopes: [{
+        id: 1,
+        role: 'ADMINISTRADOR_PIIP',
+        institutionId: 1,
+        institution: 'Institución de demostración',
+        executingUnitId: 1,
+        executingUnit: 'Unidad Ejecutora de demostración',
+        active: true,
+        version: 0,
+      }],
+    },
+  ]);
+  readonly assignmentCandidates = signal<UserAssignmentCandidate[]>([
+    { id: 2, subject: 'demo-consulta', fullName: 'Usuario de consulta', email: 'consulta.piip@midagri.gob.pe' },
+  ]);
   readonly notifications = signal<NotificationItem[]>([
     { id: 1, type: 'Nueva iniciativa registrada', message: 'Se ha registrado una iniciativa para revisión.', read: false, createdAt: new Date().toISOString() },
     { id: 2, type: 'Proyecto actualizado', message: 'El proyecto de demostración cambió de estado.', read: false, createdAt: new Date(Date.now() - 3600000).toISOString() },
@@ -284,6 +307,65 @@ export class PiipMockRepository extends PiipRepository {
   reloadCatalogs(): void {}
   reloadOrganizationalUnits(): void {}
   loadAdministrableScopes(): void {}
+  async loadUserAdministration(): Promise<UserAdministrationSnapshot> {
+    return { users: this.userAdministrationUsers(), assignmentCandidates: this.assignmentCandidates() };
+  }
+  async assignUserRole(input: AssignmentMutationInput): Promise<AssignmentMutationResult> {
+    const subject = input.userSubject ?? '';
+    const candidate = this.assignmentCandidates().find((item) => item.subject === subject);
+    if (!candidate) throw mockRepositoryError(404, 'El usuario seleccionado no está disponible.');
+    const existingUser = this.userAdministrationUsers().find((item) => item.subject === subject);
+    const existingScope = existingUser?.scopes.find((scope) => scope.institutionId === input.institutionId && scope.executingUnitId === input.executingUnitId);
+    const scope: UserAssignmentScope = existingScope
+      ? { ...existingScope, role: input.role, active: true, version: existingScope.version + 1 }
+      : {
+        id: Math.max(0, ...this.userAdministrationUsers().flatMap((item) => item.scopes.map((scopeItem) => scopeItem.id))) + 1,
+        role: input.role,
+        institutionId: input.institutionId,
+        institution: this.administrableScopes().find((item) => item.institutionId === input.institutionId)?.institutionName ?? 'Institución de demostración',
+        executingUnitId: input.executingUnitId,
+        executingUnit: this.executingUnits().find((item) => item.id === input.executingUnitId)?.name,
+        active: true,
+        version: 0,
+      };
+    const user = existingUser ?? { id: candidate.id, subject: candidate.subject, fullName: candidate.fullName, email: candidate.email, scopes: [] };
+    this.userAdministrationUsers.update((items) => [
+      { ...user, scopes: [...user.scopes.filter((item) => item.id !== scope.id), scope] },
+      ...items.filter((item) => item.subject !== subject),
+    ]);
+    this.assignmentCandidates.update((items) => items.filter((item) => item.subject !== subject));
+    return { outcome: existingScope ? 'REACTIVATED' : 'CREATED', status: existingScope ? 200 : 201, scope };
+  }
+  async updateUserAssignment(scopeId: number, version: number, input: AssignmentMutationInput): Promise<AssignmentMutationResult> {
+    const current = this.findMockScope(scopeId, version);
+    const scope: UserAssignmentScope = { ...current, role: input.role, institutionId: input.institutionId, executingUnitId: input.executingUnitId, version: current.version + 1 };
+    this.replaceMockScope(scopeId, scope);
+    return { outcome: 'UPDATED', status: 200, scope };
+  }
+  async suspendUserAssignment(scopeId: number, version: number): Promise<AssignmentMutationResult> {
+    const current = this.findMockScope(scopeId, version);
+    const scope = { ...current, active: false, version: current.version + 1 };
+    this.replaceMockScope(scopeId, scope);
+    return { outcome: 'SUSPENDED', status: 204, scope };
+  }
+  async reactivateUserAssignment(scopeId: number, version: number): Promise<AssignmentMutationResult> {
+    const current = this.findMockScope(scopeId, version);
+    const scope = { ...current, active: true, version: current.version + 1 };
+    this.replaceMockScope(scopeId, scope);
+    return { outcome: 'REACTIVATED', status: 200, scope };
+  }
+  private findMockScope(scopeId: number, version: number): UserAssignmentScope {
+    const scope = this.userAdministrationUsers().flatMap((item) => item.scopes).find((item) => item.id === scopeId);
+    if (!scope) throw mockRepositoryError(404, 'La asignación no existe.');
+    if (scope.version !== version) throw mockRepositoryError(409, 'La asignación cambió.');
+    return scope;
+  }
+  private replaceMockScope(scopeId: number, replacement: UserAssignmentScope): void {
+    this.userAdministrationUsers.update((items) => items.map((item) => ({
+      ...item,
+      scopes: item.scopes.map((scope) => scope.id === scopeId ? replacement : scope),
+    })));
+  }
   clearError(): void { this.lastError.set(null); }
   canReadExecutingUnit(executingUnitId: number | null | undefined): boolean { return this.hasGrantForExecutingUnit(executingUnitId); }
   canAdministerExecutingUnit(executingUnitId: number | null | undefined): boolean { return this.hasGrantForExecutingUnit(executingUnitId, 'ADMINISTRADOR_PIIP'); }

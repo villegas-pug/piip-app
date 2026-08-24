@@ -8,6 +8,8 @@ import {
   PiipPortfolioRecord, PiipRecordType, PreexistingProjectInput, ProjectDetail, ProjectRecord,
   ProjectStatusTransitionInput, ProjectUpdateInput, UserRole, UserRoleCode, WorkItem, HomePortfolioQuery, HomePortfolioResult,
   HomePortfolioItem, HomePortfolioStatusCount, PiipStatus, CatalogBundle, PersistentCatalogOption,
+  AssignmentMutationInput, AssignmentMutationResult, AssignmentRole, UserAdministrationSnapshot,
+  UserAdministrationUser, UserAssignmentCandidate, UserAssignmentScope,
   TechnicalCatalogOption,
 } from './piip.models';
 import { CatalogControllerService, CurrentUserResponse, DashboardControllerService, DocumentControllerService, EventResponse, PortfolioControllerService, UserAdministrationControllerService } from '../api/generated';
@@ -88,10 +90,11 @@ interface ApiProblem {
   title?: string;
   detail?: string;
   status?: number;
+  problemCode?: string;
 }
 
 export class PiipApiError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(readonly status: number, message: string, readonly problemCode?: string) {
     super(message);
     this.name = 'PiipApiError';
   }
@@ -240,6 +243,60 @@ export class PiipHttpRepository extends PiipRepository {
           }]
         : [],
     ));
+  }
+
+  async loadUserAdministration(): Promise<UserAdministrationSnapshot> {
+    const [usersResponse, candidatesResponse] = await Promise.all([
+      this.request(this.userAdministration.users()),
+      this.request(this.userAdministration.assignmentCandidates()),
+    ]);
+    const users = await readGeneratedList(usersResponse);
+    const assignmentCandidates = await readGeneratedList(candidatesResponse);
+    return {
+      users: users.flatMap(mapAdministrationUser),
+      assignmentCandidates: assignmentCandidates.flatMap(mapAssignmentCandidate),
+    };
+  }
+
+  async assignUserRole(input: AssignmentMutationInput): Promise<AssignmentMutationResult> {
+    const response = await this.request(this.userAdministration.assign$Response({
+      body: {
+        userSubject: input.userSubject ?? '',
+        role: input.role,
+        institutionId: input.institutionId,
+        executingUnitId: input.executingUnitId,
+      },
+    }));
+    return this.mapMutationResponse(response, response.status === 201 ? 'CREATED' : 'REACTIVATED', [200, 201]);
+  }
+
+  async updateUserAssignment(scopeId: number, version: number, input: AssignmentMutationInput): Promise<AssignmentMutationResult> {
+    const response = await this.request(this.userAdministration.update$Response({
+      scopeId,
+      version,
+      body: { role: input.role, institutionId: input.institutionId, executingUnitId: input.executingUnitId },
+    }));
+    return this.mapMutationResponse(response, 'UPDATED', [200]);
+  }
+
+  async suspendUserAssignment(scopeId: number, version: number): Promise<AssignmentMutationResult> {
+    const response = await this.request(this.userAdministration.suspend$Response({ scopeId, version }));
+    if (response.status !== 204) throw new PiipApiError(response.status, 'La suspensión devolvió un estado HTTP inesperado.');
+    return { outcome: 'SUSPENDED', status: response.status };
+  }
+
+  async reactivateUserAssignment(scopeId: number, version: number): Promise<AssignmentMutationResult> {
+    const response = await this.request(this.userAdministration.reactivate$Response({ scopeId, version }));
+    return this.mapMutationResponse(response, 'REACTIVATED', [200]);
+  }
+
+  private async mapMutationResponse(response: { status: number; body: unknown }, outcome: AssignmentMutationResult['outcome'], statuses: number[]): Promise<AssignmentMutationResult> {
+    if (!statuses.includes(response.status)) throw new PiipApiError(response.status, 'La API devolvió un estado HTTP inesperado.');
+    const body = await readGeneratedBody(response.body);
+    if (!body || typeof body !== 'object') throw new PiipApiError(response.status, 'La API no devolvió la asignación confirmada.');
+    const scope = mapScope(body);
+    if (!scope) throw new PiipApiError(response.status, 'La API no devolvió una asignación confirmada válida.');
+    return { outcome, status: response.status, scope };
   }
 
   canReadExecutingUnit(executingUnitId: number | null | undefined): boolean {
@@ -814,8 +871,18 @@ export class PiipHttpRepository extends PiipRepository {
     try {
       return await firstValueFrom(request) as T;
     } catch (error) {
-      throw this.captureError(error);
+      throw await this.captureHttpError(error);
     }
+  }
+
+  private async captureHttpError(error: unknown): Promise<PiipApiError> {
+    if (!(error instanceof HttpErrorResponse) || !isBlobLike(error.error)) return this.captureError(error);
+    const text = await error.error.text();
+    let problem: ApiProblem | string = text;
+    if (text.trim()) {
+      try { problem = JSON.parse(text) as ApiProblem; } catch { /* texto no estructurado: usar fallback seguro */ }
+    }
+    return this.captureProblem(error.status, problem);
   }
 
   private captureError(error: unknown): PiipApiError {
@@ -824,17 +891,91 @@ export class PiipHttpRepository extends PiipRepository {
       return error;
     }
     if (error instanceof HttpErrorResponse) {
-      const problem = error.error as ApiProblem | string | null;
-      const detail = typeof problem === 'object' && problem?.detail ? problem.detail : undefined;
-      const message = detail ?? httpStatusMessage(error.status);
-      const apiError = new PiipApiError(error.status, message);
-      this.lastError.set(apiError.message);
-      return apiError;
+      return this.captureProblem(error.status, error.error as ApiProblem | string | null);
     }
     const apiError = new PiipApiError(0, error instanceof Error ? error.message : 'No fue posible comunicarse con el backend PIIP.');
     this.lastError.set(apiError.message);
     return apiError;
   }
+
+  private captureProblem(status: number, problem: ApiProblem | string | null): PiipApiError {
+    const detail = typeof problem === 'object' && problem?.detail ? problem.detail : typeof problem === 'string' && problem.trim() ? problem : undefined;
+    const problemCode = typeof problem === 'object' && problem?.problemCode ? problem.problemCode : undefined;
+    const message = problemCode
+      ? problemMessage(problemCode) ?? detail ?? httpStatusMessage(status)
+      : detail ?? httpStatusMessage(status);
+    const apiError = new PiipApiError(status, message, problemCode);
+    this.lastError.set(apiError.message);
+    return apiError;
+  }
+}
+
+async function readGeneratedBody<T>(body: T | Blob | null | undefined): Promise<T | undefined> {
+  if (body === null || body === undefined) return undefined;
+  if (!isBlobLike(body)) return body as T;
+  const text = await body.text();
+  if (!text.trim()) return undefined;
+  return JSON.parse(text) as T;
+}
+
+function isBlobLike(value: unknown): value is Blob {
+  return value instanceof Blob || (typeof value === 'object' && value !== null && typeof (value as { text?: unknown }).text === 'function');
+}
+
+async function readGeneratedList<T>(value: T[] | Blob): Promise<T[]> {
+  const parsed = await readGeneratedBody<T[]>(value);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function mapAdministrationUser(value: any): UserAdministrationUser[] {
+  if (!value || value.id === undefined || !value.subject) return [];
+  return [{
+    id: value.id,
+    subject: value.subject,
+    fullName: value.fullName ?? value.subject,
+    email: value.email ?? '',
+    scopes: (value.scopes ?? []).flatMap((scope: unknown) => {
+      const mapped = mapScope(scope);
+      return mapped ? [mapped] : [];
+    }),
+  }];
+}
+
+function mapAssignmentCandidate(value: any): UserAssignmentCandidate[] {
+  if (!value || value.id === undefined || !value.subject) return [];
+  return [{ id: value.id, subject: value.subject, fullName: value.fullName ?? value.subject, email: value.email ?? '' }];
+}
+
+function mapScope(value: any): UserAssignmentScope | undefined {
+  if (!value || value.id === undefined || !value.role || value.institutionId === undefined || value.version === undefined) return undefined;
+  return {
+    id: value.id,
+    role: value.role,
+    institutionId: value.institutionId,
+    institution: value.institution ?? 'Institución no disponible',
+    executingUnitId: value.executingUnitId ?? undefined,
+    executingUnit: value.executingUnit ?? 'Toda la institución',
+    active: value.active === true,
+    validFrom: value.validFrom,
+    validUntil: value.validUntil,
+    version: value.version,
+  };
+}
+
+function problemMessage(problemCode: string): string | undefined {
+  const messages: Record<string, string> = {
+    INVALID_REQUEST: 'La solicitud no cumple el contrato esperado.',
+    FORBIDDEN_SCOPE: 'No tienes autorización sobre el ámbito solicitado.',
+    RESOURCE_NOT_FOUND: 'La asignación o el usuario indicado no existe.',
+    STALE_VERSION: 'La información cambió. Actualiza la pantalla antes de volver a intentarlo.',
+    ACTIVE_ASSIGNMENT_DUPLICATE: 'El usuario ya cuenta con una asignación activa igual.',
+    SELF_ADMIN_SUSPENSION: 'No puedes suspender tu propia asignación de Administrador PIIP.',
+    LAST_ACTIVE_ADMIN: 'La operación dejaría una Unidad Ejecutora sin administrador activo.',
+    INCOMPATIBLE_ASSIGNMENT_STATE: 'La asignación no se encuentra en un estado compatible con la operación.',
+    INVALID_ACTIVE_REFERENCE: 'La referencia de institución o Unidad Ejecutora ya no está activa.',
+    BUSINESS_RULE_VIOLATION: 'La operación no cumple una regla de negocio.',
+  };
+  return messages[problemCode];
 }
 
 export function resolveApiUrl(): string {

@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import pe.gob.midagri.piip.audit.application.AuditService;
+import pe.gob.midagri.piip.shared.api.ApiExceptionHandler;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -37,7 +38,9 @@ public class AccessAuditFilter extends OncePerRequestFilter {
             String subject = authentication == null || !authentication.isAuthenticated() ? null : authentication.getName();
             String roles = authentication == null ? "" : authentication.getAuthorities().toString();
             try {
-                audit.access(subject, roles, request.getMethod(), normalize(request.getRequestURI()), response.getStatus(), extractRecordCode(request.getRequestURI()), clientIp(request), correlationId, (System.nanoTime() - start) / 1_000_000);
+                String safeReason = (String) request.getAttribute(ApiExceptionHandler.SAFE_REASON_ATTRIBUTE);
+                if (safeReason == null && response.getStatus() >= 400) safeReason = fallbackReason(response.getStatus());
+                audit.access(subject, roles, request.getMethod(), normalize(request.getRequestURI()), response.getStatus(), extractRecordCode(request.getRequestURI()), clientIp(request), correlationId, (System.nanoTime() - start) / 1_000_000, safeReason);
             } catch (RuntimeException exception) {
                 LOGGER.error("No se pudo persistir AUDITORIA_ACCESO para {}", correlationId, exception);
             }
@@ -47,4 +50,7 @@ public class AccessAuditFilter extends OncePerRequestFilter {
     private String normalize(String uri) { return uri.replaceAll("/(I|P)-\\d{3}-\\d{4}", "/{code}").replaceAll("/\\d+", "/{id}"); }
     private String extractRecordCode(String uri) { var match = java.util.regex.Pattern.compile("(?:I|P)-\\d{3}-\\d{4}", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(uri); return match.find() ? match.group().toUpperCase() : null; }
     private String clientIp(HttpServletRequest request) { String forwarded = request.getHeader("X-Forwarded-For"); return forwarded == null ? request.getRemoteAddr() : forwarded.split(",")[0].trim(); }
+    private String fallbackReason(int status) {
+        return switch (status) { case 400 -> "INVALID_REQUEST"; case 403 -> "FORBIDDEN_SCOPE"; case 404 -> "RESOURCE_NOT_FOUND"; case 409 -> "STALE_VERSION"; default -> "BUSINESS_RULE_VIOLATION"; };
+    }
 }

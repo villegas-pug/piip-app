@@ -22,6 +22,7 @@ public class AuditEventEntity {
         this.eventType = eventType; this.entityType = entityType; this.entityCode = entityCode; this.detailJson = detailJson; this.user = user; this.actorSubject = actorSubject;
     }
     public String getEventType() { return eventType; }
+    public String getEntityType() { return entityType; }
     public String getEntityCode() { return entityCode; }
     public String getDetailJson() { return detailJson; }
     public UserEntity getUser() { return user; }

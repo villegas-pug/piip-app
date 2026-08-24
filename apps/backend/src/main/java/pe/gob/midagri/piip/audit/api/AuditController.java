@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.media.Schema;
 import pe.gob.midagri.piip.audit.application.AuditQueryService;
 import pe.gob.midagri.piip.audit.application.AuditReadModels;
 
@@ -21,7 +22,7 @@ public class AuditController {
     public List<AccessResponse> accesses(@RequestParam(value = "executingUnitId", required = false) Long executingUnitId) {
         return service.accesses(executingUnitId).stream()
             .map(value -> new AccessResponse(value.subject(), value.roles(), value.method(), value.path(), value.status(),
-                value.recordCode(), value.correlationId(), value.durationMs(), value.occurredAt())).toList();
+                value.recordCode(), value.correlationId(), value.durationMs(), value.safeReason(), value.occurredAt())).toList();
     }
 
     @GetMapping(value = "/events", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -35,7 +36,9 @@ public class AuditController {
     }
 
     public record AccessResponse(String subject, String roles, String method, String path, int status,
-            String recordCode, String correlationId, long durationMs, Instant occurredAt) {}
+            String recordCode, String correlationId, long durationMs,
+            @Schema(nullable = true, description = "Motivo seguro del rechazo, sin detalle HTTP") String safeReason,
+            Instant occurredAt) {}
     public record EventResponse(String event, String entityCode, String detail, String actor, String actorName,
             String actorEmail, Instant occurredAt) {}
 }

@@ -39,6 +39,7 @@ export class AuditComponent {
     );
   });
   readonly deniedAccesses = computed(() => this.repository.auditAccesses().filter((access) => access.status === 401 || access.status === 403).length);
+  readonly deniedAccessDetails = computed(() => this.repository.auditAccesses().filter((access) => access.status === 401 || access.status === 403));
   readonly failedAccesses = computed(() => this.repository.auditAccesses().filter((access) => access.status >= 500).length);
   readonly presentedEvents = computed(() => this.filteredEvents().map(presentAuditEvent));
   readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.presentedEvents().length));

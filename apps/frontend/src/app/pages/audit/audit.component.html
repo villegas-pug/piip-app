@@ -37,6 +37,14 @@
         <p>Resumen de las últimas llamadas registradas por la auditoría de acceso.</p>
         <h3>Controles visibles</h3>
         <ul><li><mat-icon>check_circle_outline</mat-icon>{{ deniedAccesses() }} accesos denegados</li><li><mat-icon>check_circle_outline</mat-icon>{{ failedAccesses() }} errores de servidor</li><li><mat-icon>check_circle_outline</mat-icon>Correlation ID por solicitud</li><li><mat-icon>check_circle_outline</mat-icon>Duración y código HTTP</li></ul>
+        @if (deniedAccessDetails().length) {
+          <h3>Motivo seguro de accesos denegados</h3>
+          <ul class="access-reasons">
+            @for (access of deniedAccessDetails(); track access.correlationId) {
+              <li><mat-icon>info_outline</mat-icon><span>{{ access.path }}: {{ access.safeReason || 'Motivo no disponible' }}</span></li>
+            }
+          </ul>
+        }
         <div class="demo-callout"><mat-icon>info_outline</mat-icon>El checksum documental está disponible; firma digital y antimalware permanecen fuera de esta versión.</div>
       </aside>
     </div>

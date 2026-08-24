@@ -57,7 +57,7 @@ public class AuditQueryService {
     private AccessView toAccessView(AccessAuditEntity value) {
         return new AccessView(value.getKeycloakSubject(), value.getRoleSnapshot(), value.getHttpMethod(),
             value.getNormalizedPath(), value.getResponseCode(), value.getRecordCode(), value.getCorrelationId(),
-            value.getDurationMs(), value.getOccurredAt());
+            value.getDurationMs(), value.getSafeReason(), value.getOccurredAt());
     }
 
     private EventView toEventView(AuditEventEntity value) {
