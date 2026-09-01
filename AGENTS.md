@@ -39,16 +39,21 @@
 - `AUDITORIA_ACCESO` no guarda tokens, cuerpos HTTP ni contenido documental.
 - La auditoría es append-only durante la operación normal. El perfil destructivo exclusivo de desarrollo/pruebas puede eliminar y recrear íntegramente sus tablas; esta excepción permanece deshabilitada por defecto y prohibida en producción.
 
-## Spec Kit y Codex
+## Spec Kit, Codex y OpenCode
 
-- La constitución está en `.specify/memory/constitution.md`, las skills compartidas en `.agents/skills` y los subagentes en `.codex/agents` como TOML.
+- SpecKit v1.0.3 (CLI `specify-cli`, commit `6906bc5`); la constitución está en `.specify/memory/constitution.md`, los workflows compartidos en `.specify/workflows/speckit/workflow.yml` y la extensión `git` en `.specify/extensions/git/`.
+- **Coexistencia Codex + OpenCode**: `installed_integrations = ["codex", "opencode"]`; default es `opencode`. Ambos viven en paralelo, no se reemplazan. Codex usa `.agents/skills/speckit-*/SKILL.md` (frontmatter con `name` + hyphen) y OpenCode usa `.opencode/commands/speckit.*.md` (frontmatter con `description` + dot). OpenCode también auto-descubre las 14 SKILL.md de Codex desde `.agents/skills/` (project agent-compatible). Los subagentes específicos del dominio viven en `.codex/agents/*.toml` (Codex) y `.opencode/agents/*.md` + `.opencode/commands/*.md` (OpenCode); ninguno se replica en el otro.
+- **Invocaciones**:
+  - Codex (hyphen): `/speckit-specify`, `/speckit-plan`, `/speckit-implement`, etc.
+  - OpenCode (dot): `/speckit.specify`, `/speckit.plan`, `/speckit.implement`, etc.
+  - Las dos formas apuntan a instrucciones distintas; usar la forma del agente activo. En OpenCode moderno, las SKILL.md en `.agents/skills/` se cargan con su nombre original (`speckit-specify`) como skill nativo.
 - Las especificaciones y documentación se escriben en español; el protocolo canónico de adopción incremental está en `docs/development/spec-kit-adoption.md`.
 - `specs/001-*` a `specs/005-*` son antecedentes históricos: no son backlog ni se completan retroactivamente. Las nuevas features empiezan en `006` y requieren grounding contra código, arquitectura, contratos y documentación reales, con rutas e impacto por área explícitos.
 - Toda contradicción histórica se marca `NEEDS CLARIFICATION`; no amplía el alcance ni autoriza modificar el código.
 
 ## Gate Spec Kit
 
-`specify`, `plan` y `tasks` no implementan producto; `analyze` es solo lectura. Ejecutar `implement` solo si la feature activa tiene `spec.md`, `plan.md` y `tasks.md`, no conserva checklists o `NEEDS CLARIFICATION` bloqueantes y el usuario invoca explícitamente `/speckit-implement` en el turno actual. Esa invocación aprueba los artefactos vigentes y autoriza únicamente sus tareas de implementación; no autoriza por sí misma pruebas, builds, servidores, OpenAPI, Oracle ni Git. Un plan pegado o `PLEASE IMPLEMENT THIS PLAN` no sustituye la invocación. Los cambios existentes se registran como baseline, no como tarea completada ni trabajo por reimplementar.
+`specify`, `plan` y `tasks` no implementan producto; `analyze` es solo lectura. Ejecutar `implement` solo si la feature activa tiene `spec.md`, `plan.md` y `tasks.md`, no conserva checklists o `NEEDS CLARIFICATION` bloqueantes y el usuario invoca explícitamente el comando de implementación (`/speckit-implement` en Codex, `/speckit.implement` en OpenCode) en el turno actual. Esa invocación aprueba los artefactos vigentes y autoriza únicamente sus tareas de implementación; no autoriza por sí misma pruebas, builds, servidores, OpenAPI, Oracle ni Git. Un plan pegado o `PLEASE IMPLEMENT THIS PLAN` no sustituye la invocación. Los cambios existentes se registran como baseline, no como tarea completada ni trabajo por reimplementar.
 
 ## Routing de especialistas
 

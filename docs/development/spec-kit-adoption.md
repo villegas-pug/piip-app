@@ -53,3 +53,21 @@ La implementación se limita a las tareas aprobadas. Un checkbox cambia a `[X]` 
 ## Cierre de una feature
 
 El cierre debe informar tareas completadas y pendientes, cambios realmente realizados, validaciones realmente ejecutadas y cualquier riesgo o `NEEDS CLARIFICATION` todavía abierto. No debe afirmar que una validación pasó si no se ejecutó.
+
+## Estado de la instalación SpecKit (vigente a 2026-09-01)
+
+- **CLI**: `specify-cli` v1.0.3 instalada con `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v1.0.3`. Hash pinneado al commit `6906bc582230bb752776e23287ee97990c1af743`.
+- **Integraciones**: coexistencia `codex` + `opencode`. `default_integration = "opencode"`; `installed_integrations = ["codex", "opencode"]` en `.specify/integration.json`.
+- **Artefactos de cada integración**:
+  - Codex: `.agents/skills/speckit-*/SKILL.md` (9 skills core + 5 git), `.codex/agents/*.toml` (subagentes), `.codex/skills/*` (skills de dominio PIIP), `.codex/hooks/piip_scope_guard.py`, `.codex/config.toml`.
+  - OpenCode: `.opencode/commands/speckit.*.md` (15 commands nativos), `.opencode/agents/*.md` (subagentes), `.opencode/commands/*.md` (subagentes como commands), `opencode.json` (raíz, permisos de task delegation), `.opencode/node_modules/@opencode-ai/plugin@1.18.12`.
+- **Convenio de invocación**:
+  - Codex: `/speckit-specify`, `/speckit-plan`, `/speckit-tasks`, `/speckit-implement` (hyphen, estilo Codex).
+  - OpenCode: `/speckit.specify`, `/speckit.plan`, `/speckit.tasks`, `/speckit.implement` (dot, estilo OpenCode).
+  - Ambas formas resuelven a instrucciones equivalentes pero materialmente distintas; usar la del agente activo.
+- **Migración desde v0.8.15**: la regeneración upstream de los 4 scripts PowerShell shared (`common.ps1`, `create-new-feature.ps1`, `setup-plan.ps1`, `setup-tasks.ps1`) y de los 2 templates (`checklist-template.md`, `plan-template.md`) forma parte del upgrade y fue aceptada por contener mejoras legítimas (soporte de `SPECIFY_INIT_DIR`, validación de argumentos desconocidos, notación dot en línea con la convención nativa de OpenCode). Los **overrides** (`templates/overrides/plan-template.md` y `tasks-template.md`) y la **extensión `git`** (`extensions/git/**`) están intactos.
+- **Reglas de convivencia**:
+  - No desinstalar Codex ni `.codex/` para "limpiar"; el hook `piip_scope_guard.py` y las skills de dominio siguen activas para Codex.
+  - No ejecutar `specify init --here --force`: regenera `.specify/` desde cero y borraría los overrides y la Constitución.
+  - Para upgrades futuros usar `uv tool upgrade specify-cli` (CLI) y `specify integration upgrade --force` (artefactos de integración), no reinicializaciones destructivas.
+  - Toda modificación de `constitution.md`, `extensions.yml` o `extensions/git/git-config.yml` requiere propuesta explícita y ratificación; no se sobreescriben por upgrade.
