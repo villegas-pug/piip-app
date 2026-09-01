@@ -4,7 +4,6 @@
 .specify/integrations/codex.manifest.json
 .specify/integrations/speckit.manifest.json
 .specify/workflows/workflow-registry.json
-.vault-project.json
 apps/frontend/tsconfig.app.json
 apps/frontend/tsconfig.json
 apps/frontend/tsconfig.spec.json

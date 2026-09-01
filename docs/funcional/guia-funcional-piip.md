@@ -2,7 +2,7 @@
 
 ## Orientación para agentes
 
-El repositorio es la autoridad para el código, las especificaciones, las pruebas y la configuración de PIIP. Graphify es un índice estructural derivado: sirve para orientarse, pero sus resultados se deben contrastar con las fuentes canónicas. El RoviDev Vault conserva continuidad y decisiones aprobadas; no sustituye al repositorio ni define reglas funcionales por sí solo.
+El repositorio es la autoridad para el código, las especificaciones, las pruebas y la configuración de PIIP. Graphify es un índice estructural derivado: sirve para orientarse, pero sus resultados se deben contrastar con las fuentes canónicas.
 
 ## Alcance y lectura de esta guía
 

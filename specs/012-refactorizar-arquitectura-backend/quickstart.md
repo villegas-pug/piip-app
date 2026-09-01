@@ -21,7 +21,7 @@ Guía para ejecutar la futura refactorización por incrementos sin ampliar el al
 4. Realizar comprobaciones estáticas autorizadas: imports, anotaciones, dependencias de capas, placeholders y diff de rutas protegidas.
 5. Si el usuario autoriza pruebas, ejecutar únicamente las suites focalizadas del incremento y registrar el resultado real.
 6. Comparar con `contracts/http-compatibility.md`; si existe diferencia no explicada, no iniciar el siguiente incremento.
-7. Actualizar trazabilidad y checkpoint no verificado. El cierre canónico del Vault requiere aprobación separada.
+7. Actualizar trazabilidad y registrar el cierre del incremento.
 
 ## Orden operativo
 
