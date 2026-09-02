@@ -61,6 +61,7 @@ __pycache__/
 *.py[cod]
 test-results/
 playwright-report/
+.playwright-cli/
 surefire-reports/
 jacoco/
 .specify/cache/
