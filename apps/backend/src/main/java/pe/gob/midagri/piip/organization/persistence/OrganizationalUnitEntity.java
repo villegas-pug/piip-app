@@ -8,9 +8,9 @@ public class OrganizationalUnitEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_UNIDAD_ORGANICA") private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_UNIDAD_EJECUTORA", nullable = false) private ExecutingUnitEntity executingUnit;
+    @JoinColumn(name = "ID_UNIDAD_EJECUTORA", nullable = false, foreignKey = @ForeignKey(name = "FK_UO_EJECUTORA")) private ExecutingUnitEntity executingUnit;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_UNIDAD_PADRE") private OrganizationalUnitEntity parent;
+    @JoinColumn(name = "ID_UNIDAD_PADRE", foreignKey = @ForeignKey(name = "FK_UO_PADRE")) private OrganizationalUnitEntity parent;
     @Column(name = "CODIGO", length = 30, nullable = false) private String code;
     @Column(name = "NOMBRE", length = 200, nullable = false) private String name;
     @Column(name = "SIGLA", length = 30) private String acronym;

@@ -9,7 +9,7 @@ import java.time.Instant;
 public class AccessAuditEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_AUDITORIA_ACCESO") private Long id;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_USUARIO") private UserEntity user;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_USUARIO", foreignKey = @ForeignKey(name = "FK_AUDACCESO_USUARIO")) private UserEntity user;
     @Column(name = "KEYCLOAK_SUBJECT", length = 100) private String keycloakSubject;
     @Column(name = "ROL_SNAPSHOT", length = 100) private String roleSnapshot;
     @Column(name = "METODO_HTTP", length = 10, nullable = false) private String httpMethod;

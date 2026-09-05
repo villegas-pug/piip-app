@@ -13,7 +13,7 @@ public class AuditEventEntity {
     @Column(name = "TIPO_ENTIDAD", length = 60, nullable = false) private String entityType;
     @Column(name = "CODIGO_ENTIDAD", length = 40, nullable = false) private String entityCode;
     @Lob @Column(name = "DETALLE_JSON", nullable = false) private String detailJson;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_USUARIO") private UserEntity user;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_USUARIO", foreignKey = @ForeignKey(name = "FK_EVENTO_USUARIO")) private UserEntity user;
     @Column(name = "ACTOR_SUBJECT", length = 100, nullable = false) private String actorSubject;
     @Column(name = "FECHA_EVENTO", nullable = false) private Instant occurredAt = Instant.now();
 

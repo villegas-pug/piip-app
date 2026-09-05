@@ -32,8 +32,8 @@ class CatalogSeedPolicyTest {
         String sql = new ClassPathResource("db/test/catalog-data.sql").getContentAsString(StandardCharsets.UTF_8);
         String catalogSection = section(sql, "-- Catalogos", "-- Items de catalogo");
         String itemSection = section(sql, "-- Items de catalogo", "-- Tipos documentales");
-        assertUnique(catalogSection, "MERGE\\s+INTO\\s+CATALOGO\\s+\\w+\\s+USING\\s*\\(\\s*SELECT\\s+'([^']+)'\\s+codigo\\b", 4);
-        assertUnique(itemSection, "CROSS\\s+JOIN\\s*\\(\\s*SELECT\\s+'([^']+)'\\s+codigo\\b|UNION\\s+ALL\\s+SELECT\\s+'([^']+)'", 17);
+        assertUnique(catalogSection, "MERGE\\s+INTO\\s+CATALOGO\\s+\\w+\\s+USING\\s*\\(\\s*SELECT\\s+'([^']+)'\\s+(?:AS\\s+)?codigo\\b", 4);
+        assertUnique(itemSection, "CROSS\\s+JOIN\\s*\\(\\s*SELECT\\s+'([^']+)'\\s+(?:AS\\s+)?codigo\\b|UNION\\s+ALL\\s+SELECT\\s+'([^']+)'", 17);
     }
 
     private static String section(String sql, String startMarker, String endMarker) {

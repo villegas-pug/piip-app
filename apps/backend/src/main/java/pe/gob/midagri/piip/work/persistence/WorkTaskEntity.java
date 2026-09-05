@@ -11,10 +11,10 @@ import java.time.*;
 public class WorkTaskEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_TAREA") private Long id;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_REGISTRO", nullable = false) private PortfolioRecordEntity record;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_REGISTRO", nullable = false, foreignKey = @ForeignKey(name = "FK_TAREA_REGISTRO")) private PortfolioRecordEntity record;
     @Enumerated(EnumType.STRING) @Column(name = "TIPO_TAREA", length = 40, nullable = false) private TaskType type;
     @Column(name = "DESCRIPCION", length = 400, nullable = false) private String description;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_USUARIO_ASIGNADO", nullable = false) private UserEntity assignedUser;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_USUARIO_ASIGNADO", nullable = false, foreignKey = @ForeignKey(name = "FK_TAREA_USUARIO")) private UserEntity assignedUser;
     @Enumerated(EnumType.STRING) @Column(name = "PRIORIDAD", length = 20, nullable = false) private TaskPriority priority;
     @Enumerated(EnumType.STRING) @Column(name = "ESTADO", length = 20, nullable = false) private TaskStatus status = TaskStatus.PENDING;
     @Column(name = "FECHA_VENCIMIENTO") private LocalDate dueDate;

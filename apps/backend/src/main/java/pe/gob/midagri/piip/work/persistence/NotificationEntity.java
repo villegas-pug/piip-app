@@ -10,8 +10,8 @@ import java.time.Instant;
 public class NotificationEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_NOTIFICACION") private Long id;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_USUARIO_DESTINATARIO", nullable = false) private UserEntity recipient;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_REGISTRO") private PortfolioRecordEntity record;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_USUARIO_DESTINATARIO", nullable = false, foreignKey = @ForeignKey(name = "FK_NOTIF_USUARIO")) private UserEntity recipient;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_REGISTRO", foreignKey = @ForeignKey(name = "FK_NOTIF_REGISTRO")) private PortfolioRecordEntity record;
     @Column(name = "TIPO", length = 60, nullable = false) private String type;
     @Column(name = "MENSAJE", length = 500, nullable = false) private String message;
     @Column(name = "LEIDA", nullable = false) private boolean read;

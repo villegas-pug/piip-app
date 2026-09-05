@@ -8,7 +8,7 @@ public class DocumentContentEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_DOCUMENTO_CONTENIDO") private Long id;
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_DOCUMENTO_VERSION", nullable = false) private DocumentVersionEntity documentVersion;
+    @JoinColumn(name = "ID_DOCUMENTO_VERSION", nullable = false, foreignKey = @ForeignKey(name = "FK_DOCCONT_VERSION")) private DocumentVersionEntity documentVersion;
     @Lob @Basic(fetch = FetchType.LAZY)
     @Column(name = "CONTENIDO", nullable = false) private byte[] content;
 

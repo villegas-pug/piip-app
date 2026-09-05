@@ -12,7 +12,7 @@ public class CatalogItemEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_CATALOGO_ITEM") private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_CATALOGO", nullable = false) private CatalogEntity catalog;
+    @JoinColumn(name = "ID_CATALOGO", nullable = false, foreignKey = @ForeignKey(name = "FK_CATITEM_CATALOGO")) private CatalogEntity catalog;
     @Column(name = "CODIGO", length = 60, nullable = false) private String code;
     @Column(name = "NOMBRE", length = 500, nullable = false) private String name;
     @Column(name = "ORDEN_PRESENTACION", nullable = false) private int displayOrder;

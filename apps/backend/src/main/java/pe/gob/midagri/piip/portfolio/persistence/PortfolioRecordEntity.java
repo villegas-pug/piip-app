@@ -23,17 +23,17 @@ public class PortfolioRecordEntity {
     @Column(name = "ID_REGISTRO") private Long id;
     @Enumerated(EnumType.STRING) @Column(name = "TIPO_REGISTRO", length = 20, nullable = false) private RecordType recordType;
     @Column(name = "CODIGO", length = 20, nullable = false) private String code;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_REGISTRO_ORIGEN") private PortfolioRecordEntity originRecord;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_REGISTRO_ORIGEN", foreignKey = @ForeignKey(name = "FK_REG_ORIGEN")) private PortfolioRecordEntity originRecord;
     @Enumerated(EnumType.STRING) @Column(name = "MODO_ORIGEN", length = 40) private ProjectOriginMode originMode;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_UNIDAD_EJECUTORA", nullable = false) private ExecutingUnitEntity executingUnit;
+    @JoinColumn(name = "ID_UNIDAD_EJECUTORA", nullable = false, foreignKey = @ForeignKey(name = "FK_REG_UE")) private ExecutingUnitEntity executingUnit;
     @Column(name = "NOMBRE", length = 180, nullable = false) private String name;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_TIPO_SOLUCION", nullable = false) private CatalogItemEntity solutionType;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_FUENTE_ORIGEN", nullable = false) private CatalogItemEntity sourceOrigin;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_TIPO_SOLUCION", nullable = false, foreignKey = @ForeignKey(name = "FK_REG_SOLUCION")) private CatalogItemEntity solutionType;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "ID_FUENTE_ORIGEN", nullable = false, foreignKey = @ForeignKey(name = "FK_REG_FUENTE")) private CatalogItemEntity sourceOrigin;
     @Column(name = "FECHA_INICIO", nullable = false) private LocalDate startDate;
     @Column(name = "RESPONSABLE", length = 300, nullable = false) private String responsible;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_OBJETIVO_PEI") private CatalogItemEntity peiObjective;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_ACTIVIDAD_POI") private CatalogItemEntity poiActivity;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_OBJETIVO_PEI", foreignKey = @ForeignKey(name = "FK_REG_PEI")) private CatalogItemEntity peiObjective;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "ID_ACTIVIDAD_POI", foreignKey = @ForeignKey(name = "FK_REG_POI")) private CatalogItemEntity poiActivity;
     @Lob @Column(name = "DESCRIPCION", nullable = false) private String description;
     @Lob @Column(name = "RESULTADOS_CLAVE") private String keyResults;
     @Column(name = "NOTA", length = 600) private String note;

@@ -11,9 +11,9 @@ public class DocumentEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_DOCUMENTO") private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_REGISTRO", nullable = false) private PortfolioRecordEntity record;
+    @JoinColumn(name = "ID_REGISTRO", nullable = false, foreignKey = @ForeignKey(name = "FK_DOC_REGISTRO")) private PortfolioRecordEntity record;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_TIPO_DOCUMENTO", nullable = false) private DocumentTypeEntity type;
+    @JoinColumn(name = "ID_TIPO_DOCUMENTO", nullable = false, foreignKey = @ForeignKey(name = "FK_DOC_TIPODOC")) private DocumentTypeEntity type;
     @Enumerated(EnumType.STRING) @Column(name = "ESTADO", length = 30, nullable = false) private DocumentState state = DocumentState.PENDING;
     @Column(name = "MOTIVO_NO_APLICA", length = 500) private String notApplicableReason;
     @Column(name = "ULTIMA_VERSION", nullable = false) private int latestVersion;

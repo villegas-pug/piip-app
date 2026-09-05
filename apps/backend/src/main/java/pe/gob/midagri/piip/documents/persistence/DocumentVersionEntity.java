@@ -9,7 +9,7 @@ public class DocumentVersionEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_DOCUMENTO_VERSION") private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_DOCUMENTO", nullable = false) private DocumentEntity document;
+    @JoinColumn(name = "ID_DOCUMENTO", nullable = false, foreignKey = @ForeignKey(name = "FK_DOCVER_DOC")) private DocumentEntity document;
     @Column(name = "NUMERO_VERSION", nullable = false) private int versionNumber;
     @Column(name = "NOMBRE_ARCHIVO", length = 255, nullable = false) private String filename;
     @Column(name = "TIPO_MIME", length = 120, nullable = false) private String mimeType;

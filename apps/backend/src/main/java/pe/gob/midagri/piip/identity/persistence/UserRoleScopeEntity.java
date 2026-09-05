@@ -13,13 +13,13 @@ public class UserRoleScopeEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_USUARIO_ROL_AMBITO") private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_USUARIO", nullable = false) private UserEntity user;
+    @JoinColumn(name = "ID_USUARIO", nullable = false, foreignKey = @ForeignKey(name = "FK_URA_USUARIO")) private UserEntity user;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_ROL", nullable = false) private RoleEntity role;
+    @JoinColumn(name = "ID_ROL", nullable = false, foreignKey = @ForeignKey(name = "FK_URA_ROL")) private RoleEntity role;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_INSTITUCION", nullable = false) private InstitutionEntity institution;
+    @JoinColumn(name = "ID_INSTITUCION", nullable = false, foreignKey = @ForeignKey(name = "FK_URA_INSTITUCION")) private InstitutionEntity institution;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ID_UNIDAD_EJECUTORA") private ExecutingUnitEntity executingUnit;
+    @JoinColumn(name = "ID_UNIDAD_EJECUTORA", foreignKey = @ForeignKey(name = "FK_URA_UE")) private ExecutingUnitEntity executingUnit;
     @Column(name = "ACTIVO", nullable = false) private boolean active = true;
     @Column(name = "VIGENTE_DESDE", nullable = false) private Instant validFrom;
     @Column(name = "VIGENTE_HASTA") private Instant validUntil;

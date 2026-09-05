@@ -8,7 +8,7 @@ public class ExecutingUnitEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_UNIDAD_EJECUTORA") private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ID_INSTITUCION", nullable = false) private InstitutionEntity institution;
+    @JoinColumn(name = "ID_INSTITUCION", nullable = false, foreignKey = @ForeignKey(name = "FK_UE_INSTITUCION")) private InstitutionEntity institution;
     @Column(name = "CODIGO", length = 30, nullable = false) private String code;
     @Column(name = "NOMBRE", length = 200, nullable = false) private String name;
     @Column(name = "ACTIVO", nullable = false) private boolean active = true;
