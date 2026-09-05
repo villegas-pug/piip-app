@@ -2,24 +2,25 @@
 
 ## Datos requeridos
 
-Antes del primer despliegue se deben confirmar, sin incorporarlos al repositorio:
+Antes del primer despliegue institucional se deben confirmar, sin incorporarlos al repositorio:
 
-- URL JDBC, usuario y contraseña del esquema Oracle.
+- URL JDBC, usuario y contraseña del esquema Oracle. Para la instancia local prevista se usa la URL SID directa `jdbc:oracle:thin:@srvdb-oracle-desa.domainminag.gob:1521:DEVELOPER` y el esquema `SISPIIP`.
 - URL del issuer, audiencia de la API, realm y client ID público de Keycloak.
 - URL del frontend y orígenes CORS exactos.
-- `subject` Keycloak del administrador inicial.
+- `subject` Keycloak del administrador inicial productivo. El seed descartable contiene una identidad aprobada independiente para pruebas.
 - código y nombre de la institución, unidades ejecutoras y unidades orgánicas iniciales.
 
 Usar [.env.example](../../.env.example) como matriz de variables. Los valores de ejemplo no son datos maestros confirmados.
 
 ## Base de datos
 
-1. Ejecutar `gradlew.bat test` en Windows o `./gradlew test` en Linux/macOS, desde `apps/backend`.
-2. Comparar `apps/backend/target/piip-oracle.sql` con `database/generated/piip-oracle.sql`, generado por Hibernate desde las entidades JPA y versionado como entrega al DBA.
-3. Entregar el artefacto al DBA para revisión y aplicación en un esquema vacío de desarrollo.
-4. Iniciar la aplicación con `PIIP_DDL_AUTO=validate`.
+1. Para un esquema descartable de desarrollo o pruebas, configurar externamente `ORACLE_PASSWORD`; `test-reset` hereda URL, usuario, contraseña y driver desde `application.yml`. La identidad inicial aprobada está definida directamente en `db/test/catalog-data.sql`.
+2. Ejecutar manualmente el proceso no web con los perfiles exactos `test,test-reset`; Hibernate recreará las 19 tablas y Spring ejecutará el seed sintético DML-only.
+3. Para un esquema institucional, comparar `apps/backend/target/piip-oracle.sql` con `database/generated/piip-oracle.sql`, generado por Hibernate desde las entidades JPA y versionado como entrega al DBA.
+4. Entregar el artefacto al DBA para revisión y aplicación en un esquema vacío institucional.
+5. Iniciar la aplicación sin perfil explícito para usar `dev`, o con `prod` activado externamente; ambos deben usar `ddl-auto=validate`.
 
-No usar `create`, `create-drop` ni scripts SQL manuales en el esquema institucional. Hibernate JPA es la fuente canónica y la aplicación no ejecuta SQL nativo.
+No usar el perfil `test-reset`, `create`, `create-drop` ni el seed sintético en el esquema institucional o en producción. Hibernate JPA es la fuente canónica; el único SQL externo permitido es el DML del perfil destructivo de pruebas.
 
 ## Keycloak
 
@@ -31,7 +32,7 @@ Keycloak autentica la identidad. Los roles del token no conceden permisos PIIP: 
 
 ## Bootstrap
 
-El primer `Administrador PIIP` se crea con las variables `PIIP_BOOTSTRAP_*`. El `subject`, institución y unidades ejecutoras deben existir y estar confirmados. El proceso es idempotente y debe deshabilitarse después de comprobar el acceso inicial.
+El seed descartable crea la fila local del primer `Administrador PIIP` con los datos aprobados directamente en `db/test/catalog-data.sql`, más los ámbitos de `UE-001` y `UE-002`. El `subject` debe corresponder a un usuario existente en Keycloak. No se crea ninguna contraseña ni usuario remoto. En el arranque ordinario no se crean identidades; `prod` valida que exista un ámbito activo `ADMINISTRADOR_PIIP` mediante `ProductionAdminGuard`.
 
 ## Contrato frontend-backend
 

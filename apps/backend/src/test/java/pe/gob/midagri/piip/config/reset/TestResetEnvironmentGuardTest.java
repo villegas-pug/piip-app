@@ -2,7 +2,7 @@ package pe.gob.midagri.piip.config.reset;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Set;
+import java.util.List;
 import javax.sql.DataSource;
 import java.sql.*;
 import org.junit.jupiter.api.Test;
@@ -12,30 +12,32 @@ import static org.mockito.Mockito.*;
 
 class TestResetEnvironmentGuardTest {
     @Test
-    void exigeExactamenteLosPerfilesDePruebaYLaConfirmacion() {
-        assertThatThrownBy(() -> TestResetEnvironmentGuard.validateProfiles(Set.of("test-reset")))
+    void exigeExactamenteLosPerfilesDePruebaEnOrden() {
+        assertThatThrownBy(() -> TestResetEnvironmentGuard.validateProfiles(List.of("test-reset")))
             .isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> TestResetEnvironmentGuard.validateProfiles(Set.of("test", "test-reset", "prod")))
+        assertThatThrownBy(() -> TestResetEnvironmentGuard.validateProfiles(List.of("test-reset", "test")))
             .isInstanceOf(IllegalStateException.class);
-        assertThatCode(() -> TestResetEnvironmentGuard.validateProfiles(Set.of("test", "test-reset")))
+        assertThatThrownBy(() -> TestResetEnvironmentGuard.validateProfiles(List.of("test", "test-reset", "prod")))
+            .isInstanceOf(IllegalStateException.class);
+        assertThatCode(() -> TestResetEnvironmentGuard.validateProfiles(List.of("test", "test-reset")))
             .doesNotThrowAnyException();
     }
 
-    @Test void validaConfirmacionHuellaYEsquemaContraMetadataJdbc() throws Exception {
+    @Test void validaHuellaYEsquemaContraMetadataJdbc() throws Exception {
         Environment environment = mock(Environment.class);
         DataSource dataSource = mock(DataSource.class);
         Connection connection = mock(Connection.class);
         DatabaseMetaData metadata = mock(DatabaseMetaData.class);
         when(environment.getActiveProfiles()).thenReturn(new String[] {"test", "test-reset"});
+        when(environment.getProperty("spring.jpa.hibernate.ddl-auto")).thenReturn("none");
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.getMetaData()).thenReturn(metadata);
-        when(metadata.getURL()).thenReturn("jdbc:oracle:thin:@test_low");
-        when(connection.getSchema()).thenReturn("PIIP_TEST");
-        String fingerprint = TestResetEnvironmentGuard.sha256("jdbc:oracle:thin:@test_low");
-        PiipProperties.TestReset properties = new PiipProperties.TestReset(true, "RESET-PIIP-TEST", "RESET-PIIP-TEST", fingerprint, "PIIP_TEST");
+        when(metadata.getURL()).thenReturn("jdbc:oracle:thin:@srvdb-oracle-desa.domainminag.gob:1521:DEVELOPER");
+        when(connection.getSchema()).thenReturn("SISPIIP");
+        PiipProperties.TestReset properties = new PiipProperties.TestReset("5888eca4876f8583aea30c29da4bcacd944f8d2529b4eef71945943906521428", "SISPIIP");
 
         assertThatCode(() -> new TestResetEnvironmentGuard(environment, dataSource, properties).preflight()).doesNotThrowAnyException();
-        PiipProperties.TestReset wrong = new PiipProperties.TestReset(true, "RESET-PIIP-TEST", "RESET-PIIP-TEST", fingerprint, "PROD");
+        PiipProperties.TestReset wrong = new PiipProperties.TestReset(properties.allowedJdbcFingerprint(), "PROD");
         assertThatThrownBy(() -> new TestResetEnvironmentGuard(environment, dataSource, wrong).preflight())
             .isInstanceOf(IllegalStateException.class).hasMessageContaining("esquema");
     }

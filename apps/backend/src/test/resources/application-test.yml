@@ -1,4 +1,7 @@
 spring:
+  config:
+    activate:
+      on-profile: "test & !test-reset"
   datasource:
     url: jdbc:h2:mem:piip;MODE=Oracle;DB_CLOSE_DELAY=-1
     username: sa
@@ -19,5 +22,3 @@ spring:
 piip:
   security:
     audience: piip-api
-  bootstrap:
-    enabled: false

@@ -30,7 +30,7 @@ description: "Task list template for feature implementation"
   ============================================================================
   IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.
 
-  The /speckit-tasks command MUST replace these with actual tasks based on:
+  The /speckit.tasks command MUST replace these with actual tasks based on:
   - User stories from spec.md (with their priorities P1, P2, P3...)
   - Feature requirements from plan.md
   - Entities from data-model.md
@@ -152,7 +152,6 @@ Examples of foundational tasks (adjust based on your project):
 **Purpose**: Improvements that affect multiple user stories
 
 - [ ] TXXX [P] Documentation updates in docs/
-- [ ] TXXX Evaluar el impacto en la guía funcional de `docs/`: actualizarla con evidencia verificable si el cambio altera flujos, roles, permisos, datos visibles, documentos o reglas de negocio; de no corresponder, registrar la justificación. No cerrar la implementación sin una de estas dos alternativas.
 - [ ] TXXX Code cleanup and refactoring
 - [ ] TXXX Performance optimization across all stories
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/

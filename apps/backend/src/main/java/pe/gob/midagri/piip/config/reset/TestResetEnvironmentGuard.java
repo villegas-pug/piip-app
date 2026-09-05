@@ -21,10 +21,10 @@ public class TestResetEnvironmentGuard {
     }
 
     public GuardResult preflight() {
-        validateProfiles(Set.of(environment.getActiveProfiles()));
-        require(properties.enabled(), "test-reset no fue habilitado explícitamente");
-        require(notBlank(properties.confirmation()) && properties.confirmation().equals(properties.expectedConfirmation()), "La confirmación test-reset no coincide");
-        require(notBlank(properties.allowedJdbcFingerprint()) && notBlank(properties.allowedSchema()), "Falta la allowlist de conexión test-reset");
+        validateProfiles(List.of(environment.getActiveProfiles()));
+        validateDdlAuto(environment);
+        require("5888eca4876f8583aea30c29da4bcacd944f8d2529b4eef71945943906521428".equalsIgnoreCase(properties.allowedJdbcFingerprint()), "La huella JDBC configurada no está autorizada");
+        require("SISPIIP".equalsIgnoreCase(properties.allowedSchema()), "El esquema configurado no está autorizado");
         try (Connection connection = dataSource.getConnection()) {
             String fingerprint = sha256(connection.getMetaData().getURL());
             String schema = Optional.ofNullable(connection.getSchema()).orElse(connection.getMetaData().getUserName());
@@ -36,14 +36,19 @@ public class TestResetEnvironmentGuard {
         }
     }
 
-    public static void validateProfiles(Set<String> profiles) {
-        if (!profiles.equals(Set.of("test", "test-reset"))) throw new IllegalStateException("test-reset exige exclusivamente los perfiles test,test-reset");
+    public static void validateProfiles(List<String> profiles) {
+        if (!profiles.equals(List.of("test", "test-reset"))) throw new IllegalStateException("test-reset exige exclusivamente los perfiles test,test-reset");
+    }
+    static void validateDdlAuto(Environment environment) {
+        String ddlAuto = environment.getProperty("spring.jpa.hibernate.ddl-auto");
+        require("none".equalsIgnoreCase(ddlAuto), "test-reset exige spring.jpa.hibernate.ddl-auto=none");
+        String hibernateDdlAuto = environment.getProperty("spring.jpa.properties.hibernate.hbm2ddl.auto");
+        if (hibernateDdlAuto != null) require("none".equalsIgnoreCase(hibernateDdlAuto), "test-reset rechaza el override hibernate.hbm2ddl.auto");
     }
     static String sha256(String value) {
         try { return java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
         catch (java.security.NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }
     }
-    private static boolean notBlank(String value) { return value != null && !value.isBlank(); }
     private static void require(boolean condition, String message) { if (!condition) throw new IllegalStateException(message); }
     public record GuardResult(String jdbcFingerprint, String schema) {}
 }

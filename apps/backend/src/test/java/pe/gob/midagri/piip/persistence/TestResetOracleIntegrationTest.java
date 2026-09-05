@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import pe.gob.midagri.piip.audit.persistence.*;
@@ -18,7 +17,6 @@ import pe.gob.midagri.piip.work.persistence.NotificationRepository;
 @Tag("integration")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles({"test", "test-reset"})
-@EnabledIfEnvironmentVariable(named = "PIIP_TEST_RESET_ENABLED", matches = "true")
 class TestResetOracleIntegrationTest {
     private final InstitutionRepository institutions; private final ExecutingUnitRepository executingUnits;
     private final OrganizationalUnitRepository organizationalUnits; private final RoleRepository roles;
@@ -41,37 +39,37 @@ class TestResetOracleIntegrationTest {
     }
 
     @Test void preservaIdentidadYDejaAuditoriaYNotificacionesVacias() {
-        assertThat(institutions.count()).isPositive();
-        assertThat(executingUnits.count()).isPositive();
-        assertThat(organizationalUnits.count()).isNotNegative();
-        assertThat(roles.count()).isPositive();
-        assertThat(users.count()).isPositive();
-        assertThat(scopes.count()).isPositive();
+        assertThat(institutions.count()).isEqualTo(1);
+        assertThat(executingUnits.count()).isEqualTo(2);
+        assertThat(organizationalUnits.count()).isEqualTo(4);
+        assertThat(roles.count()).isEqualTo(2);
+        assertThat(users.count()).isEqualTo(1);
+        assertThat(scopes.count()).isEqualTo(2);
         assertThat(auditEvents.count()).isZero();
         assertThat(accessAudits.count()).isZero();
         assertThat(notifications.count()).isZero();
     }
 
-    @Test void reejecucionCompletaEsIdempotenteYPreservaLasSeisTablas() {
-        ProtectedCounts before = protectedCounts();
+    @Test void reejecucionCompletaEsIdempotenteYConservaElDataset() {
+        DatasetCounts before = datasetCounts();
 
         org.assertj.core.api.Assertions.assertThatCode(() -> coordinator.run(new org.springframework.boot.DefaultApplicationArguments(new String[0])))
             .doesNotThrowAnyException();
 
-        assertThat(protectedCounts()).isEqualTo(before);
+        assertThat(datasetCounts()).isEqualTo(before);
         assertThat(catalogs.count()).isEqualTo(4);
-        assertThat(catalogItems.count()).isPositive();
+        assertThat(catalogItems.count()).isEqualTo(17);
         assertThat(documentTypes.count()).isEqualTo(6);
         assertThat(auditEvents.count()).isZero();
         assertThat(accessAudits.count()).isZero();
         assertThat(notifications.count()).isZero();
     }
 
-    private ProtectedCounts protectedCounts() {
-        return new ProtectedCounts(institutions.count(), roles.count(), executingUnits.count(), organizationalUnits.count(),
+    private DatasetCounts datasetCounts() {
+        return new DatasetCounts(institutions.count(), roles.count(), executingUnits.count(), organizationalUnits.count(),
             users.count(), scopes.count());
     }
 
-    private record ProtectedCounts(long institutions, long roles, long executingUnits, long organizationalUnits,
+    private record DatasetCounts(long institutions, long roles, long executingUnits, long organizationalUnits,
             long users, long scopes) {}
 }

@@ -10,5 +10,3 @@ piip:
     max-size-bytes: ${PIIP_DOCUMENT_MAX_SIZE}
   audit:
     retention-days: ${PIIP_AUDIT_RETENTION_DAYS}
-  bootstrap:
-    enabled: ${PIIP_BOOTSTRAP_ENABLED:false}

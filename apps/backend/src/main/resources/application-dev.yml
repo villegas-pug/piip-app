@@ -2,7 +2,3 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-
-piip:
-  bootstrap:
-    enabled: ${PIIP_BOOTSTRAP_ENABLED:false}

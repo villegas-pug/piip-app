@@ -14,7 +14,8 @@ class TestResetCoordinatorTest {
         assertThat(TestResetCoordinator.oracleCode(new CommandAcceptanceException("otro", new SQLException("fatal", "42000", 955)))).isEqualTo(955);
     }
 
-    @Test void soloTolera942EnDropAllowlistedActualDespuesDelPreflight() {
+    @Test void soloTolera942EnDropAllowlistedActualDespuesDelPreflightIncluidoUsuario() {
+        assertThat(TestResetSchemaFilterProvider.ALLOWLIST).hasSize(19);
         CommandAcceptanceException missing = new CommandAcceptanceException("drop", new SQLException("missing", "42000", 942));
         assertThat(TestResetCoordinator.isRecoverableMissingTable(true, TestResetStage.DROP, "DOCUMENTO", "DOCUMENTO", missing)).isTrue();
         assertThat(TestResetCoordinator.isRecoverableMissingTable(false, TestResetStage.DROP, "DOCUMENTO", "DOCUMENTO", missing)).isFalse();
@@ -23,7 +24,7 @@ class TestResetCoordinatorTest {
         assertThat(TestResetCoordinator.isRecoverableMissingTable(true, TestResetStage.VALIDATE_EMPTY, "DOCUMENTO", "DOCUMENTO", missing)).isFalse();
         assertThat(TestResetCoordinator.isRecoverableMissingTable(true, TestResetStage.SEED, "DOCUMENTO", "DOCUMENTO", missing)).isFalse();
         assertThat(TestResetCoordinator.isRecoverableMissingTable(true, TestResetStage.POST_VALIDATION, "DOCUMENTO", "DOCUMENTO", missing)).isFalse();
-        assertThat(TestResetCoordinator.isRecoverableMissingTable(true, TestResetStage.DROP, "USUARIO", "USUARIO", missing)).isFalse();
+        assertThat(TestResetCoordinator.isRecoverableMissingTable(true, TestResetStage.DROP, "USUARIO", "USUARIO", missing)).isTrue();
         assertThat(TestResetCoordinator.isRecoverableMissingTable(true, TestResetStage.DROP, "DOCUMENTO", "NOTIFICACION", missing)).isFalse();
         CommandAcceptanceException otherOracle = new CommandAcceptanceException("drop", new SQLException("fatal", "42000", 955));
         assertThat(TestResetCoordinator.isRecoverableMissingTable(true, TestResetStage.DROP, "DOCUMENTO", "DOCUMENTO", otherOracle)).isFalse();

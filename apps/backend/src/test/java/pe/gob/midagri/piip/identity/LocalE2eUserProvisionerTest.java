@@ -13,6 +13,7 @@ import pe.gob.midagri.piip.identity.persistence.UserEntity;
 import pe.gob.midagri.piip.identity.persistence.UserRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Herramienta de provisión manual para la identidad E2E local autorizada.
@@ -56,8 +57,10 @@ class LocalE2eUserProvisionerTest {
     }
 
     private void requireExplicitLocalExecution() {
-        assertThat(System.getProperty("piip.provision.local-e2e")).isEqualTo("true");
-        assertThat(System.getProperty("spring.profiles.active")).isEqualTo("local-e2e");
+        assumeTrue("true".equalsIgnoreCase(System.getProperty("piip.provision.local-e2e")),
+            "La provisión local E2E requiere piip.provision.local-e2e=true");
+        assumeTrue("local-e2e".equals(System.getProperty("spring.profiles.active")),
+            "La provisión local E2E requiere el perfil JVM local-e2e");
     }
 
     private record ProvisionedUser(String subject, String fullName, String email) {

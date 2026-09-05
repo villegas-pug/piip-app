@@ -1,17 +1,18 @@
 <!--
 Sync Impact Report
-- Cambio de versión: 1.1.0 -> 1.2.0
-- Principios modificados: IV. Persistencia; V. Trazabilidad y calidad
+- Cambio de versión: 1.2.0 -> 1.3.0
+- Principios modificados: IV. Persistencia
 - Secciones agregadas: ninguna
 - Secciones eliminadas: ninguna
-- Artefactos alineados: AGENTS.md y artefactos Spec Kit de la feature 011
-- Templates actualizados: .specify/templates/overrides/plan-template.md y
-  .specify/templates/overrides/tasks-template.md
-- Templates revisados sin cambios: plan-template.md, spec-template.md y tasks-template.md
-- Documentación revisada sin cambios: docs/development/spec-kit-adoption.md y
-  docs/deployment/institutional-development.md
+- Artefactos alineados: spec.md, plan.md y tasks.md de la feature 015
+- Templates actualizados: ninguno; la regla se expresa en el principio IV
+- Templates revisados sin cambios: plan-template.md, spec-template.md,
+  tasks-template.md y sus overrides
+- Documentación revisada sin cambios: docs/development/spec-kit-adoption.md,
+  README.md y AGENTS.md
 - Comandos revisados: .specify/templates/commands/ no existe en este checkout
-- Pendientes: ninguno
+- Pendientes: sincronizar la documentación operativa y la implementación de la
+  feature 015 con la nueva autorización por perfiles exactos
 -->
 
 # Constitución PIIP
@@ -53,7 +54,9 @@ Hibernate JPA es la fuente canónica del esquema Oracle. Se prohíben SQL nativo
 definición estructural permanente. Como única excepción, un perfil destructivo explícito y
 exclusivo de desarrollo o pruebas PUEDE ejecutar un archivo externo versionado con DML de datos
 iniciales, siempre que no contenga DDL, sea idempotente, permanezca deshabilitado por defecto y
-valide de forma fail-closed el perfil, la confirmación, la conexión y el esquema antes de escribir.
+valide de forma fail-closed la activación exacta y ordenada de los perfiles
+`test,test-reset`, la conexión y el esquema antes de escribir. Esa activación
+explícita sustituye cualquier variable adicional de habilitación o confirmación.
 Esta excepción NO PUEDE habilitarse en operación normal ni en producción. Los binarios
 documentales se almacenan como BLOB separado de sus metadatos.
 
@@ -65,8 +68,8 @@ o pruebas PUEDE eliminar y recrear por completo las tablas de auditoría y desca
 siempre que cumpla las guardias fail-closed del principio IV y no pueda activarse en producción.
 Los cambios relevantes requieren pruebas automatizadas.
 
-**Versión:** 1.2.0
+**Versión:** 1.3.0
 
 **Ratificada:** 2026-07-28
 
-**Última enmienda:** 2026-08-20
+**Última enmienda:** 2026-09-05

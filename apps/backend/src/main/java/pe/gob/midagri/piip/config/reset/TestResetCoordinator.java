@@ -20,10 +20,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pe.gob.midagri.piip.audit.persistence.*;
 import pe.gob.midagri.piip.catalogs.persistence.*;
-import pe.gob.midagri.piip.documents.persistence.DocumentTypeRepository;
+import pe.gob.midagri.piip.documents.persistence.*;
 import pe.gob.midagri.piip.identity.persistence.*;
 import pe.gob.midagri.piip.organization.persistence.*;
-import pe.gob.midagri.piip.work.persistence.NotificationRepository;
+import pe.gob.midagri.piip.portfolio.persistence.*;
+import pe.gob.midagri.piip.work.persistence.*;
 
 @Component
 @Profile("test-reset")
@@ -41,6 +42,10 @@ public class TestResetCoordinator implements ApplicationRunner {
     private final AuditEventRepository auditEvents; private final AccessAuditRepository accessAudits;
     private final NotificationRepository notifications; private final CatalogRepository catalogs;
     private final CatalogItemRepository catalogItems; private final DocumentTypeRepository documentTypes;
+    private final PortfolioRecordRepository portfolios; private final ResponsibleUnitRepository responsibleUnits;
+    private final CodeCounterRepository codeCounters; private final DocumentRepository documents;
+    private final DocumentVersionRepository documentVersions; private final DocumentContentRepository documentContents;
+    private final WorkTaskRepository workTasks;
     private volatile boolean preflightCompleted;
 
     public TestResetCoordinator(TestResetEnvironmentGuard guard, HibernateMetadataCapture capture,
@@ -48,18 +53,21 @@ public class TestResetCoordinator implements ApplicationRunner {
             InstitutionRepository institutions, ExecutingUnitRepository executingUnits, OrganizationalUnitRepository organizationalUnits,
             RoleRepository roles, UserRepository users, UserRoleScopeRepository scopes, AuditEventRepository auditEvents,
             AccessAuditRepository accessAudits, NotificationRepository notifications, CatalogRepository catalogs,
-            CatalogItemRepository catalogItems, DocumentTypeRepository documentTypes) {
+            CatalogItemRepository catalogItems, DocumentTypeRepository documentTypes, PortfolioRecordRepository portfolios,
+            ResponsibleUnitRepository responsibleUnits, CodeCounterRepository codeCounters, DocumentRepository documents,
+            DocumentVersionRepository documentVersions, DocumentContentRepository documentContents, WorkTaskRepository workTasks) {
         this.guard = guard; this.capture = capture; this.filters = filters; this.entityManagerFactory = entityManagerFactory; this.dataSource = dataSource;
         this.institutions = institutions; this.executingUnits = executingUnits; this.organizationalUnits = organizationalUnits;
         this.roles = roles; this.users = users; this.scopes = scopes; this.auditEvents = auditEvents; this.accessAudits = accessAudits;
         this.notifications = notifications; this.catalogs = catalogs; this.catalogItems = catalogItems; this.documentTypes = documentTypes;
+        this.portfolios = portfolios; this.responsibleUnits = responsibleUnits; this.codeCounters = codeCounters;
+        this.documents = documents; this.documentVersions = documentVersions; this.documentContents = documentContents; this.workTasks = workTasks;
     }
 
     @Override public void run(ApplicationArguments args) {
         stage(TestResetStage.PREFLIGHT.name(), () -> guard.preflight());
         Metadata metadata = capture.requireMetadata();
         stage(TestResetStage.PREFLIGHT.name() + ":METADATA", () -> validateMetadata(metadata));
-        ProtectedCounts before = protectedCounts();
         preflightCompleted = true;
         SessionFactoryImplementor factory = entityManagerFactory.unwrap(SessionFactoryImplementor.class);
         SchemaManagementTool schema = factory.getServiceRegistry().getService(SchemaManagementTool.class);
@@ -78,19 +86,18 @@ public class TestResetCoordinator implements ApplicationRunner {
                 options(configuration, TestResetStage.CREATE, table), ContributableMatcher.ALL, source, target));
         }
         stage(TestResetStage.VALIDATE_EMPTY.name(), () -> {
-            if (auditEvents.count() != 0 || accessAudits.count() != 0 || notifications.count() != 0) {
-                throw new IllegalStateException("Auditoría y notificaciones deben quedar vacías antes del seed");
+            if (!operationalTablesAreEmpty()) {
+                throw new IllegalStateException("Las tablas operativas, auditoría y notificaciones deben quedar vacías antes del seed");
             }
-            if (!before.equals(protectedCounts())) throw new IllegalStateException("Una tabla protegida cambió durante drop/create");
         });
         stage(TestResetStage.SEED.name(), () -> new ResourceDatabasePopulator(new ClassPathResource("db/test/catalog-data.sql")).execute(dataSource));
         stage(TestResetStage.POST_VALIDATION.name(), () -> {
-            ProtectedCounts after = protectedCounts();
-            if (!before.sameIdentityBoundary(after) || after.organizationalUnits() < before.organizationalUnits()) {
-                throw new IllegalStateException("La identidad o estructura organizacional protegida cambió durante test-reset");
+            if (institutions.count() != 1 || executingUnits.count() != 2 || organizationalUnits.count() != 4
+                    || roles.count() != 2 || users.count() != 1 || scopes.count() != 2
+                    || catalogs.count() != 4 || catalogItems.count() != 17 || documentTypes.count() != 6) {
+                throw new IllegalStateException("El seed de identidad, organización o catálogos quedó incompleto");
             }
-            if (catalogs.count() != 4 || catalogItems.count() != 17 || documentTypes.count() != 6) throw new IllegalStateException("El seed de catálogos quedó incompleto");
-            if (auditEvents.count() != 0 || accessAudits.count() != 0 || notifications.count() != 0) throw new IllegalStateException("Auditoría o notificaciones recibieron datos durante test-reset");
+            if (!operationalTablesAreEmpty()) throw new IllegalStateException("Las tablas operativas, auditoría o notificaciones recibieron datos durante test-reset");
         });
         LOGGER.info("test-reset completado correctamente sobre el esquema allowlisted");
     }
@@ -99,16 +106,10 @@ public class TestResetCoordinator implements ApplicationRunner {
         Set<String> mapped = new TreeSet<>();
         metadata.collectTableMappings().forEach(table -> mapped.add(table.getName().toUpperCase(Locale.ROOT)));
         Set<String> expected = new TreeSet<>(TestResetSchemaFilterProvider.ALLOWLIST);
-        expected.addAll(TestResetSchemaFilterProvider.PROTECTED_TABLES);
-        if (!mapped.equals(expected)) throw new IllegalStateException("El Metadata JPA no coincide con las 13 tablas permitidas y 6 protegidas");
+        if (expected.size() != 19 || !mapped.equals(expected)) throw new IllegalStateException("El Metadata JPA no coincide con las 19 tablas del reset");
         metadata.collectTableMappings().forEach(source -> source.getForeignKeyCollection().forEach(foreignKey -> {
-            String sourceName = source.getName().toUpperCase(Locale.ROOT);
             String targetName = foreignKey.getReferencedTable().getName().toUpperCase(Locale.ROOT);
             if (!expected.contains(targetName)) throw new IllegalStateException("La FK del Metadata apunta fuera de la matriz test-reset");
-            if (TestResetSchemaFilterProvider.PROTECTED_TABLES.contains(sourceName)
-                    && TestResetSchemaFilterProvider.ALLOWLIST.contains(targetName)) {
-                throw new IllegalStateException("Una tabla protegida depende de una tabla destructible");
-            }
         }));
     }
 
@@ -145,17 +146,13 @@ public class TestResetCoordinator implements ApplicationRunner {
         @Override public EnumSet<TargetType> getTargetTypes() { return EnumSet.of(TargetType.DATABASE); }
         @Override public ScriptTargetOutput getScriptTargetOutput() { return null; }
     }; }
-    private ProtectedCounts protectedCounts() {
-        return new ProtectedCounts(institutions.count(), executingUnits.count(), organizationalUnits.count(), roles.count(), users.count(), scopes.count());
+    private boolean operationalTablesAreEmpty() {
+        return portfolios.count() == 0 && responsibleUnits.count() == 0 && codeCounters.count() == 0
+            && documents.count() == 0 && documentVersions.count() == 0 && documentContents.count() == 0
+            && workTasks.count() == 0 && auditEvents.count() == 0 && accessAudits.count() == 0 && notifications.count() == 0;
     }
     static void stage(String name, Runnable action) {
         try { action.run(); }
         catch (RuntimeException exception) { throw new IllegalStateException("Falló la etapa test-reset " + name, exception); }
-    }
-    private record ProtectedCounts(long institutions, long executingUnits, long organizationalUnits, long roles, long users, long scopes) {
-        boolean sameIdentityBoundary(ProtectedCounts other) {
-            return institutions == other.institutions && executingUnits == other.executingUnits && roles == other.roles
-                && users == other.users && scopes == other.scopes;
-        }
     }
 }

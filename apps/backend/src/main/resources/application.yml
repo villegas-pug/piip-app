@@ -1,18 +1,17 @@
 spring:
+  profiles:
+    default: dev
   application:
     name: piip-backend
   datasource:
-    url: ${ORACLE_URL:jdbc:oracle:thin:@myatp_low}
-    username: ${ORACLE_USERNAME:ADMIN}
-    password: ${ORACLE_PASSWORD:OracleA7dbPass2026}
+    url: ${ORACLE_URL:jdbc:oracle:thin:@srvdb-oracle-desa.domainminag.gob:1521:DEVELOPER}
+    username: ${ORACLE_USERNAME:SISPIIP}
+    password: ${ORACLE_PASSWORD:D3v3l0p3r$}
     driver-class-name: oracle.jdbc.OracleDriver
-    hikari:
-      data-source-properties:
-        oracle.net.tns_admin: ${ORACLE_DEV_TNS_ADMIN}
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: ${PIIP_DDL_AUTO:validate}
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.OracleDialect
@@ -51,10 +50,3 @@ piip:
     max-size-bytes: ${PIIP_DOCUMENT_MAX_SIZE:10485760}
   audit:
     retention-days: ${PIIP_AUDIT_RETENTION_DAYS:180}
-  bootstrap:
-    enabled: ${PIIP_BOOTSTRAP_ENABLED:false}
-    subject: ${PIIP_BOOTSTRAP_SUBJECT:ed3742bc-f2c2-4884-ae09-07e3f9ab98fc}
-    name: ${PIIP_BOOTSTRAP_NAME:Cristopher Guevara Villegas}
-    email: ${PIIP_BOOTSTRAP_EMAIL:rguevarav@midagri.gob.pe}
-    institution-code: ${PIIP_BOOTSTRAP_INSTITUTION_CODE:MIDAGRI}
-    executing-unit-codes: ${PIIP_BOOTSTRAP_EXECUTING_UNIT_CODES:UE-001,UE-002}

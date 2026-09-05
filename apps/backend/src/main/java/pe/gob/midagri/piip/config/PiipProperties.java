@@ -1,6 +1,7 @@
 package pe.gob.midagri.piip.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
 import java.util.List;
 
 public final class PiipProperties {
@@ -15,11 +16,6 @@ public final class PiipProperties {
     @ConfigurationProperties("piip.audit")
     public record Audit(int retentionDays) {}
 
-    @ConfigurationProperties("piip.bootstrap")
-    public record Bootstrap(boolean enabled, String subject, String name, String email,
-            String institutionCode, List<String> executingUnitCodes) {}
-
     @ConfigurationProperties("piip.test-reset")
-    public record TestReset(boolean enabled, String confirmation, String expectedConfirmation,
-            String allowedJdbcFingerprint, String allowedSchema) {}
+    public record TestReset(String allowedJdbcFingerprint, String allowedSchema) {}
 }
