@@ -1,10 +1,10 @@
 .audit-page { max-width: 1300px; margin: 0 auto; }
-.audit-filters { display: grid; grid-template-columns: 1.1fr .9fr .9fr .85fr .85fr auto; gap: 26px; align-items: end; margin: -6px -26px 20px; padding: 0 30px 23px; border-bottom: 1px solid var(--piip-border); background: #fff; }
+.audit-filters { display: grid; grid-template-columns: 1.1fr .9fr 1.1fr .9fr .85fr .85fr auto; gap: 18px; align-items: end; margin: -6px -26px 20px; padding: 0 30px 23px; border-bottom: 1px solid var(--piip-border); background: #fff; }
 .audit-filters .secondary-button { height: 44px; }
 .audit-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; }
 .history-panel { min-width: 0; padding: 18px 15px 13px; }
 .history-panel > h2 { margin: 0; padding: 0 5px 18px; color: var(--piip-green-900); border-bottom: 1px solid var(--piip-border); font-family: var(--piip-display); font-size: 27px; }
-.audit-head, .audit-row { display: grid; grid-template-columns: 45px .76fr 1fr .95fr 1.45fr .98fr .76fr; gap: 12px; align-items: center; }
+.audit-head, .audit-row { display: grid; grid-template-columns: 45px .72fr .74fr .95fr .9fr 1.35fr .98fr .72fr; gap: 12px; align-items: center; }
 .audit-head { min-height: 54px; padding: 0 0; color: #434b46; font-size: 13px; }
 .timeline { position: relative; }
 .timeline::before { content: ''; position: absolute; top: 0; bottom: 0; left: 22px; width: 1px; background: #bfc8c1; }
@@ -12,6 +12,7 @@
 .event-icon { z-index: 1; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid var(--piip-green-700); border-radius: 50%; color: var(--piip-green-800); background: #f2f8f3; }
 .event-icon mat-icon { width: 23px; height: 23px; font-size: 23px; }
 .timestamp { white-space: pre-line; }
+.audit-record { color: var(--piip-green-900); font-weight: 700; overflow-wrap: anywhere; }
 .audit-row small { display: block; margin-top: 3px; color: #6b746e; font-size: 12px; overflow-wrap: anywhere; }
 .document-link { display: inline-flex; gap: 5px; max-width: 100%; padding: 0; border: 0; color: #176399; background: transparent; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
 .document-link mat-icon { flex: 0 0 17px; width: 17px; height: 17px; font-size: 17px; }

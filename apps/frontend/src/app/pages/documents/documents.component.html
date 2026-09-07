@@ -5,16 +5,24 @@
 
     @if (uploadOpen()) {
       <div class="panel document-upload-panel" [attr.aria-busy]="isPending(uploadTarget() ? 'new-version' : 'add-file')">
-        <label class="document-type-field">
-          <span>{{ uploadTarget() ? 'Tipo documental de la nueva versión' : 'Tipo documental para el archivo nuevo' }}</span>
-          <select [value]="uploadType() ?? ''" [disabled]="operationPending() || catalogState().phase !== 'ready' || !!uploadTarget()" (change)="selectUploadType($event)">
-            <option value="">Seleccionar tipo documental</option>
-            @for (item of documentTypes(); track item.id) {<option [value]="item.id">{{ item.name }}</option>}
-          </select>
-          @if (catalogState().phase === 'loading') {<small>Cargando tipos documentales...</small>} @else if (catalogState().phase === 'error') {<small class="error" role="alert">{{ catalogState().error }} <button type="button" (click)="repository.reloadCatalogs()">Reintentar</button></small>} @else if (!documentTypes().length) {<small>No hay tipos documentales disponibles.</small>}
-        </label>
+        @if (uploadTarget(); as target) {
+          <section class="version-target-context" aria-label="Contexto de la nueva versión">
+            <span>Tipo documental</span>
+            <strong>{{ documentTypeLabel(target.document.name, target.document.type ?? target.document.documentType?.code) }}</strong>
+            <small>Archivo {{ target.file.id }} · versión vigente {{ target.file.latestVersion }} · {{ target.file.current?.filename ?? 'Archivo sin versión visible' }}</small>
+          </section>
+        } @else {
+          <label class="document-type-field">
+            <span>Tipo documental para el archivo nuevo</span>
+            <select [value]="uploadType() ?? ''" [disabled]="operationPending() || catalogState().phase !== 'ready'" (change)="selectUploadType($event)">
+              <option value="">Seleccionar tipo documental</option>
+              @for (item of documentTypes(); track item.id) {<option [value]="item.id">{{ documentTypeLabel(item.name, item.code) }}</option>}
+            </select>
+            @if (catalogState().phase === 'loading') {<small>Cargando tipos documentales...</small>} @else if (catalogState().phase === 'error') {<small class="error" role="alert">{{ catalogState().error }} <button type="button" (click)="repository.reloadCatalogs()">Reintentar</button></small>} @else if (!documentTypes().length) {<small>No hay tipos documentales disponibles.</small>}
+          </label>
+        }
         <label class="file-picker" [class.file-selected]="uploadFile()" [class.file-disabled]="operationPending()" [attr.title]="uploadFile()?.name ?? null">
-          <input class="file-picker-input" type="file" accept=".pdf,.docx,.xlsx" [disabled]="operationPending()" aria-describedby="document-upload-formats" (change)="selectUploadFile($event)" />
+          <input class="file-picker-input" type="file" accept=".pdf,.docx,.xlsx" [disabled]="operationPending()" aria-describedby="document-upload-formats document-upload-error" (change)="selectUploadFile($event)" />
           <mat-icon aria-hidden="true">{{ uploadFile() ? 'check_circle' : 'upload_file' }}</mat-icon>
           <span class="file-picker-copy">
             <strong>{{ uploadFile()?.name ?? 'Seleccionar archivo' }}</strong>
@@ -22,9 +30,10 @@
           </span>
           <span class="file-picker-action">{{ uploadFile() ? 'Cambiar archivo' : 'Examinar' }}</span>
         </label>
+        @if (uploadFileError()) {<p id="document-upload-error" class="file-validation-error" role="alert"><mat-icon aria-hidden="true">error_outline</mat-icon>{{ uploadFileError() }}</p>}
         <div class="document-upload-actions">
           <button class="secondary-button" type="button" [disabled]="operationPending()" (click)="closeUploadPanel()">Cancelar</button>
-          <button class="primary-button" type="button" [disabled]="!uploadFile() || !uploadType() || operationPending()" (click)="upload()">@if (operationPending()) {<mat-icon class="button-spinner">progress_activity</mat-icon>Cargando...} @else if (uploadTarget()) {Nueva versión} @else {Agregar archivo}</button>
+          <button class="primary-button" type="button" [disabled]="!uploadFile() || !!uploadFileError() || !uploadType() || operationPending()" (click)="upload()">@if (operationPending()) {<mat-icon class="button-spinner">progress_activity</mat-icon>Cargando...} @else if (uploadTarget()) {Nueva versión} @else {Agregar archivo}</button>
         </div>
       </div>
     }
@@ -44,22 +53,30 @@
               <div class="document-table document-head"><span>Documento</span><span>Obligatorio</span><span>Archivos y versiones</span><span>Estado del tipo</span><span>Acciones del tipo</span></div>
               @for (document of pagedStageRecords(stage); track document.name) {
                 <div class="document-table document-row">
-                  <strong>{{ document.name }} @if (document.documentType && !document.documentType.active) {<small>(Inactivo)</small>}</strong><span class="required">{{ document.required ? '*' : '—' }}</span>
+                  <strong class="document-name">{{ documentTypeLabel(document.name, document.type ?? document.documentType?.code) }} @if (document.documentType && !document.documentType.active) {<small>(Inactivo)</small>}</strong><span class="required">{{ document.required ? '*' : '—' }}</span>
                   <div class="document-files">
                     @if (document.files?.length) {
                       @for (file of document.files; track file.id ?? file.current?.id ?? $index) {
                         <section class="document-file" [attr.aria-label]="'Archivo ' + (file.current?.filename ?? file.id)">
-                          <header><div><strong>{{ file.current?.filename ?? 'Archivo sin versión visible' }}</strong><small>Archivo {{ file.id ?? 'legado' }} · versión vigente {{ file.latestVersion }}@if (file.original) { · Original}</small></div>@if (canAdministerRecord() && file.id !== null) {<span class="file-actions"><button class="secondary-button" type="button" [disabled]="operationPending()" (click)="openNewVersionPanel(document, file)"><mat-icon>upload_file</mat-icon>Nueva versión</button><button class="text-button danger" type="button" [disabled]="operationPending()" (click)="deleteFile(file)"><mat-icon>delete</mat-icon>Eliminar archivo</button></span>}</header>
-                          <div class="version-history" aria-label="Historial de versiones">
-                            @for (version of file.versions; track version.id ?? version.number) {
-                              <div class="version-row"><span><b>v{{ version.number }}</b> {{ version.filename }}</span><small>{{ version.uploadedAt }} · {{ version.externallyPublished ? 'Publicado' : 'Uso interno' }}</small><span class="version-actions"><button class="text-button" type="button" [disabled]="operationPending() || !version.id" (click)="download(version)" [attr.aria-label]="'Descargar versión ' + version.number + ' de ' + version.filename"><mat-icon>download</mat-icon>Descargar</button>@if (canAdministerRecord()) {<button class="text-button" type="button" [disabled]="operationPending() || !version.id || version.optimisticVersion === undefined" (click)="togglePublication(version)" [attr.aria-label]="(version.externallyPublished ? 'Retirar publicación de' : 'Publicar') + ' versión ' + version.number"><mat-icon>{{ version.externallyPublished ? 'visibility_off' : 'publish' }}</mat-icon>{{ version.externallyPublished ? 'Retirar publicación' : 'Publicar' }}</button>}</span></div>
+                          <header><div><span class="current-version-label">Versión vigente</span><strong>{{ file.current?.filename ?? 'Archivo sin versión visible' }}</strong><small>Archivo {{ file.id ?? 'legado' }} · versión vigente {{ file.latestVersion }}@if (file.original) { · Original}</small></div>@if (canAdministerRecord() && file.id !== null) {<span class="file-actions"><button class="secondary-button" type="button" [disabled]="operationPending()" (click)="openNewVersionPanel(document, file)"><mat-icon>upload_file</mat-icon>Nueva versión</button><button class="text-button danger" type="button" [disabled]="operationPending()" (click)="requestDeleteFile(document, file)"><mat-icon>delete</mat-icon>Eliminar archivo</button></span>}</header>
+                          @if (file.current; as currentVersion) {
+                            <div class="version-row current-version"><span><b>v{{ currentVersion.number }}</b> {{ currentVersion.filename }}</span><small>{{ currentVersion.uploadedAt }} · {{ currentVersion.externallyPublished ? 'Publicado' : 'Uso interno' }}</small><span class="version-actions"><button class="text-button" type="button" [disabled]="operationPending() || !currentVersion.id" (click)="download(currentVersion)" [attr.aria-label]="'Descargar versión ' + currentVersion.number + ' de ' + currentVersion.filename"><mat-icon>download</mat-icon>Descargar</button>@if (canAdministerRecord()) {<button class="text-button" type="button" [disabled]="operationPending() || !currentVersion.id || currentVersion.optimisticVersion === undefined" (click)="togglePublication(currentVersion)" [attr.aria-label]="(currentVersion.externallyPublished ? 'Retirar publicación de' : 'Publicar') + ' versión ' + currentVersion.number"><mat-icon>{{ currentVersion.externallyPublished ? 'visibility_off' : 'publish' }}</mat-icon>{{ currentVersion.externallyPublished ? 'Retirar publicación' : 'Publicar' }}</button>}</span></div>
+                          }
+                          @if (historyVersions(file).length) {
+                            <button class="history-toggle" type="button" [attr.aria-expanded]="isHistoryExpanded(file)" [attr.aria-controls]="historyId(file)" (click)="toggleFileHistory(file)"><mat-icon>{{ isHistoryExpanded(file) ? 'expand_less' : 'expand_more' }}</mat-icon>{{ isHistoryExpanded(file) ? 'Ocultar historial' : 'Ver historial' }} ({{ historyVersions(file).length }})</button>
+                            @if (isHistoryExpanded(file)) {
+                              <div class="version-history" [id]="historyId(file)" aria-label="Historial de versiones">
+                                @for (version of historyVersions(file); track version.id ?? version.number) {
+                                  <div class="version-row"><span><b>v{{ version.number }}</b> {{ version.filename }}</span><small>{{ version.uploadedAt }} · {{ version.externallyPublished ? 'Publicado' : 'Uso interno' }}</small><span class="version-actions"><button class="text-button" type="button" [disabled]="operationPending() || !version.id" (click)="download(version)" [attr.aria-label]="'Descargar versión ' + version.number + ' de ' + version.filename"><mat-icon>download</mat-icon>Descargar</button>@if (canAdministerRecord()) {<button class="text-button" type="button" [disabled]="operationPending() || !version.id || version.optimisticVersion === undefined" (click)="togglePublication(version)" [attr.aria-label]="(version.externallyPublished ? 'Retirar publicación de' : 'Publicar') + ' versión ' + version.number"><mat-icon>{{ version.externallyPublished ? 'visibility_off' : 'publish' }}</mat-icon>{{ version.externallyPublished ? 'Retirar publicación' : 'Publicar' }}</button>}</span></div>
+                                }
+                              </div>
                             }
-                          </div>
+                          }
                         </section>
                       }
                     } @else {<span class="filename">Sin archivos cargados</span>}
                   </div>
-                  <span><b class="status" [class.pending]="document.state === 'Pendiente'" [class.not-applicable]="document.state === 'No aplica'">{{ document.state }}</b></span>
+                  <span class="document-status"><b class="status" [class.pending]="document.state === 'Pendiente'" [class.not-applicable]="document.state === 'No aplica'">{{ document.state }}</b></span>
                   <span class="actions">
                     @if (canAdministerRecord() && document.state === 'Pendiente') {
                       <button class="document-action-trigger" type="button" [matMenuTriggerFor]="documentActions" [disabled]="operationPending()" [attr.aria-busy]="isDocumentPending(document)" [attr.aria-label]="'Acciones de ' + document.name">
@@ -72,7 +89,7 @@
                   </span>
                 </div>
               }
-              <app-piip-pagination [totalItems]="stage.records.length" [pageIndex]="stagePageIndex(stage)" itemLabel="documentos" (pageChange)="setStagePage(stage, $event)" />
+              @if (shouldShowStagePagination(stage)) {<app-piip-pagination [totalItems]="stage.records.length" [pageIndex]="stagePageIndex(stage)" itemLabel="tipos documentales" (pageChange)="setStagePage(stage, $event)" />}
             }
           </section>
         }
@@ -88,7 +105,7 @@
           <div class="progress"><span><i [style.width.%]="progress()"></i></span><b>{{ summary.loadedCount }} / {{ summary.loadedCount + summary.pendingCount }}</b></div>
           <div class="availability-counts"><p><strong>{{ summary.loadedCount }}</strong><span>Cargados</span></p><p><strong>{{ summary.pendingCount }}</strong><span>Pendientes</span></p><p><strong>{{ summary.notApplicableCount }}</strong><span>No aplica</span></p></div>
           @for (stage of dossier.stages; track stage.title) {
-            <section><h4>{{ stage.title }} <b>{{ stageAvailability(stage) }}</b></h4>@for (document of stage.records; track document.name) {<p [class.complete]="document.state === 'Cargado'" [class.na]="document.state === 'No aplica'"><mat-icon>{{ document.state === 'Cargado' ? 'check_circle' : document.state === 'No aplica' ? 'remove_circle_outline' : 'radio_button_unchecked' }}</mat-icon>{{ document.name }}</p>}</section>
+            <section><h4>{{ stage.title }} <b>{{ stageAvailability(stage) }}</b></h4>@for (document of stage.records; track document.name) {<p [class.complete]="document.state === 'Cargado'" [class.na]="document.state === 'No aplica'"><mat-icon>{{ document.state === 'Cargado' ? 'check_circle' : document.state === 'No aplica' ? 'remove_circle_outline' : 'radio_button_unchecked' }}</mat-icon>{{ documentTypeLabel(document.name, document.type ?? document.documentType?.code) }}</p>}</section>
           }
           <div class="info-box"><mat-icon>info_outline</mat-icon>Los conteos son informativos. Esta vista no afirma obligatoriedad por transición.</div>
         </aside>

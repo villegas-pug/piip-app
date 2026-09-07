@@ -1,14 +1,18 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { summarizeDocumentDossier } from '../../core/piip-mock.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { DocumentFile, DocumentRecord, DocumentStage, DocumentVersion, PiipRecordType, PiipStatus } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
+import { DeleteDocumentFileDialogComponent } from './delete-document-file-dialog.component';
+import { presentDocumentTypeLabel } from './document-type-label.presenter';
 
 type DocumentOperationKind = 'add-file' | 'new-version' | 'delete-file' | 'download' | 'publication' | 'not-applicable';
 
@@ -26,14 +30,17 @@ interface PendingDocumentOperation {
 })
 export class DocumentsComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly routeParamMap = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
   private readonly routeData = toSignal(this.route.data, { initialValue: this.route.snapshot.data });
   readonly repository = inject(PIIP_REPOSITORY);
   readonly collapsedStages = signal<Set<string>>(new Set());
+  readonly expandedFileHistories = signal<Set<string>>(new Set());
   readonly uploadOpen = signal(false);
   readonly uploadType = signal<number | null>(null);
   readonly uploadFile = signal<File | null>(null);
+  readonly uploadFileError = signal<string | null>(null);
   readonly uploadTarget = signal<{ document: DocumentRecord; file: DocumentFile } | null>(null);
   readonly pendingOperation = signal<PendingDocumentOperation | null>(null);
   readonly stagePageIndexes = signal<Record<string, number>>({});
@@ -100,12 +107,20 @@ export class DocumentsComponent {
     return paginateItems(stage.records, this.stagePageIndex(stage));
   }
 
+  shouldShowStagePagination(stage: DocumentStage): boolean {
+    return stage.records.length > 5;
+  }
+
   setStagePage(stage: DocumentStage, pageIndex: number): void {
     this.stagePageIndexes.update((current) => ({ ...current, [stage.title]: clampPageIndex(pageIndex, stage.records.length) }));
   }
 
   selectUploadFile(event: Event): void {
-    this.uploadFile.set((event.target as HTMLInputElement).files?.[0] ?? null);
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    this.uploadFile.set(file);
+    this.uploadFileError.set(file && !this.hasSupportedExtension(file)
+      ? `El formato de ${this.fileExtension(file) || 'archivo'} no está permitido. Selecciona un archivo PDF, DOCX o XLSX.`
+      : null);
   }
 
   toggleUploadPanel(): void {
@@ -120,6 +135,8 @@ export class DocumentsComponent {
     }
     this.uploadTarget.set(null);
     this.uploadType.set(null);
+    this.uploadFile.set(null);
+    this.uploadFileError.set(null);
     this.uploadOpen.set(true);
   }
 
@@ -128,12 +145,14 @@ export class DocumentsComponent {
     this.uploadTarget.set({ document, file });
     this.uploadType.set(document.documentTypeId ?? null);
     this.uploadFile.set(null);
+    this.uploadFileError.set(null);
     this.uploadOpen.set(true);
   }
 
   closeUploadPanel(): void {
     this.uploadOpen.set(false);
     this.uploadFile.set(null);
+    this.uploadFileError.set(null);
     this.uploadTarget.set(null);
     this.uploadType.set(null);
   }
@@ -142,7 +161,7 @@ export class DocumentsComponent {
     const file = this.uploadFile();
     const documentTypeId = this.uploadType();
     const target = this.uploadTarget();
-    if (!file || !documentTypeId || (target && target.file.id === null) || this.operationPending() || !this.canAdministerRecord()) return;
+    if (!file || this.uploadFileError() || !documentTypeId || (target && target.file.id === null) || this.operationPending() || !this.canAdministerRecord()) return;
     this.pendingOperation.set({ kind: target ? 'new-version' : 'add-file', key: target ? this.fileKey(target.file) : String(documentTypeId) });
     try {
       if (target?.file.id !== undefined && target.file.id !== null) {
@@ -184,10 +203,23 @@ export class DocumentsComponent {
     }
   }
 
+  async requestDeleteFile(document: DocumentRecord, file: DocumentFile): Promise<void> {
+    if (file.id === null || this.operationPending() || !this.canAdministerRecord()) return;
+    const confirmed = await firstValueFrom(this.dialog.open(DeleteDocumentFileDialogComponent, {
+      data: {
+        documentName: document.name,
+        filename: file.current?.filename ?? `Archivo ${file.id}`,
+        latestVersion: file.latestVersion,
+      },
+      autoFocus: 'first-tabbable',
+      maxWidth: 'calc(100vw - 32px)',
+    }).afterClosed());
+    if (confirmed !== true) return;
+    await this.deleteFile(file);
+  }
+
   async deleteFile(file: DocumentFile): Promise<void> {
     if (file.id === null || this.operationPending() || !this.canAdministerRecord()) return;
-    const filename = file.current?.filename ?? `archivo ${file.id}`;
-    if (!window.confirm(`¿Eliminar el archivo ${filename}? Esta acción no afecta a los demás archivos del tipo.`)) return;
     this.pendingOperation.set({ kind: 'delete-file', key: this.fileKey(file) });
     try {
       await Promise.resolve(this.repository.deleteDocumentFile(this.code(), file.id));
@@ -221,15 +253,53 @@ export class DocumentsComponent {
     return this.pendingOperation()?.key === this.documentKey(document);
   }
 
+  isHistoryExpanded(file: DocumentFile): boolean {
+    return this.expandedFileHistories().has(this.fileKey(file));
+  }
+
+  toggleFileHistory(file: DocumentFile): void {
+    this.expandedFileHistories.update((current) => {
+      const next = new Set(current);
+      const key = this.fileKey(file);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+
+  historyVersions(file: DocumentFile): readonly DocumentVersion[] {
+    const current = file.current;
+    if (!current) return file.versions;
+    return file.versions.filter((version) => current.id !== undefined && version.id !== undefined
+      ? version.id !== current.id
+      : version.number !== current.number);
+  }
+
+  historyId(file: DocumentFile): string {
+    return `document-history-${file.id ?? file.current?.id ?? 'legacy'}`;
+  }
+
+  documentTypeLabel(name: string | null | undefined, code?: string | null): string {
+    return presentDocumentTypeLabel(name, code);
+  }
+
   documentKey(document: DocumentRecord): string {
     return String(document.documentTypeId ?? document.type ?? document.name);
   }
 
   fileKey(file: DocumentFile): string {
-    return `file:${file.id ?? 'legacy'}`;
+    return `file:${file.id ?? file.current?.id ?? 'legacy'}`;
   }
 
   versionKey(version: DocumentVersion): string {
     return `version:${version.id ?? version.number}`;
+  }
+
+  private hasSupportedExtension(file: File): boolean {
+    return ['.pdf', '.docx', '.xlsx'].includes(this.fileExtension(file));
+  }
+
+  private fileExtension(file: File): string {
+    const dot = file.name.lastIndexOf('.');
+    return dot < 0 ? '' : file.name.slice(dot).toLocaleLowerCase();
   }
 }

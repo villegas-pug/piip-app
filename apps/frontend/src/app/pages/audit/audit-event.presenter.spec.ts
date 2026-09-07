@@ -14,7 +14,6 @@ describe('presentAuditEvent', () => {
     expect(event.eventLabel).toBe('Documento cargado');
     expect(event.observation).toBe('Se cargó Informe de opinión técnica de evaluación de iniciativa, versión 1.');
     expect(event.detailFields).toEqual(expect.arrayContaining([
-      { label: 'Código de tipo documental', value: 'INITIATIVE_TECHNICAL_OPINION' },
       { label: 'Tipo documental', value: 'Informe de opinión técnica de evaluación de iniciativa' },
     ]));
     expect(event.technicalDetail).toContain('"INITIATIVE_TECHNICAL_OPINION"');
@@ -33,11 +32,10 @@ describe('presentAuditEvent', () => {
     expect(event.eventLabel).toBe('Archivo de documento eliminado');
     expect(event.observation).toBe('Se eliminó Informe de opinión técnica (a1.pdf), versión 2.');
     expect(event.detailFields).toEqual(expect.arrayContaining([
-      { label: 'Código de tipo documental', value: 'OPINION' },
       { label: 'Tipo documental', value: 'Informe de opinión técnica' },
       { label: 'Id de archivo', value: '15' },
-      { label: 'Versión vigente', value: '2' },
-      { label: 'Nombre de archivo vigente', value: 'a1.pdf' },
+      { label: 'Versión al momento de la eliminación', value: '2' },
+      { label: 'Nombre del archivo eliminado', value: 'a1.pdf' },
     ]));
     expect(event.technicalDetail).toContain('"archivoId": 15');
   });

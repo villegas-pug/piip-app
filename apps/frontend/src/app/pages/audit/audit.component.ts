@@ -11,6 +11,8 @@ import { PresentedAuditEvent, presentAuditEvent } from './audit-event.presenter'
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 
+type DocumentaryOperation = 'Carga o nueva versión' | 'Publicación' | 'Retiro de publicación' | 'Eliminación' | 'No aplica';
+
 @Component({
   selector: 'app-audit',
   imports: [ReactiveFormsModule, MatIconModule, PiipPaginationComponent],
@@ -25,7 +27,7 @@ export class AuditComponent {
   private readonly route = inject(ActivatedRoute);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly initialRecord = this.route.snapshot.queryParamMap.get('record') ?? '';
-  readonly filters = this.formBuilder.nonNullable.group({ record: this.initialRecord, eventType: 'Todos', user: 'Todos', from: '', to: '' });
+  readonly filters = this.formBuilder.nonNullable.group({ record: this.initialRecord, eventType: 'Todos', documentOperation: 'Todas', user: 'Todos', from: '', to: '' });
   private readonly filterValue = toSignal(this.filters.valueChanges, { initialValue: this.filters.getRawValue() });
   readonly pageIndex = signal(0);
   readonly recordCodes = computed(() => [...new Set(this.repository.portfolioRecords().map((record) => record.code))]);
@@ -35,7 +37,8 @@ export class AuditComponent {
     return this.repository.auditEvents().filter((event) =>
       (!filters.record || event.recordCode === filters.record) &&
       (filters.user === 'Todos' || event.user === filters.user) &&
-      (filters.eventType === 'Todos' || this.eventCategory(event.event, Boolean(event.documentName)) === filters.eventType),
+      (filters.eventType === 'Todos' || this.eventCategory(event.event) === filters.eventType) &&
+      (filters.documentOperation === 'Todas' || this.documentOperation(event.event) === filters.documentOperation),
     );
   });
   readonly deniedAccesses = computed(() => this.repository.auditAccesses().filter((access) => access.status === 401 || access.status === 403).length);
@@ -50,7 +53,7 @@ export class AuditComponent {
   }
 
   resetFilters(): void {
-    this.filters.reset({ record: this.initialRecord, eventType: 'Todos', user: 'Todos', from: '', to: '' });
+    this.filters.reset({ record: this.initialRecord, eventType: 'Todos', documentOperation: 'Todas', user: 'Todos', from: '', to: '' });
   }
 
   showDetail(event: PresentedAuditEvent): void {
@@ -61,9 +64,18 @@ export class AuditComponent {
     });
   }
 
-  private eventCategory(event: string, hasDocument: boolean): 'Creación' | 'Documento' | 'Transición' {
-    if (hasDocument || /cargad/i.test(event)) return 'Documento';
+  private eventCategory(event: string): 'Creación' | 'Documento' | 'Transición' {
+    if (this.documentOperation(event) !== null || /cargad/i.test(event)) return 'Documento';
     if (/cread|registrad/i.test(event)) return 'Creación';
     return 'Transición';
+  }
+
+  private documentOperation(event: string): DocumentaryOperation | null {
+    if (event === 'DOCUMENTO_CARGADO' || /cargad/i.test(event)) return 'Carga o nueva versión';
+    if (event === 'DOCUMENTO_PUBLICADO') return 'Publicación';
+    if (event === 'DOCUMENTO_RETIRADO') return 'Retiro de publicación';
+    if (event === 'DOCUMENTO_ARCHIVO_ELIMINADO') return 'Eliminación';
+    if (event === 'DOCUMENTO_NO_APLICA') return 'No aplica';
+    return null;
   }
 }

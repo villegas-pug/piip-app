@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { DocumentFile } from '../../core/piip.models';
@@ -8,7 +9,10 @@ import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { DocumentsComponent } from './documents.component';
 
 describe('DocumentsComponent archivos independientes', () => {
+  const dialog = { open: vi.fn() };
+
   beforeEach(async () => {
+    dialog.open.mockReset();
     const paramMap = convertToParamMap({ code: 'I-024-2026' });
     await TestBed.configureTestingModule({
       imports: [DocumentsComponent],
@@ -17,6 +21,7 @@ describe('DocumentsComponent archivos independientes', () => {
         PiipMockRepository,
         { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository },
         { provide: MatSnackBar, useValue: { open: vi.fn() } },
+        { provide: MatDialog, useValue: dialog },
         { provide: ActivatedRoute, useValue: { paramMap: of(paramMap), data: of({ recordType: 'Iniciativa' }), snapshot: { paramMap, data: { recordType: 'Iniciativa' } } } },
       ],
     }).compileComponents();
@@ -53,8 +58,11 @@ describe('DocumentsComponent archivos independientes', () => {
     const documentRow = host.querySelector<HTMLElement>('.document-row');
     expect(documentRow?.querySelectorAll('.document-file')).toHaveLength(2);
     expect(host.textContent).toContain('anexo-b-v2.pdf');
-    expect(host.textContent).toContain('anexo-b-v1.pdf');
+    expect(host.textContent).not.toContain('anexo-b-v1.pdf');
     expect(host.textContent).toContain('versión vigente 2');
+    fixture.componentInstance.toggleFileHistory(second);
+    fixture.detectChanges();
+    expect(host.textContent).toContain('anexo-b-v1.pdf');
     expect(host.querySelector('[aria-label="Descargar versión 1 de anexo-b-v1.pdf"]')).not.toBeNull();
   });
 
@@ -101,7 +109,7 @@ describe('DocumentsComponent archivos independientes', () => {
     expect(files.find((file) => file.id === original.id)?.versions).toHaveLength(1);
   });
 
-  it('pide confirmación antes de eliminar y elimina solo el archivo objetivo', async () => {
+  it('abre un diálogo antes de eliminar y elimina solo el archivo confirmado', async () => {
     const repository = TestBed.inject(PiipMockRepository);
     const fixture = TestBed.createComponent(DocumentsComponent);
     const component = fixture.componentInstance;
@@ -109,13 +117,13 @@ describe('DocumentsComponent archivos independientes', () => {
     repository.addDocumentFile('I-024-2026', document.documentTypeId!, new File(['b'], 'b.pdf', { type: 'application/pdf' }));
     const files = repository.getDocumentDossier('Iniciativa', 'I-024-2026')!.stages[0].records[0].files!;
     const [target, survivor] = files;
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
     const deleteFile = vi.spyOn(repository, 'deleteDocumentFile');
+    dialog.open.mockReturnValueOnce({ afterClosed: () => of(false) }).mockReturnValueOnce({ afterClosed: () => of(true) });
 
-    await component.deleteFile(target);
+    await component.requestDeleteFile(document, target);
     expect(deleteFile).not.toHaveBeenCalled();
-    await component.deleteFile(target);
-    expect(confirm).toHaveBeenCalledTimes(2);
+    await component.requestDeleteFile(document, target);
+    expect(dialog.open).toHaveBeenCalledTimes(2);
     expect(deleteFile).toHaveBeenCalledWith('I-024-2026', target.id);
     expect(repository.getDocumentDossier('Iniciativa', 'I-024-2026')!.stages[0].records[0].files?.map((file) => file.id)).toEqual([survivor.id]);
   });

@@ -1,4 +1,5 @@
 import { AuditEvent } from '../../core/piip.models';
+import { presentDocumentTypeLabel } from '../documents/document-type-label.presenter';
 
 export interface AuditDetailField {
   label: string;
@@ -9,6 +10,7 @@ export interface PresentedAuditEvent {
   source: AuditEvent;
   eventLabel: string;
   observation: string;
+  documentName?: string;
   technicalDetail: string;
   detailFields: AuditDetailField[];
 }
@@ -52,13 +54,31 @@ export function presentAuditEvent(event: AuditEvent): PresentedAuditEvent {
     source: event,
     eventLabel: EVENT_LABELS[event.event] ?? humanize(event.event),
     observation: summarize(event.event, detail),
+    documentName: event.documentName ?? stringDetail(detail['nombreVigente']),
     technicalDetail: formatTechnicalDetail(rawDetail),
-    detailFields: Object.entries(detail).map(([key, value]) => ({ label: DETAIL_LABELS[key] ?? humanize(key), value: presentValue(key, value) })),
+    detailFields: Object.entries(detail)
+      .filter(([key]) => key !== 'tipoCodigo')
+      .map(([key, value]) => ({ label: detailLabel(event.event, key), value: presentValue(key, value) })),
   };
 }
 
+function detailLabel(event: string, key: string): string {
+  if (event === 'DOCUMENTO_ARCHIVO_ELIMINADO') {
+    if (key === 'versionVigente') return 'Versión al momento de la eliminación';
+    if (key === 'nombreVigente') return 'Nombre del archivo eliminado';
+  }
+  return DETAIL_LABELS[key] ?? humanize(key);
+}
+
+function stringDetail(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
 function summarize(event: string, detail: AuditDetail): string {
-  const documentType = presentValue('tipoNombre', detail['tipoNombre'] ?? detail['tipo']);
+  const documentType = presentDocumentTypeLabel(
+    presentValue('tipoNombre', detail['tipoNombre'] ?? detail['tipo']),
+    typeof detail['tipoCodigo'] === 'string' ? detail['tipoCodigo'] : undefined,
+  );
   const version = detail['version'] ?? detail['versionId'] ?? detail['versionVigente'];
   const record = presentValue('registro', detail['registro']);
   switch (event) {
@@ -129,7 +149,9 @@ function presentValue(key: string, value: unknown): string {
       .join('; ');
     return entries || '{}';
   }
-  return String(value);
+  return key === 'tipoNombre' || key === 'tipo'
+    ? presentDocumentTypeLabel(String(value))
+    : String(value);
 }
 
 function humanize(value: string): string {
