@@ -4,6 +4,10 @@
 .specify/integrations/codex.manifest.json
 .specify/integrations/speckit.manifest.json
 .specify/workflows/workflow-registry.json
+AGENTS.md
+.agents/
+.codex/
+.opencode/
 apps/frontend/tsconfig.app.json
 apps/frontend/tsconfig.json
 apps/frontend/tsconfig.spec.json

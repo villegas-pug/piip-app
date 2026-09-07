@@ -15,10 +15,12 @@
 
 ## Contexto: Graphify -> código fuente
 
-- Ante preguntas o tareas sobre arquitectura, módulos, dependencias, símbolos, flujos o impacto, si existe `graphify-out/graph.json`, aplicar la skill global `graphify` mediante una consulta acotada con `graphify query "<pregunta>"` antes de explorar ampliamente el repositorio. Si ya se conoce el archivo o símbolo exacto, inspeccionarlo directamente; si el grafo falta o falla, informarlo y continuar con las fuentes canónicas.
-- No cargar `graph.json` ni `GRAPH_REPORT.md` completos; usar el resultado acotado de Graphify y validarlo en código fuente, especificaciones, pruebas o configuración antes de responder, planificar o modificar.
-- Graphify es un índice estructural derivado; el repositorio es la autoridad canónica. No derivar reglas de negocio del grafo.
-- Después de cambios materiales de código, ejecutar `graphify update .`.
+- Graphify es un índice estructural local y derivado; el repositorio sigue siendo la autoridad para código, especificaciones, pruebas y configuración. No derivar reglas funcionales solo del grafo.
+- Al iniciar trabajo que use el grafo, ejecutar `graphify reflect --if-stale`. Para preguntas sobre arquitectura, módulos, dependencias, símbolos, flujos o impacto, si existe `graphify-out/graph.json`, aplicar la skill global `graphify` y consultar primero `query`, `path`, `explain` o `affected` de forma acotada. No cargar `graph.json` ni `GRAPH_REPORT.md` completos.
+- Si ya se conoce la ruta o el símbolo exacto, inspeccionarlo directamente. Si el grafo falta, falla o está desactualizado, informarlo y continuar con las fuentes canónicas; validar siempre los hallazgos del grafo contra código, especificaciones, pruebas o configuración.
+- Después de cambios materiales de código no confirmados, ejecutar `graphify update .` para refrescar el AST local. Los hooks Git actualizan código tras commits y cambios de rama en el checkout principal.
+- Los cambios de `specs/`, `docs/` u otros documentos requieren una actualización semántica explícita mediante la skill Graphify del agente activo; no configurar ni usar proveedores externos sin autorización expresa.
+- `graphify-out/` permanece local e ignorado por Git. En worktrees enlazados sin un grafo local, usar las fuentes canónicas directamente.
 
 ## Comandos (manual, no automático)
 
