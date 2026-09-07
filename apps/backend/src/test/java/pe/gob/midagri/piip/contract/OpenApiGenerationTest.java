@@ -28,6 +28,9 @@ class OpenApiGenerationTest {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body())
             .contains("/initiatives", "/projects/derived", "/portfolio-records/{recordCode}/documents",
+                "/portfolio-records/{recordCode}/documents/{documentTypeId}/files",
+                "/portfolio-records/{recordCode}/documents/files/{fileId}/versions",
+                "/portfolio-records/{recordCode}/documents/files/{fileId}", "FileResponse",
                 "/catalogs", "CatalogBundleResponse", "PersistentCatalogItemResponse", "TechnicalCatalogItemResponse",
                 "solutionTypeId", "sourceId", "peiObjectiveId", "poiActivityId", "documentTypeId",
                 "/admin/users/administrable-scopes", "/initiatives/{code}/status-transitions",

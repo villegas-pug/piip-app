@@ -20,6 +20,28 @@ describe('presentAuditEvent', () => {
     expect(event.technicalDetail).toContain('"INITIATIVE_TECHNICAL_OPINION"');
   });
 
+  it('presenta la eliminación de un archivo de documento con su etiqueta, resumen y detalle', () => {
+    const detalle = { tipoCodigo: 'OPINION', tipoNombre: 'Informe de opinión técnica', archivoId: 15, versionVigente: 2, nombreVigente: 'a1.pdf' };
+    const event = presentAuditEvent({
+      ...baseEvent,
+      recordCode: 'INI-001',
+      event: 'DOCUMENTO_ARCHIVO_ELIMINADO',
+      observation: JSON.stringify(detalle),
+      rawDetail: JSON.stringify(detalle),
+    });
+
+    expect(event.eventLabel).toBe('Archivo de documento eliminado');
+    expect(event.observation).toBe('Se eliminó Informe de opinión técnica (a1.pdf), versión 2.');
+    expect(event.detailFields).toEqual(expect.arrayContaining([
+      { label: 'Código de tipo documental', value: 'OPINION' },
+      { label: 'Tipo documental', value: 'Informe de opinión técnica' },
+      { label: 'Id de archivo', value: '15' },
+      { label: 'Versión vigente', value: '2' },
+      { label: 'Nombre de archivo vigente', value: 'a1.pdf' },
+    ]));
+    expect(event.technicalDetail).toContain('"archivoId": 15');
+  });
+
   it('presents initiative registration with its functional label and initial status', () => {
     const event = presentAuditEvent({
       ...baseEvent,

@@ -9,9 +9,11 @@ import java.util.List;
 public final class DocumentDtos {
     private DocumentDtos() {}
     public record DocumentResponse(Long id, PersistentCatalogItemResponse documentType, DocumentState state,
-            String notApplicableReason, int latestVersion, List<VersionResponse> versions) {}
+            String notApplicableReason, int latestVersion, List<VersionResponse> versions, List<FileResponse> files) {}
     public record VersionResponse(Long id, int version, String filename, String mimeType, long sizeBytes,
             String checksumSha256, Instant uploadedAt, boolean externallyPublished, long optimisticVersion) {}
+    public record FileResponse(Long id, boolean original, int latestVersion, VersionResponse current,
+            List<VersionResponse> versions) {}
     public record NotApplicableRequest(@Size(max = 500) String reason) {}
     public record DownloadResponse(String filename, String mimeType, byte[] content) {}
 }

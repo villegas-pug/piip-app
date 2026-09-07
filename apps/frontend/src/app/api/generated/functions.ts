@@ -13,10 +13,16 @@ export type { Publication$Params as Publication$Params } from './fn/document-con
 export { publication as publication } from './fn/document-controller/publication';
 export type { Upload$Params as Upload$Params } from './fn/document-controller/upload';
 export { upload as upload } from './fn/document-controller/upload';
+export type { AddFile$Params as AddFile$Params } from './fn/document-controller/add-file';
+export { addFile as addFile } from './fn/document-controller/add-file';
+export type { AddVersionToFile$Params as AddVersionToFile$Params } from './fn/document-controller/add-version-to-file';
+export { addVersionToFile as addVersionToFile } from './fn/document-controller/add-version-to-file';
 export type { List$Params as List$Params } from './fn/document-controller/list';
 export { list as list } from './fn/document-controller/list';
 export type { Download$Params as Download$Params } from './fn/document-controller/download';
 export { download as download } from './fn/document-controller/download';
+export type { DeleteFile$Params as DeleteFile$Params } from './fn/document-controller/delete-file';
+export { deleteFile as deleteFile } from './fn/document-controller/delete-file';
 export type { Read$Params as Read$Params } from './fn/notification-controller/read';
 export { read as read } from './fn/notification-controller/read';
 export type { List1$Params as List1$Params } from './fn/notification-controller/list-1';

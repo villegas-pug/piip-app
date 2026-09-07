@@ -16,17 +16,16 @@ public class DocumentEntity {
     @JoinColumn(name = "ID_TIPO_DOCUMENTO", nullable = false, foreignKey = @ForeignKey(name = "FK_DOC_TIPODOC")) private DocumentTypeEntity type;
     @Enumerated(EnumType.STRING) @Column(name = "ESTADO", length = 30, nullable = false) private DocumentState state = DocumentState.PENDING;
     @Column(name = "MOTIVO_NO_APLICA", length = 500) private String notApplicableReason;
-    @Column(name = "ULTIMA_VERSION", nullable = false) private int latestVersion;
     @Version @Column(name = "VERSION", nullable = false) private long version;
 
     protected DocumentEntity() {}
     public DocumentEntity(PortfolioRecordEntity record, DocumentTypeEntity type) { this.record = record; this.type = type; }
-    public int registerUpload() { state = DocumentState.LOADED; return ++latestVersion; }
+    public void registerUpload() { state = DocumentState.LOADED; }
+    public void markPending() { state = DocumentState.PENDING; }
     public void markNotApplicable(String reason) { state = DocumentState.NOT_APPLICABLE; notApplicableReason = reason; }
     public Long getId() { return id; }
     public PortfolioRecordEntity getRecord() { return record; }
     public DocumentTypeEntity getType() { return type; }
     public DocumentState getState() { return state; }
     public String getNotApplicableReason() { return notApplicableReason; }
-    public int getLatestVersion() { return latestVersion; }
 }

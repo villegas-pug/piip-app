@@ -15,6 +15,7 @@ export interface PresentedAuditEvent {
 
 const EVENT_LABELS: Record<string, string> = {
   DOCUMENTO_CARGADO: 'Documento cargado',
+  DOCUMENTO_ARCHIVO_ELIMINADO: 'Archivo de documento eliminado',
   DOCUMENTO_NO_APLICA: 'Documento marcado como No aplica',
   DOCUMENTO_PUBLICADO: 'Documento publicado',
   DOCUMENTO_RETIRADO: 'Publicación retirada',
@@ -34,7 +35,7 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 const DETAIL_LABELS: Record<string, string> = {
-  tipo: 'Tipo documental', tipoCodigo: 'Código de tipo documental', tipoNombre: 'Tipo documental', version: 'Versión', versionId: 'Versión', estado: 'Estado', estadoAnterior: 'Estado anterior', estadoNuevo: 'Estado nuevo', observacion: 'Observación',
+  tipo: 'Tipo documental', tipoCodigo: 'Código de tipo documental', tipoNombre: 'Tipo documental', version: 'Versión', versionId: 'Versión', versionVigente: 'Versión vigente', archivoId: 'Id de archivo', nombreVigente: 'Nombre de archivo vigente', estado: 'Estado', estadoAnterior: 'Estado anterior', estadoNuevo: 'Estado nuevo', observacion: 'Observación',
   registro: 'Expediente', motivo: 'Motivo', iniciativaOrigen: 'Iniciativa de origen', origen: 'Origen',
   asignadoA: 'Asignado a', rol: 'Rol', institucion: 'Institución', unidadEjecutora: 'Unidad Ejecutora', unidadEjecutoraId: 'Unidad Ejecutora', resultado: 'Resultado',
   tipoRegistro: 'Tipo de registro', versionAnterior: 'Versión anterior', versionNueva: 'Versión nueva', cambios: 'Cambios', anterior: 'Anterior', nuevo: 'Nuevo',
@@ -58,10 +59,11 @@ export function presentAuditEvent(event: AuditEvent): PresentedAuditEvent {
 
 function summarize(event: string, detail: AuditDetail): string {
   const documentType = presentValue('tipoNombre', detail['tipoNombre'] ?? detail['tipo']);
-  const version = detail['version'] ?? detail['versionId'];
+  const version = detail['version'] ?? detail['versionId'] ?? detail['versionVigente'];
   const record = presentValue('registro', detail['registro']);
   switch (event) {
     case 'DOCUMENTO_CARGADO': return `Se cargó ${documentType}${version == null ? '' : `, versión ${version}`}.`;
+    case 'DOCUMENTO_ARCHIVO_ELIMINADO': return `Se eliminó ${documentType}${detail['nombreVigente'] ? ` (${detail['nombreVigente']})` : ''}${version == null ? '' : `, versión ${version}`}.`;
     case 'DOCUMENTO_NO_APLICA': return `Se marcó como No aplica ${documentType}${detail['motivo'] ? `. Motivo: ${detail['motivo']}` : ''}.`;
     case 'DOCUMENTO_PUBLICADO': return `Se publicó el documento${version == null ? '' : `, versión ${version}`}.`;
     case 'DOCUMENTO_RETIRADO': return `Se retiró la publicación del documento${version == null ? '' : `, versión ${version}`}.`;

@@ -7,7 +7,7 @@ import {
   DerivedProjectInput,
   DocumentDossier,
   DocumentDossierSummary,
-  DocumentRecord,
+  DocumentFile, DocumentRecord, DocumentVersion,
   InitiativeDecisionInput,
   InitiativeDetail,
   InitiativeStatusTransitionInput,
@@ -202,7 +202,7 @@ export class PiipMockRepository extends PiipRepository {
     { code: 'P-010-2026', name: 'Módulo de Seguros Agrarios', originCode: 'NA', originMode: 'PREEXISTING', unit: 'DGA', responsible: 'Ricardo Salazar', status: 'Suspendido', digitalComponent: 'No' },
   ] satisfies ProjectRecord[]).map(enrichMockProject));
 
-  readonly documentDossiers = signal<DocumentDossier[]>([
+  readonly documentDossiers = signal<DocumentDossier[]>(([
     {
       recordType: 'Iniciativa',
       code: 'I-024-2026',
@@ -278,7 +278,7 @@ export class PiipMockRepository extends PiipRepository {
         ] },
       ],
     },
-  ]);
+  ] as DocumentDossier[]).map(hydrateMockDossier));
 
   readonly auditEvents = signal<AuditEvent[]>([
     { recordCode: 'I-024-2026', timestamp: '20/05/2026\n10:28:19', event: 'Informe técnico cargado', user: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', observation: 'Se cargó el informe técnico de evaluación.', documentName: 'Informe_tecnico_I-024-2026.pdf', icon: 'cloud_upload' },
@@ -623,7 +623,7 @@ export class PiipMockRepository extends PiipRepository {
     const structuredRecord = enrichMockRecord(portfolioRecord);
     this.portfolioRecords.update((records) => [structuredRecord, ...records]);
     this.projects.update((projects) => [enrichMockProject(project), ...projects]);
-    this.documentDossiers.update((dossiers) => [createDerivedProjectDocumentDossier(input, unit), ...dossiers]);
+    this.documentDossiers.update((dossiers) => [hydrateMockDossier(createDerivedProjectDocumentDossier(input, unit), dossiers.length), ...dossiers]);
     this.auditEvents.update((events) => [
       {
         recordCode: input.code,
@@ -778,7 +778,7 @@ export class PiipMockRepository extends PiipRepository {
       }),
       ...projects,
     ]);
-    this.documentDossiers.update((dossiers) => [createPreexistingDocumentDossier(input, unit), ...dossiers]);
+    this.documentDossiers.update((dossiers) => [hydrateMockDossier(createPreexistingDocumentDossier(input, unit), dossiers.length), ...dossiers]);
     this.auditEvents.update((events) => [
       {
         recordCode: input.code,
@@ -794,16 +794,93 @@ export class PiipMockRepository extends PiipRepository {
     return structuredRecord;
   }
 
-  uploadDocument(): void {}
-  markDocumentNotApplicable(): void {}
+  uploadDocument(code: string, documentTypeId: number, file: File): void {
+    this.addFileVersion(code, documentTypeId, file, true);
+  }
+
+  addDocumentFile(code: string, documentTypeId: number, file: File): void {
+    this.addFileVersion(code, documentTypeId, file, false);
+  }
+
+  addDocumentFileVersion(code: string, fileId: number, file: File): void {
+    this.assertDocumentAdministrator(code);
+    this.updateMockDocument(code, (document) => {
+      const files = document.files ?? [];
+      const target = files.find((item) => item.id === fileId);
+      if (!target) throw mockRepositoryError(404, 'El archivo indicado no existe en este expediente.');
+      return { ...document, files: files.map((item) => item.id === fileId ? appendMockVersion(item, file) : item), state: 'Cargado' };
+    }, undefined, (document) => (document.files ?? []).some((item) => item.id === fileId));
+  }
+
+  deleteDocumentFile(code: string, fileId: number): void {
+    this.assertDocumentAdministrator(code);
+    this.updateMockDocument(code, (document) => {
+      const files = document.files ?? [];
+      if (!files.some((item) => item.id === fileId)) throw mockRepositoryError(404, 'El archivo indicado no existe en este expediente.');
+      const remaining = files.filter((item) => item.id !== fileId);
+      return { ...document, files: remaining, state: remaining.length ? 'Cargado' : document.state === 'No aplica' ? 'No aplica' : 'Pendiente' };
+    }, undefined, (document) => (document.files ?? []).some((item) => item.id === fileId));
+  }
+
+  markDocumentNotApplicable(code: string, documentTypeId: number): void {
+    this.assertDocumentAdministrator(code);
+    this.updateMockDocument(code, (document) => ({ ...document, state: 'No aplica' }), documentTypeId);
+  }
+
   downloadDocument(): void {}
-  setDocumentPublication(): void {}
+
+  setDocumentPublication(code: string, versionId: number, published: boolean): void {
+    this.assertDocumentAdministrator(code);
+    this.updateMockDocument(code, (document) => ({
+      ...document,
+      files: (document.files ?? []).map((file) => ({
+        ...file,
+        current: file.current?.id === versionId ? { ...file.current, externallyPublished: published } : file.current,
+        versions: file.versions.map((version) => version.id === versionId ? { ...version, externallyPublished: published } : version),
+      })),
+    }), undefined, (document) => (document.files ?? []).some((file) => file.versions.some((version) => version.id === versionId)));
+  }
   markNotificationRead(id: number): void {
     this.notifications.update((items) => items.map((item) => item.id === id ? { ...item, read: true } : item));
   }
 
   private assertAdministrator(message: string): void {
     if (this.role() !== 'Administrador PIIP') throw new Error(message);
+  }
+
+  private addFileVersion(code: string, documentTypeId: number, file: File, original: boolean): void {
+    this.assertDocumentAdministrator(code);
+    this.updateMockDocument(code, (document) => {
+      const files = document.files ?? [];
+      const currentOriginal = files.find((item) => item.original);
+      if (original && currentOriginal) return { ...document, files: files.map((item) => item.id === currentOriginal.id ? appendMockVersion(item, file) : item), state: 'Cargado' };
+      const nextFile = createMockFile(file, nextMockFileId(this.documentDossiers()), original);
+      return { ...document, files: [...files, nextFile], state: 'Cargado' };
+    }, documentTypeId);
+  }
+
+  private assertDocumentAdministrator(code: string): void {
+    const dossier = this.documentDossiers().find((item) => item.code === code);
+    if (!dossier) throw mockRepositoryError(404, 'El expediente documental no existe.');
+    if (!this.canAdministerExecutingUnit(dossier.executingUnitId)) throw mockRepositoryError(403, 'No tienes autorización sobre la Unidad Ejecutora del registro.');
+  }
+
+  private updateMockDocument(code: string, update: (document: DocumentRecord) => DocumentRecord, documentTypeId?: number, predicate?: (document: DocumentRecord) => boolean): void {
+    let found = false;
+    this.documentDossiers.update((dossiers) => dossiers.map((dossier) => dossier.code !== code ? dossier : {
+      ...dossier,
+      lastActivity: formatDateTime(new Date()),
+      stages: dossier.stages.map((stage) => ({
+        ...stage,
+        records: stage.records.map((document) => {
+          const matches = documentTypeId !== undefined ? document.documentTypeId === documentTypeId : predicate?.(document) ?? false;
+          if (!matches) return document;
+          found = true;
+          return update(document);
+        }),
+      })),
+    }));
+    if (!found) throw mockRepositoryError(404, 'El documento indicado no existe en este expediente.');
   }
 
   private catalogName(key: 'solutionTypes' | 'sources', id: number): string {
@@ -828,6 +905,44 @@ export class PiipMockRepository extends PiipRepository {
       && (scope.executingUnitId === null || scope.executingUnitId === executingUnitId),
     ) ?? false;
   }
+}
+
+function hydrateMockDossier(dossier: DocumentDossier, dossierIndex: number): DocumentDossier {
+  return {
+    ...dossier,
+    stages: dossier.stages.map((stage, stageIndex) => ({
+      ...stage,
+      records: stage.records.map((document, recordIndex) => hydrateMockDocument(document, dossierIndex * 100 + stageIndex * 10 + recordIndex + 1)),
+    })),
+  };
+}
+
+function hydrateMockDocument(document: DocumentRecord, seed: number): DocumentRecord {
+  const documentType = mockCatalogBundle().documentTypes.find((item) => item.name === document.name);
+  const current = document.filename && document.version
+    ? mockVersion(document.filename, Number.parseInt(document.version, 10) || 1, seed * 10, document.uploadedAt ?? formatDateTime(new Date()), document.externallyPublished ?? false)
+    : null;
+  const files = current ? [{ id: seed, original: true, latestVersion: current.number, current, versions: [current] }] : [];
+  return { ...document, type: documentType?.code as DocumentRecord['type'], documentTypeId: documentType?.id, documentType, files };
+}
+
+function nextMockFileId(dossiers: DocumentDossier[]): number {
+  return Math.max(0, ...dossiers.flatMap((dossier) => dossier.stages.flatMap((stage) => stage.records.flatMap((document) => document.files ?? []).map((file) => file.id ?? 0)))) + 1;
+}
+
+function createMockFile(file: File, id: number, original: boolean): DocumentFile {
+  const version = mockVersion(file.name, 1, id * 10, formatDateTime(new Date()), false);
+  return { id, original, latestVersion: 1, current: version, versions: [version] };
+}
+
+function appendMockVersion(file: DocumentFile, upload: File): DocumentFile {
+  const number = file.latestVersion + 1;
+  const version = mockVersion(upload.name, number, (file.id ?? 0) * 10 + number, formatDateTime(new Date()), false);
+  return { ...file, latestVersion: number, current: version, versions: [version, ...file.versions] };
+}
+
+function mockVersion(filename: string, number: number, id: number, uploadedAt: string, externallyPublished: boolean): DocumentVersion {
+  return { id, number, filename, uploadedAt, externallyPublished, optimisticVersion: number - 1 };
 }
 
 export function summarizeDocumentDossier(dossier: DocumentDossier): DocumentDossierSummary {

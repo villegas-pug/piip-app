@@ -18,6 +18,8 @@ import pe.gob.midagri.piip.audit.application.AuditService;
 import pe.gob.midagri.piip.config.PiipProperties;
 import pe.gob.midagri.piip.documents.persistence.DocumentContentRepository;
 import pe.gob.midagri.piip.documents.persistence.DocumentEntity;
+import pe.gob.midagri.piip.documents.persistence.DocumentFileEntity;
+import pe.gob.midagri.piip.documents.persistence.DocumentFileRepository;
 import pe.gob.midagri.piip.documents.persistence.DocumentRepository;
 import pe.gob.midagri.piip.documents.persistence.DocumentVersionEntity;
 import pe.gob.midagri.piip.documents.persistence.DocumentVersionRepository;
@@ -40,6 +42,7 @@ import pe.gob.midagri.piip.work.persistence.NotificationRepository;
 class DocumentAuthorizationTest {
     @Mock PortfolioRecordRepository records;
     @Mock DocumentRepository documents;
+    @Mock DocumentFileRepository files;
     @Mock DocumentVersionRepository versions;
     @Mock DocumentContentRepository contents;
     @Mock UserRoleScopeRepository scopes;
@@ -52,14 +55,15 @@ class DocumentAuthorizationTest {
 
     @BeforeEach
     void setUp() {
-        service = new DocumentService(records, documents, versions, contents, scopes, notifications, authorization, audit, properties, documentTypes);
+        service = new DocumentService(records, documents, files, versions, contents, scopes, notifications, authorization, audit, properties, documentTypes);
     }
 
     @Test
     void administratorInAnotherUnitCannotDownloadAnUnpublishedVersion() {
         PortfolioRecordEntity record = initiative("INI-UE1", 10L, 100L);
         DocumentEntity document = new DocumentEntity(record, new DocumentTypeEntity("INITIATIVE_TECHNICAL_OPINION", "Informe técnico", 20, true));
-        DocumentVersionEntity version = new DocumentVersionEntity(document, 1, "informe.pdf", "application/pdf", 1L,
+        DocumentFileEntity file = new DocumentFileEntity(document, true);
+        DocumentVersionEntity version = new DocumentVersionEntity(file, 1, "informe.pdf", "application/pdf", 1L,
             "checksum", "subject");
         ReflectionTestUtils.setField(version, "id", 1L);
         LocalAccessContext actor = new LocalAccessContext(1L, "subject",

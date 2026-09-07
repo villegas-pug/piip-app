@@ -8,13 +8,13 @@ import org.hibernate.mapping.Table;
 class TestResetSchemaFilterTest {
     @Test
     void fijaAllowlistOrdenYTablasProtegidas() {
-        assertThat(TestResetSchemaFilterProvider.DROP_ORDER).hasSize(19)
-            .startsWith("DOCUMENTO_CONTENIDO", "DOCUMENTO_VERSION", "DOCUMENTO")
+        assertThat(TestResetSchemaFilterProvider.DROP_ORDER).hasSize(20)
+            .startsWith("DOCUMENTO_CONTENIDO", "DOCUMENTO_VERSION", "ARCHIVO_DOCUMENTO", "DOCUMENTO")
             .endsWith("INSTITUCION", "CATALOGO");
-        assertThat(TestResetSchemaFilterProvider.CREATE_ORDER).hasSize(19)
+        assertThat(TestResetSchemaFilterProvider.CREATE_ORDER).hasSize(20)
             .startsWith("CATALOGO", "INSTITUCION", "ROL", "USUARIO")
             .endsWith("EVENTO_AUDITORIA", "AUDITORIA_ACCESO");
-        assertThat(TestResetSchemaFilterProvider.ALLOWLIST).hasSize(19)
+        assertThat(TestResetSchemaFilterProvider.ALLOWLIST).hasSize(20)
             .contains("INSTITUCION", "ROL", "UNIDAD_EJECUTORA", "UNIDAD_ORGANICA", "USUARIO", "USUARIO_ROL_AMBITO");
     }
 

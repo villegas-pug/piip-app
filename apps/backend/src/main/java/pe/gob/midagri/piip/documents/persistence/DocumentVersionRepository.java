@@ -6,4 +6,6 @@ import java.util.*;
 public interface DocumentVersionRepository extends JpaRepository<DocumentVersionEntity, Long> {
     List<DocumentVersionEntity> findByDocumentIdOrderByVersionNumberDesc(Long documentId);
     Optional<DocumentVersionEntity> findFirstByDocumentIdOrderByVersionNumberDesc(Long documentId);
+    List<DocumentVersionEntity> findByFileIsNull();
+    Optional<DocumentVersionEntity> findFirstByFileIdOrderByVersionNumberDesc(Long fileId);
 }

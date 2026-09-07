@@ -17,6 +17,14 @@ public class DocumentController {
     @PostMapping(value = "/{documentTypeId}/versions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public VersionResponse upload(@PathVariable("recordCode") String recordCode, @PathVariable("documentTypeId") Long documentTypeId, @RequestPart("file") MultipartFile file) { return service.upload(recordCode, documentTypeId, MultipartDocumentUploadAdapter.adapt(file)); }
+    @PostMapping(value = "/{documentTypeId}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public FileResponse addFile(@PathVariable("recordCode") String recordCode, @PathVariable("documentTypeId") Long documentTypeId, @RequestPart("file") MultipartFile file) { return service.addFile(recordCode, documentTypeId, MultipartDocumentUploadAdapter.adapt(file)); }
+    @PostMapping(value = "/files/{fileId}/versions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public VersionResponse addVersionToFile(@PathVariable("recordCode") String recordCode, @PathVariable("fileId") Long fileId, @RequestPart("file") MultipartFile file) { return service.addVersionToFile(recordCode, fileId, MultipartDocumentUploadAdapter.adapt(file)); }
+    @DeleteMapping("/files/{fileId}") @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteFile(@PathVariable("recordCode") String recordCode, @PathVariable("fileId") Long fileId) { service.deleteFile(recordCode, fileId); }
     @PutMapping("/{documentTypeId}/not-applicable") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void notApplicable(@PathVariable("recordCode") String recordCode, @PathVariable("documentTypeId") Long documentTypeId, @Valid @RequestBody NotApplicableRequest request) { service.markNotApplicable(recordCode, documentTypeId, request.reason()); }
     @PutMapping(value = "/versions/{versionId}/publication", produces = MediaType.APPLICATION_JSON_VALUE) public VersionResponse publication(@PathVariable("recordCode") String recordCode, @PathVariable("versionId") Long versionId, @RequestParam("published") boolean published, @RequestParam("version") long version) { return service.publish(versionId, published, version); }

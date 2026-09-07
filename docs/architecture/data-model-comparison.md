@@ -16,7 +16,7 @@ La comparación se realizó contra las 13 tablas declaradas en `database/ddl/001
 | `PROYECTO_UNIDAD_ORGANICA` | Reemplazar | `REGISTRO_UNIDAD_RESPONSABLE` normaliza el campo multivaluado y conserva `denominacion_original`. |
 | `TRANSICION_PERMITIDA` | Descartar | No se mantiene un catálogo de transiciones no confirmadas. El dominio expone únicamente `Presentado -> Iniciativa aprobada`. |
 | `TIPO_DOCUMENTO` | Reemplazar | Los seis tipos documentales se definen como enum Java: cinco campos Excel más la Ficha de Iniciativa de la aplicación. |
-| `DOCUMENTO` | Dividir | `DOCUMENTO` representa la posición; `DOCUMENTO_VERSION` los metadatos y publicación; `DOCUMENTO_CONTENIDO` el BLOB diferido. |
+| `DOCUMENTO` | Dividir | `DOCUMENTO` representa la posición por tipo documental; `ARCHIVO_DOCUMENTO` los archivos independientes del tipo (original, vigencia por archivo y eliminación lógica individual); `DOCUMENTO_VERSION` los metadatos y publicación; `DOCUMENTO_CONTENIDO` el BLOB diferido. |
 | `TRANSICION_ESTADO` | Reemplazar | `EVENTO_AUDITORIA` registra el hecho funcional append-only sin convertir estados no confirmados en reglas. |
 | `SECUENCIA_CODIGO` | Reemplazar | `CONTADOR_CODIGO` genera correlativos por tipo y año mediante bloqueo pesimista JPA. |
 | `AUDITORIA_ACCESO` | Conservar y minimizar | Registra ruta normalizada, respuesta, rol snapshot, correlación y duración; excluye cuerpos, tokens y binarios. |
@@ -29,8 +29,9 @@ La comparación se realizó contra las 13 tablas declaradas en `database/ddl/001
 | `INSTITUCION` | Permite reutilizar PIIP sin confundir institución con Unidad Ejecutora. |
 | `UNIDAD_ORGANICA` | Representa direcciones, oficinas y jerarquía responsable. |
 | `DOCUMENTO_VERSION` | Versionado y publicación externa explícita. |
+| `ARCHIVO_DOCUMENTO` | Archivos independientes por posición documental: el original surgido de la carga por tipo o de la migración, archivos adicionales del mismo tipo y eliminación lógica individual que conserva los historiales. |
 | `DOCUMENTO_CONTENIDO` | Aísla el BLOB para carga diferida. |
 | `TAREA_TRABAJO` | Persistencia de bandeja, vencimientos y alertas derivadas. |
 | `NOTIFICACION` | Avisos persistentes y lectura por usuario. |
 
-El SQL anterior se elimina únicamente dentro del monorepo para impedir su aplicación accidental. Las entidades Hibernate JPA son la fuente canónica y `target/piip-oracle.sql` es un artefacto regenerable para revisión DBA.
+El SQL anterior se elimina únicamente dentro del monorepo para impedir su aplicación accidental. Las entidades Hibernate JPA son la fuente canónica y `database/generated/piip-oracle.sql` es un artefacto regenerable para revisión DBA.

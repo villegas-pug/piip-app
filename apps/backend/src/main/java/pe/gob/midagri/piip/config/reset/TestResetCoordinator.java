@@ -106,7 +106,7 @@ public class TestResetCoordinator implements ApplicationRunner {
         Set<String> mapped = new TreeSet<>();
         metadata.collectTableMappings().forEach(table -> mapped.add(table.getName().toUpperCase(Locale.ROOT)));
         Set<String> expected = new TreeSet<>(TestResetSchemaFilterProvider.ALLOWLIST);
-        if (expected.size() != 19 || !mapped.equals(expected)) throw new IllegalStateException("El Metadata JPA no coincide con las 19 tablas del reset");
+        if (expected.size() != 20 || !mapped.equals(expected)) throw new IllegalStateException("El Metadata JPA no coincide con las 20 tablas del reset");
         metadata.collectTableMappings().forEach(source -> source.getForeignKeyCollection().forEach(foreignKey -> {
             String targetName = foreignKey.getReferencedTable().getName().toUpperCase(Locale.ROOT);
             if (!expected.contains(targetName)) throw new IllegalStateException("La FK del Metadata apunta fuera de la matriz test-reset");

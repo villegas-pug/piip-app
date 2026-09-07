@@ -22,11 +22,13 @@ class OracleSchemaGenerationTest {
     private static final Path DDL = Path.of("target", "piip-oracle.sql");
 
     private static final List<String> EXPECTED_FK_NAMES = List.of(
+        "FK_ARCHDOC_DOC",
         "FK_AUDACCESO_USUARIO",
         "FK_CATITEM_CATALOGO",
         "FK_DOC_REGISTRO",
         "FK_DOC_TIPODOC",
         "FK_DOCCONT_VERSION",
+        "FK_DOCVER_ARCHIVO",
         "FK_DOCVER_DOC",
         "FK_EVENTO_USUARIO",
         "FK_NOTIF_USUARIO",
@@ -66,13 +68,15 @@ class OracleSchemaGenerationTest {
             .containsIgnoringCase("create table CATALOGO")
             .containsIgnoringCase("create table CATALOGO_ITEM")
             .containsIgnoringCase("create table TIPO_DOCUMENTO")
+            .containsIgnoringCase("create table ARCHIVO_DOCUMENTO")
             .containsIgnoringCase("ID_TIPO_SOLUCION")
             .containsIgnoringCase("ID_FUENTE_ORIGEN")
             .containsIgnoringCase("ID_TIPO_DOCUMENTO")
+            .containsIgnoringCase("ID_ARCHIVO")
             .doesNotContainIgnoringCase(" TIPO_SOLUCION varchar")
             .doesNotContainIgnoringCase(" FUENTE_ORIGEN varchar")
             .doesNotContain("INSERT INTO");
-        assertThat(read(DDL).lines().filter(line -> line.startsWith("create table ")).count()).isEqualTo(19);
+        assertThat(read(DDL).lines().filter(line -> line.startsWith("create table ")).count()).isEqualTo(20);
     }
 
     @Test

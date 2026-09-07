@@ -4,12 +4,14 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "DOCUMENTO_VERSION", uniqueConstraints = @UniqueConstraint(name = "UK_DOC_VERSION", columnNames = {"ID_DOCUMENTO", "NUMERO_VERSION"}))
+@Table(name = "DOCUMENTO_VERSION", uniqueConstraints = @UniqueConstraint(name = "UK_DOC_VERSION", columnNames = {"ID_ARCHIVO", "NUMERO_VERSION"}))
 public class DocumentVersionEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ID_DOCUMENTO_VERSION") private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "ID_DOCUMENTO", nullable = false, foreignKey = @ForeignKey(name = "FK_DOCVER_DOC")) private DocumentEntity document;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ID_ARCHIVO", foreignKey = @ForeignKey(name = "FK_DOCVER_ARCHIVO")) private DocumentFileEntity file;
     @Column(name = "NUMERO_VERSION", nullable = false) private int versionNumber;
     @Column(name = "NOMBRE_ARCHIVO", length = 255, nullable = false) private String filename;
     @Column(name = "TIPO_MIME", length = 120, nullable = false) private String mimeType;
@@ -23,20 +25,26 @@ public class DocumentVersionEntity {
     @Version @Column(name = "VERSION_OPTIMISTA", nullable = false) private long optimisticVersion;
 
     protected DocumentVersionEntity() {}
-    public DocumentVersionEntity(DocumentEntity document, int versionNumber, String filename, String mimeType,
+    public DocumentVersionEntity(DocumentFileEntity file, int versionNumber, String filename, String mimeType,
             long sizeBytes, String checksumSha256, String uploadedBy) {
-        this.document = document; this.versionNumber = versionNumber; this.filename = filename; this.mimeType = mimeType;
+        this.file = file; this.document = file.getDocument(); this.versionNumber = versionNumber; this.filename = filename; this.mimeType = mimeType;
         this.sizeBytes = sizeBytes; this.checksumSha256 = checksumSha256; this.uploadedBy = uploadedBy; this.uploadedAt = Instant.now();
     }
     public void publish(String actor) { externallyPublished = true; publishedBy = actor; publishedAt = Instant.now(); }
     public void unpublish() { externallyPublished = false; publishedBy = null; publishedAt = null; }
+    public void assignFile(DocumentFileEntity file) {
+        if (!file.getDocument().getId().equals(document.getId())) throw new IllegalStateException("El archivo pertenece a otra posición documental");
+        this.file = file;
+    }
     public Long getId() { return id; }
     public DocumentEntity getDocument() { return document; }
+    public DocumentFileEntity getFile() { return file; }
     public int getVersionNumber() { return versionNumber; }
     public String getFilename() { return filename; }
     public String getMimeType() { return mimeType; }
     public long getSizeBytes() { return sizeBytes; }
     public String getChecksumSha256() { return checksumSha256; }
+    public String getUploadedBy() { return uploadedBy; }
     public Instant getUploadedAt() { return uploadedAt; }
     public boolean isExternallyPublished() { return externallyPublished; }
     public long getOptimisticVersion() { return optimisticVersion; }

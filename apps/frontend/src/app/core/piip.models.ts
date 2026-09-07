@@ -262,6 +262,26 @@ export interface DocumentRecord {
   versionId?: number;
   optimisticVersion?: number;
   externallyPublished?: boolean;
+  /** Archivos independientes activos del tipo documental. */
+  files?: DocumentFile[];
+}
+
+export interface DocumentVersion {
+  id?: number;
+  number: number;
+  filename: string;
+  uploadedAt: string;
+  externallyPublished: boolean;
+  optimisticVersion?: number;
+}
+
+export interface DocumentFile {
+  /** Nulo únicamente para la representación compatible de una respuesta legada. */
+  id: number | null;
+  original: boolean;
+  latestVersion: number;
+  current: DocumentVersion | null;
+  versions: DocumentVersion[];
 }
 
 export type DocumentType =

@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
   AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
-  DocumentDossierSummary, DocumentRecord, DocumentType, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail,
+  DocumentDossierSummary, DocumentFile, DocumentRecord, DocumentType, DocumentVersion, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail,
   InitiativeInput, InitiativeRecord, InitiativeStatusTransitionInput, InitiativeUpdateInput, NotificationItem, OrganizationalUnit,
   PiipPortfolioRecord, PiipRecordType, PreexistingProjectInput, ProjectDetail, ProjectRecord,
   ProjectStatusTransitionInput, ProjectUpdateInput, UserRole, UserRoleCode, WorkItem, HomePortfolioQuery, HomePortfolioResult,
@@ -19,7 +19,7 @@ import { resolveApiUrl as runtimeApiUrl } from './piip-runtime-config';
 import {
   ApprovalRequest, DerivedProjectRequest, InitiativeCreateRequest, InitiativeStatusTransitionRequest,
   DossierSummary, InitiativeUpdateRequest, PersistentCatalogItemResponse, PreexistingProjectRequest,
-  ProjectStatusTransitionRequest, ProjectUpdateRequest, ResponsibleUnitResponse, TechnicalCatalogItemResponse,
+  DocumentResponse, FileResponse, ProjectStatusTransitionRequest, ProjectUpdateRequest, ResponsibleUnitResponse, TechnicalCatalogItemResponse, VersionResponse,
 } from '../api/generated/models';
 
 interface ApiPortfolioRecord {
@@ -58,21 +58,6 @@ interface ApiPage<T> {
   size: number;
   totalElements: number;
   totalPages: number;
-}
-
-interface ApiDocumentVersion {
-  id: number;
-  version: number;
-  filename: string;
-  uploadedAt: string;
-  externallyPublished: boolean;
-  optimisticVersion: number;
-}
-
-interface ApiDocument {
-  documentType: PersistentCatalogItemResponse;
-  state: 'PENDING' | 'LOADED' | 'NOT_APPLICABLE';
-  versions: ApiDocumentVersion[];
 }
 
 interface ApiWorkTask {
@@ -568,8 +553,29 @@ export class PiipHttpRepository extends PiipRepository {
     await this.loadDocumentSummaries();
   }
 
+  async addDocumentFile(code: string, documentTypeId: number, file: File): Promise<void> {
+    await this.request(this.documentApi.addFile({ recordCode: code, documentTypeId, body: { file } }));
+    await this.refreshDocumentsAfterMutation(code);
+  }
+
+  async addDocumentFileVersion(code: string, fileId: number, file: File): Promise<void> {
+    await this.request(this.documentApi.addVersionToFile({ recordCode: code, fileId, body: { file } }));
+    await this.refreshDocumentsAfterMutation(code);
+  }
+
+  async deleteDocumentFile(code: string, fileId: number): Promise<void> {
+    await this.request(this.documentApi.deleteFile({ recordCode: code, fileId }));
+    await this.refreshDocumentsAfterMutation(code);
+  }
+
   async markDocumentNotApplicable(code: string, documentTypeId: number, reason: string): Promise<void> {
     await this.request(this.documentApi.notApplicable({ recordCode: code, documentTypeId, body: { reason } }));
+    const recordType = this.portfolioRecords().find((record) => record.code === code)?.recordType;
+    if (recordType) await this.loadDocuments(recordType, code);
+    await this.loadDocumentSummaries();
+  }
+
+  private async refreshDocumentsAfterMutation(code: string): Promise<void> {
     const recordType = this.portfolioRecords().find((record) => record.code === code)?.recordType;
     if (recordType) await this.loadDocuments(recordType, code);
     await this.loadDocumentSummaries();
@@ -739,7 +745,7 @@ export class PiipHttpRepository extends PiipRepository {
   }
 
   private async loadDocuments(recordType: PiipRecordType, code: string): Promise<void> {
-    const items = await this.request(this.http.get<ApiDocument[]>(`${this.apiUrl}/portfolio-records/${code}/documents`));
+    const items = await this.request(this.documentApi.list({ recordCode: code }));
     const record = this.portfolioRecords().find((candidate) => candidate.code === code)
       ?? await this.loadPortfolioRecord(recordType, code);
     if (!record) return;
@@ -1090,25 +1096,62 @@ function toProjectRecord(value: ApiPortfolioRecord): ProjectRecord {
   };
 }
 
-function mapDocuments(items: ApiDocument[], types: DocumentType[]): DocumentRecord[] {
-  return items.filter((item) => types.includes(item.documentType.code as DocumentType)).map((item) => {
+function mapDocuments(items: DocumentResponse[], types: DocumentType[]): DocumentRecord[] {
+  return items.flatMap((item): DocumentRecord[] => {
+    if (!item.documentType || !types.includes(item.documentType.code as DocumentType)) return [];
     const documentType = mapPersistentOption(item.documentType);
-    const version = item.versions[0];
-    return {
+    const files = mapDocumentFiles(item);
+    const compatibleFile = files.find((file) => file.original) ?? files[0];
+    const version = compatibleFile?.current ?? null;
+    return [{
       type: documentType.code as DocumentType,
       documentTypeId: documentType.id,
       documentType,
       name: documentType.name,
       required: false,
       filename: version?.filename ?? null,
-      version: version ? `${version.version}.0` : null,
-      uploadedAt: version ? formatDate(version.uploadedAt) : null,
+      version: version ? `${version.number}.0` : null,
+      uploadedAt: version ? version.uploadedAt : null,
       state: item.state === 'LOADED' ? 'Cargado' : item.state === 'NOT_APPLICABLE' ? 'No aplica' : 'Pendiente',
       versionId: version?.id,
       optimisticVersion: version?.optimisticVersion,
       externallyPublished: version?.externallyPublished,
-    };
+      files,
+    }];
   });
+}
+
+function mapDocumentFiles(document: DocumentResponse): DocumentFile[] {
+  const files = document.files ?? [];
+  if (files.length) return files.flatMap(mapDocumentFile);
+  const versions = (document.versions ?? []).flatMap(mapDocumentVersion);
+  if (!versions.length) return [];
+  return [{
+    id: null,
+    original: true,
+    latestVersion: document.latestVersion ?? versions[0].number,
+    current: versions[0] ?? null,
+    versions,
+  }];
+}
+
+function mapDocumentFile(value: FileResponse): DocumentFile[] {
+  if (value.id === undefined) return [];
+  const versions = (value.versions ?? []).flatMap(mapDocumentVersion);
+  const current = value.current ? mapDocumentVersion(value.current)[0] ?? null : versions[0] ?? null;
+  return [{ id: value.id, original: value.original ?? false, latestVersion: value.latestVersion ?? current?.number ?? 0, current, versions }];
+}
+
+function mapDocumentVersion(value: VersionResponse): DocumentVersion[] {
+  if (value.version === undefined || !value.filename || !value.uploadedAt) return [];
+  return [{
+    id: value.id,
+    number: value.version,
+    filename: value.filename,
+    uploadedAt: formatDate(value.uploadedAt),
+    externallyPublished: value.externallyPublished ?? false,
+    optimisticVersion: value.optimisticVersion,
+  }];
 }
 
 function mapCatalogBundle(value: import('../api/generated/models').CatalogBundleResponse): CatalogBundle {

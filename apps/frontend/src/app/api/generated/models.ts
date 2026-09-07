@@ -13,6 +13,7 @@ export type { DocumentResponse } from './models/document-response';
 export type { DossierSummary } from './models/dossier-summary';
 export type { EventResponse } from './models/event-response';
 export type { ExecutingUnitResponse } from './models/executing-unit-response';
+export type { FileResponse } from './models/file-response';
 export type { HomePortfolioItemResponse } from './models/home-portfolio-item-response';
 export type { HomePortfolioResponse } from './models/home-portfolio-response';
 export type { InitiativeCreateRequest } from './models/initiative-create-request';

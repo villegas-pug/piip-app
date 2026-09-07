@@ -1,16 +1,13 @@
-import { OverlayContainer } from '@angular/cdk/overlay';
 import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import { DocumentFile } from '../../core/piip.models';
 import { PiipMockRepository } from '../../core/piip-mock.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { DocumentRecord } from '../../core/piip.models';
 import { DocumentsComponent } from './documents.component';
 
-describe('DocumentsComponent operations', () => {
-  let overlayContainer: OverlayContainer;
-
+describe('DocumentsComponent archivos independientes', () => {
   beforeEach(async () => {
     const paramMap = convertToParamMap({ code: 'I-024-2026' });
     await TestBed.configureTestingModule({
@@ -23,299 +20,128 @@ describe('DocumentsComponent operations', () => {
         { provide: ActivatedRoute, useValue: { paramMap: of(paramMap), data: of({ recordType: 'Iniciativa' }), snapshot: { paramMap, data: { recordType: 'Iniciativa' } } } },
       ],
     }).compileComponents();
-    overlayContainer = TestBed.inject(OverlayContainer);
   });
 
-  afterEach(() => {
-    overlayContainer.getContainerElement().innerHTML = '';
-  });
-
-  it('renders one compact and keyboard-accessible file selector', () => {
+  it('presenta archivos independientes con su vigente e historial por archivo', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const dossier = repository.documentDossiers()[0];
+    const record = dossier.stages[0].records[0];
+    const first: DocumentFile = {
+      id: 901,
+      original: true,
+      latestVersion: 1,
+      current: { id: 9011, number: 1, filename: 'anexo-a-v1.pdf', uploadedAt: '01/09/2026 08:30', externallyPublished: false, optimisticVersion: 0 },
+      versions: [
+        { id: 9011, number: 1, filename: 'anexo-a-v1.pdf', uploadedAt: '01/09/2026 08:30', externallyPublished: false, optimisticVersion: 0 },
+      ],
+    };
+    const second: DocumentFile = {
+      id: 902,
+      original: false,
+      latestVersion: 2,
+      current: { id: 9022, number: 2, filename: 'anexo-b-v2.pdf', uploadedAt: '01/09/2026 10:30', externallyPublished: true, optimisticVersion: 1 },
+      versions: [
+        { id: 9022, number: 2, filename: 'anexo-b-v2.pdf', uploadedAt: '01/09/2026 10:30', externallyPublished: true, optimisticVersion: 1 },
+        { id: 9021, number: 1, filename: 'anexo-b-v1.pdf', uploadedAt: '01/09/2026 09:30', externallyPublished: false, optimisticVersion: 0 },
+      ],
+    };
+    repository.documentDossiers.set([{ ...dossier, stages: [{ ...dossier.stages[0], records: [{ ...record, files: [first, second] }] }, ...dossier.stages.slice(1)] }, ...repository.documentDossiers().slice(1)]);
     const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.componentInstance.uploadOpen.set(true);
-    fixture.componentInstance.uploadType.set(40);
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
 
-    const picker = host.querySelector<HTMLElement>('.file-picker');
-    const input = host.querySelector<HTMLInputElement>('.file-picker-input');
-    expect(host.querySelectorAll('input[type="file"]')).toHaveLength(1);
-    expect(input?.accept).toBe('.pdf,.docx,.xlsx');
-    expect(input?.tabIndex).toBe(0);
-    expect(input?.getAttribute('aria-describedby')).toBe('document-upload-formats');
-    expect(picker?.textContent).toContain('Seleccionar archivo');
-    expect(picker?.textContent).toContain('PDF, DOCX o XLSX');
-    expect(picker?.textContent).toContain('Examinar');
+    const documentRow = host.querySelector<HTMLElement>('.document-row');
+    expect(documentRow?.querySelectorAll('.document-file')).toHaveLength(2);
+    expect(host.textContent).toContain('anexo-b-v2.pdf');
+    expect(host.textContent).toContain('anexo-b-v1.pdf');
+    expect(host.textContent).toContain('versión vigente 2');
+    expect(host.querySelector('[aria-label="Descargar versión 1 de anexo-b-v1.pdf"]')).not.toBeNull();
   });
 
-  it('shows the selected filename, enables upload and clears it when cancelled', () => {
+  it('distingue Agregar archivo de Nueva versión y conserva un selector de archivo por operación', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const addFile = vi.spyOn(repository, 'addDocumentFile').mockImplementation(() => Promise.resolve() as unknown as void);
+    const addVersion = vi.spyOn(repository, 'addDocumentFileVersion').mockImplementation(() => Promise.resolve() as unknown as void);
     const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.componentInstance.uploadOpen.set(true);
-    fixture.componentInstance.uploadType.set(40);
+    const component = fixture.componentInstance;
+    const document = component.dossier()!.stages[0].records[0];
+    const target = document.files![0];
+    const file = new File(['contenido'], 'nuevo.pdf', { type: 'application/pdf' });
+
+    component.openAddFilePanel();
+    component.uploadType.set(document.documentTypeId!);
+    component.uploadFile.set(file);
+    await component.upload();
+    expect(addFile).toHaveBeenCalledWith('I-024-2026', document.documentTypeId, file);
+    expect(addVersion).not.toHaveBeenCalled();
+
+    component.openNewVersionPanel(document, target);
+    component.uploadFile.set(file);
+    await component.upload();
+    expect(addVersion).toHaveBeenCalledWith('I-024-2026', target.id, file);
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    const input = host.querySelector<HTMLInputElement>('.file-picker-input')!;
-    const selectedFile = new File(['documento'], 'informe-tecnico-con-nombre-extenso.pdf', { type: 'application/pdf' });
-    Object.defineProperty(input, 'files', { value: [selectedFile] });
-    input.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-
-    const picker = host.querySelector<HTMLElement>('.file-picker');
-    const uploadButton = host.querySelector<HTMLButtonElement>('.document-upload-actions .primary-button');
-    expect(picker?.classList.contains('file-selected')).toBe(true);
-    expect(picker?.title).toBe(selectedFile.name);
-    expect(picker?.textContent).toContain(selectedFile.name);
-    expect(picker?.textContent).toContain('Cambiar archivo');
-    expect(uploadButton?.disabled).toBe(false);
-
-    host.querySelector<HTMLButtonElement>('.document-upload-actions .secondary-button')?.click();
-    fixture.detectChanges();
-    expect(fixture.componentInstance.uploadOpen()).toBe(false);
-    expect(fixture.componentInstance.uploadFile()).toBeNull();
-    expect(host.querySelector('.document-upload-panel')).toBeNull();
+    expect(host.querySelectorAll('input[type="file"]')).toHaveLength(0);
   });
 
-  it('disables the picker and exposes its busy state during upload', () => {
+  it('opera una nueva versión exclusivamente sobre el fileId seleccionado', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
     const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.componentInstance.uploadOpen.set(true);
-    fixture.componentInstance.uploadFile.set(new File(['documento'], 'ficha.pdf', { type: 'application/pdf' }));
-    fixture.componentInstance.pendingOperation.set({ kind: 'upload', key: String(fixture.componentInstance.uploadType()) });
+    const component = fixture.componentInstance;
+    const document = component.dossier()!.stages[0].records[0];
+    const original = document.files![0];
+    repository.addDocumentFile('I-024-2026', document.documentTypeId!, new File(['b'], 'b.pdf', { type: 'application/pdf' }));
+    const target = repository.getDocumentDossier('Iniciativa', 'I-024-2026')!.stages[0].records[0].files!.find((file) => file.id !== original.id)!;
+
+    component.openNewVersionPanel(document, target);
+    component.uploadFile.set(new File(['b2'], 'b-v2.pdf', { type: 'application/pdf' }));
+    await component.upload();
+    const files = repository.getDocumentDossier('Iniciativa', 'I-024-2026')!.stages[0].records[0].files!;
+    expect(files.find((file) => file.id === target.id)?.versions).toHaveLength(2);
+    expect(files.find((file) => file.id === original.id)?.versions).toHaveLength(1);
+  });
+
+  it('pide confirmación antes de eliminar y elimina solo el archivo objetivo', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(DocumentsComponent);
+    const component = fixture.componentInstance;
+    const document = component.dossier()!.stages[0].records[0];
+    repository.addDocumentFile('I-024-2026', document.documentTypeId!, new File(['b'], 'b.pdf', { type: 'application/pdf' }));
+    const files = repository.getDocumentDossier('Iniciativa', 'I-024-2026')!.stages[0].records[0].files!;
+    const [target, survivor] = files;
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+    const deleteFile = vi.spyOn(repository, 'deleteDocumentFile');
+
+    await component.deleteFile(target);
+    expect(deleteFile).not.toHaveBeenCalled();
+    await component.deleteFile(target);
+    expect(confirm).toHaveBeenCalledTimes(2);
+    expect(deleteFile).toHaveBeenCalledWith('I-024-2026', target.id);
+    expect(repository.getDocumentDossier('Iniciativa', 'I-024-2026')!.stages[0].records[0].files?.map((file) => file.id)).toEqual([survivor.id]);
+  });
+
+  it('mantiene las guardas accesibles y oculta las escrituras a Consulta externa', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.toggleRole();
+    const fixture = TestBed.createComponent(DocumentsComponent);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.textContent).not.toContain('Agregar archivo');
+    expect(host.textContent).not.toContain('Nueva versión');
+    expect(host.textContent).not.toContain('Eliminar archivo');
+    expect(host.querySelector('[aria-label^="Descargar versión"]')).not.toBeNull();
+  });
+
+  it('expone el formato permitido y el estado ocupado del panel de agregar archivo', () => {
+    const fixture = TestBed.createComponent(DocumentsComponent);
+    fixture.componentInstance.openAddFilePanel();
+    fixture.componentInstance.pendingOperation.set({ kind: 'add-file', key: '40' });
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
 
     expect(host.querySelector('.document-upload-panel')?.getAttribute('aria-busy')).toBe('true');
-    expect(host.querySelector('.file-picker')?.classList.contains('file-disabled')).toBe(true);
+    expect(host.querySelector<HTMLInputElement>('.file-picker-input')?.accept).toBe('.pdf,.docx,.xlsx');
     expect(host.querySelector<HTMLInputElement>('.file-picker-input')?.disabled).toBe(true);
-    expect(host.querySelector<HTMLButtonElement>('.document-upload-actions .primary-button')?.textContent).toContain('Cargando...');
-  });
-
-  it('uploads once, closes on success and restores the state after an error', async () => {
-    const repository = TestBed.inject(PiipMockRepository);
-    let releaseUpload!: () => void;
-    const pendingUpload = new Promise<void>((resolve) => { releaseUpload = resolve; });
-    const uploadDocument = vi.spyOn(repository, 'uploadDocument').mockImplementationOnce(() => pendingUpload as unknown as void);
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    const selectedFile = new File(['documento'], 'ficha.pdf', { type: 'application/pdf' });
-    fixture.componentInstance.uploadOpen.set(true);
-    fixture.componentInstance.uploadType.set(40);
-    fixture.componentInstance.uploadFile.set(selectedFile);
-
-    const firstUpload = fixture.componentInstance.upload();
-    const duplicateUpload = fixture.componentInstance.upload();
-    expect(uploadDocument).toHaveBeenCalledTimes(1);
-    releaseUpload();
-    await Promise.all([firstUpload, duplicateUpload]);
-    expect(fixture.componentInstance.uploadOpen()).toBe(false);
-    expect(fixture.componentInstance.uploadFile()).toBeNull();
-    expect(fixture.componentInstance.operationPending()).toBe(false);
-
-    uploadDocument.mockImplementationOnce(() => Promise.reject(new Error('Carga rechazada')) as unknown as void);
-    fixture.componentInstance.uploadOpen.set(true);
-    fixture.componentInstance.uploadType.set(40);
-    fixture.componentInstance.uploadFile.set(selectedFile);
-    await fixture.componentInstance.upload();
-    expect(fixture.componentInstance.uploadOpen()).toBe(true);
-    expect(fixture.componentInstance.uploadFile()).toBe(selectedFile);
-    expect(fixture.componentInstance.operationPending()).toBe(false);
-  });
-
-  it('renders one accessible gear per actionable document without direct action buttons', () => {
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
-
-    const triggers = host.querySelectorAll<HTMLButtonElement>('.document-action-trigger');
-    expect(triggers).toHaveLength(6);
-    expect(triggers[0].getAttribute('aria-label')).toBe('Acciones de Ficha de Iniciativa de Innovación Pública');
-    expect(triggers[0].textContent?.trim()).toBe('settings');
-    expect(host.querySelector('.actions .secondary-button, .actions .text-button, .actions .icon-action')).toBeNull();
-  });
-
-  it('shows the applicable administrator options for loaded and pending documents', async () => {
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
-
-    const loadedTrigger = host.querySelector<HTMLButtonElement>('[aria-label="Acciones de Ficha de Iniciativa de Innovación Pública"]');
-    loadedTrigger?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    let menuPanels = overlayContainer.getContainerElement().querySelectorAll<HTMLElement>('.mat-mdc-menu-content');
-    let menuText = menuPanels.item(menuPanels.length - 1).textContent ?? '';
-    expect(menuText).toContain('Descargar');
-    expect(menuText).toContain('Publicar para consulta externa');
-    expect(menuText).not.toContain('Marcar como No aplica');
-
-    loadedTrigger?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-    const pendingTrigger = host.querySelector<HTMLButtonElement>('[aria-label="Acciones de Documento formal de decisión de aprobación"]');
-    pendingTrigger?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    menuPanels = overlayContainer.getContainerElement().querySelectorAll<HTMLElement>('.mat-mdc-menu-content');
-    menuText = menuPanels.item(menuPanels.length - 1).textContent ?? '';
-    expect(menuText).toContain('Marcar como No aplica');
-    expect(menuText).not.toContain('Descargar');
-  });
-
-  it('limits Consulta externa to download actions', async () => {
-    TestBed.inject(PiipMockRepository).toggleRole();
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
-
-    const triggers = host.querySelectorAll<HTMLButtonElement>('.document-action-trigger');
-    expect(triggers).toHaveLength(2);
-    triggers[0].click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const menuText = overlayContainer.getContainerElement().textContent ?? '';
-    expect(menuText).toContain('Descargar');
-    expect(menuText).not.toContain('Publicar para consulta externa');
-    expect(menuText).not.toContain('Retirar publicación');
-    expect(menuText).not.toContain('Marcar como No aplica');
-  });
-
-  it('does not expose document writes when Administrator belongs to another UE', () => {
-    const repository = TestBed.inject(PiipMockRepository);
-    repository.executingUnits.set([
-      { id: 1, code: 'UE-001', name: 'UE-001', institutionId: 1 },
-      { id: 2, code: 'UE-002', name: 'UE-002', institutionId: 1 },
-    ]);
-    repository.currentUser.set({
-      subject: 'mixed', fullName: 'Usuario mixto', email: 'mixed@example.pe',
-      roleScopes: [
-        { role: 'CONSULTA_EXTERNA', institutionId: 1, executingUnitId: 1 },
-        { role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 2 },
-      ], roles: ['CONSULTA_EXTERNA', 'ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1, 2], institutionWide: false,
-    });
-    repository.selectedExecutingUnitId.set(2);
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.detectChanges();
-
-    expect(fixture.componentInstance.canAdministerRecord()).toBe(false);
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Cargar documento');
-  });
-
-  it('shows Retirar publicación for an externally published document', async () => {
-    const repository = TestBed.inject(PiipMockRepository);
-    repository.documentDossiers()[0].stages[0].records[0].externallyPublished = true;
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
-
-    host.querySelector<HTMLButtonElement>('[aria-label="Acciones de Ficha de Iniciativa de Innovación Pública"]')?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const menuText = overlayContainer.getContainerElement().textContent ?? '';
-    expect(menuText).toContain('Retirar publicación');
-    expect(menuText).not.toContain('Publicar para consulta externa');
-  });
-
-  it('invokes download once from the document menu', async () => {
-    const repository = TestBed.inject(PiipMockRepository);
-    repository.documentDossiers()[0].stages[0].records[0].versionId = 25;
-    const downloadDocument = vi.spyOn(repository, 'downloadDocument').mockResolvedValue(undefined);
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
-
-    host.querySelector<HTMLButtonElement>('[aria-label="Acciones de Ficha de Iniciativa de Innovación Pública"]')?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-    overlayContainer.getContainerElement().querySelector<HTMLButtonElement>('[mat-menu-item]')?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    expect(downloadDocument).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows the active row spinner and disables every gear during an operation', () => {
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
-    const activeDocument = fixture.componentInstance.dossier()!.stages[0].records[0];
-
-    fixture.componentInstance.pendingOperation.set({ kind: 'download', key: fixture.componentInstance.operationKey(activeDocument) });
-    fixture.detectChanges();
-
-    const triggers = Array.from(host.querySelectorAll<HTMLButtonElement>('.document-action-trigger'));
-    const activeTrigger = triggers.find((trigger) => trigger.getAttribute('aria-label')?.includes(activeDocument.name));
-    expect(triggers.every((trigger) => trigger.disabled)).toBe(true);
-    expect(activeTrigger?.getAttribute('aria-busy')).toBe('true');
-    expect(activeTrigger?.textContent?.trim()).toBe('progress_activity');
-  });
-
-  it('identifies the active document action and prevents duplicate downloads', async () => {
-    const repository = TestBed.inject(PIIP_REPOSITORY);
-    let releaseDownload!: () => void;
-    const pendingDownload = new Promise<void>((resolve) => { releaseDownload = resolve; });
-    const downloadDocument = vi.spyOn(repository, 'downloadDocument').mockReturnValue(pendingDownload);
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    const documentRecord: DocumentRecord = {
-      type: 'PUBLIC_INNOVATION_INITIATIVE_SHEET', name: 'Ficha', required: true,
-      filename: 'ficha.pdf', version: '1.0', versionId: 25, uploadedAt: '31/07/2026', state: 'Cargado',
-    };
-
-    const first = fixture.componentInstance.download(documentRecord);
-    const duplicate = fixture.componentInstance.download(documentRecord);
-
-    expect(downloadDocument).toHaveBeenCalledTimes(1);
-    expect(fixture.componentInstance.isPending('download', documentRecord)).toBe(true);
-    releaseDownload();
-    await Promise.all([first, duplicate]);
-    expect(fixture.componentInstance.operationPending()).toBe(false);
-  });
-
-  it('paginates every document stage independently', () => {
-    const repository = TestBed.inject(PiipMockRepository);
-    const dossier = repository.documentDossiers()[0];
-    repository.documentDossiers.set([{
-      ...dossier,
-      stages: dossier.stages.map((stage) => ({
-        ...stage,
-        records: Array.from({ length: 6 }, (_, index) => ({ ...stage.records[0], name: `${stage.title} ${index + 1}` })),
-      })),
-    }, ...repository.documentDossiers().slice(1)]);
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    const component = fixture.componentInstance;
-    const [firstStage, secondStage] = component.dossier()!.stages;
-
-    expect(component.pagedStageRecords(firstStage)).toHaveLength(5);
-    component.setStagePage(firstStage, 1);
-    expect(component.pagedStageRecords(firstStage)).toHaveLength(1);
-    expect(component.stagePageIndex(secondStage)).toBe(0);
-    expect(component.pagedStageRecords(secondStage)).toHaveLength(5);
-  });
-
-  it('usa IDs en el selector y conserva versión, publicación, No aplica e histórico inactivo', () => {
-    const repository = TestBed.inject(PiipMockRepository);
-    const dossier = repository.documentDossiers()[0];
-    const loaded = dossier.stages[0].records[0];
-    const pending = dossier.stages.flatMap((stage) => stage.records).find((record) => record.state === 'Pendiente');
-    if (!loaded || !pending) throw new Error('El expediente de prueba debe incluir documentos cargados y pendientes.');
-    loaded.documentTypeId = 40;
-    loaded.documentType = { id: 40, code: 'PUBLIC_INNOVATION_INITIATIVE_SHEET', name: 'Ficha histórica renombrada', displayOrder: 1, active: false };
-    loaded.name = 'Ficha histórica renombrada';
-    loaded.version = '3.0';
-    loaded.externallyPublished = true;
-    pending.state = 'No aplica';
-    const fixture = TestBed.createComponent(DocumentsComponent);
-    fixture.componentInstance.uploadOpen.set(true);
-    fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
-    const options = Array.from(host.querySelectorAll<HTMLOptionElement>('select option'));
-
-    expect(options.some((item) => item.value === '40')).toBe(true);
-    expect(host.textContent).toContain('Ficha histórica renombrada');
-    expect(host.textContent).toContain('Inactivo');
-    expect(host.textContent).toContain('3.0');
-    expect(host.textContent).toContain('Publicado');
-    expect(host.textContent).toContain('No aplica');
   });
 });

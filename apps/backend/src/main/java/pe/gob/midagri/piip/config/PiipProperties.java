@@ -13,6 +13,9 @@ public final class PiipProperties {
     @ConfigurationProperties("piip.documents")
     public record Documents(long maxSizeBytes) {}
 
+    @ConfigurationProperties("piip.documents.migration")
+    public record Migration(boolean enabled) {}
+
     @ConfigurationProperties("piip.audit")
     public record Audit(int retentionDays) {}
 

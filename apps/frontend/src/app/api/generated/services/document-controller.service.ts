@@ -10,9 +10,16 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { addFile } from '../fn/document-controller/add-file';
+import { AddFile$Params } from '../fn/document-controller/add-file';
+import { addVersionToFile } from '../fn/document-controller/add-version-to-file';
+import { AddVersionToFile$Params } from '../fn/document-controller/add-version-to-file';
+import { deleteFile } from '../fn/document-controller/delete-file';
+import { DeleteFile$Params } from '../fn/document-controller/delete-file';
 import { DocumentResponse } from '../models/document-response';
 import { download } from '../fn/document-controller/download';
 import { Download$Params } from '../fn/document-controller/download';
+import { FileResponse } from '../models/file-response';
 import { list } from '../fn/document-controller/list';
 import { List$Params } from '../fn/document-controller/list';
 import { notApplicable } from '../fn/document-controller/not-applicable';
@@ -110,6 +117,60 @@ export class DocumentControllerService extends BaseService {
     );
   }
 
+  /** Path part for operation `addFile()` */
+  static readonly AddFilePath = '/portfolio-records/{recordCode}/documents/{documentTypeId}/files';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `addFile()` instead.
+   *
+   * This method sends `multipart/form-data` and handles request body of type `multipart/form-data`.
+   */
+  addFile$Response(params: AddFile$Params, context?: HttpContext): Observable<StrictHttpResponse<FileResponse>> {
+    const obs = addFile(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `addFile$Response()` instead.
+   *
+   * This method sends `multipart/form-data` and handles request body of type `multipart/form-data`.
+   */
+  addFile(params: AddFile$Params, context?: HttpContext): Observable<FileResponse> {
+    const resp = this.addFile$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<FileResponse>): FileResponse => r.body)
+    );
+  }
+
+  /** Path part for operation `addVersionToFile()` */
+  static readonly AddVersionToFilePath = '/portfolio-records/{recordCode}/documents/files/{fileId}/versions';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `addVersionToFile()` instead.
+   *
+   * This method sends `multipart/form-data` and handles request body of type `multipart/form-data`.
+   */
+  addVersionToFile$Response(params: AddVersionToFile$Params, context?: HttpContext): Observable<StrictHttpResponse<VersionResponse>> {
+    const obs = addVersionToFile(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `addVersionToFile$Response()` instead.
+   *
+   * This method sends `multipart/form-data` and handles request body of type `multipart/form-data`.
+   */
+  addVersionToFile(params: AddVersionToFile$Params, context?: HttpContext): Observable<VersionResponse> {
+    const resp = this.addVersionToFile$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<VersionResponse>): VersionResponse => r.body)
+    );
+  }
+
   /** Path part for operation `list()` */
   static readonly ListPath = '/portfolio-records/{recordCode}/documents';
 
@@ -161,6 +222,33 @@ export class DocumentControllerService extends BaseService {
     const resp = this.download$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<string>): string => r.body)
+    );
+  }
+
+  /** Path part for operation `deleteFile()` */
+  static readonly DeleteFilePath = '/portfolio-records/{recordCode}/documents/files/{fileId}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `deleteFile()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  deleteFile$Response(params: DeleteFile$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
+    const obs = deleteFile(this.http, this.rootUrl, params, context);
+    return obs;
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `deleteFile$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  deleteFile(params: DeleteFile$Params, context?: HttpContext): Observable<void> {
+    const resp = this.deleteFile$Response(params, context);
+    return resp.pipe(
+      map((r: StrictHttpResponse<void>): void => r.body)
     );
   }
 

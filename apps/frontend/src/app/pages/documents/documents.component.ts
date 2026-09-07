@@ -6,11 +6,11 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { summarizeDocumentDossier } from '../../core/piip-mock.repository';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { DocumentRecord, DocumentStage, PiipRecordType, PiipStatus } from '../../core/piip.models';
+import { DocumentFile, DocumentRecord, DocumentStage, DocumentVersion, PiipRecordType, PiipStatus } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 
-type DocumentOperationKind = 'upload' | 'download' | 'publication' | 'not-applicable';
+type DocumentOperationKind = 'add-file' | 'new-version' | 'delete-file' | 'download' | 'publication' | 'not-applicable';
 
 interface PendingDocumentOperation {
   kind: DocumentOperationKind;
@@ -34,6 +34,7 @@ export class DocumentsComponent {
   readonly uploadOpen = signal(false);
   readonly uploadType = signal<number | null>(null);
   readonly uploadFile = signal<File | null>(null);
+  readonly uploadTarget = signal<{ document: DocumentRecord; file: DocumentFile } | null>(null);
   readonly pendingOperation = signal<PendingDocumentOperation | null>(null);
   readonly stagePageIndexes = signal<Record<string, number>>({});
   readonly operationPending = computed(() => this.pendingOperation() !== null);
@@ -108,28 +109,49 @@ export class DocumentsComponent {
   }
 
   toggleUploadPanel(): void {
+    this.openAddFilePanel();
+  }
+
+  openAddFilePanel(): void {
     if (!this.canAdministerRecord()) return;
     if (this.uploadOpen()) {
       this.closeUploadPanel();
       return;
     }
+    this.uploadTarget.set(null);
+    this.uploadType.set(null);
+    this.uploadOpen.set(true);
+  }
+
+  openNewVersionPanel(document: DocumentRecord, file: DocumentFile): void {
+    if (!this.canAdministerRecord() || file.id === null || this.operationPending()) return;
+    this.uploadTarget.set({ document, file });
+    this.uploadType.set(document.documentTypeId ?? null);
+    this.uploadFile.set(null);
     this.uploadOpen.set(true);
   }
 
   closeUploadPanel(): void {
     this.uploadOpen.set(false);
     this.uploadFile.set(null);
+    this.uploadTarget.set(null);
+    this.uploadType.set(null);
   }
 
   async upload(): Promise<void> {
     const file = this.uploadFile();
     const documentTypeId = this.uploadType();
-    if (!file || !documentTypeId || this.operationPending() || !this.canAdministerRecord()) return;
-    this.pendingOperation.set({ kind: 'upload', key: String(documentTypeId) });
+    const target = this.uploadTarget();
+    if (!file || !documentTypeId || (target && target.file.id === null) || this.operationPending() || !this.canAdministerRecord()) return;
+    this.pendingOperation.set({ kind: target ? 'new-version' : 'add-file', key: target ? this.fileKey(target.file) : String(documentTypeId) });
     try {
-      await Promise.resolve(this.repository.uploadDocument(this.code(), documentTypeId, file));
+      if (target?.file.id !== undefined && target.file.id !== null) {
+        await Promise.resolve(this.repository.addDocumentFileVersion(this.code(), target.file.id, file));
+      } else {
+        await Promise.resolve(this.repository.addDocumentFile(this.code(), documentTypeId, file));
+      }
       this.closeUploadPanel();
-      this.snackBar.open('Documento cargado correctamente.', 'Cerrar', { duration: 3000 });
+      this.snackBar.open(target ? 'Nueva versión cargada correctamente.' : 'Archivo agregado correctamente.', 'Cerrar', { duration: 3000 });
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible cargar el documento.', 'Cerrar', { duration: 4000 });
     } finally {
@@ -137,11 +159,11 @@ export class DocumentsComponent {
     }
   }
 
-  async download(document: DocumentRecord): Promise<void> {
-    if (!document.versionId || !document.filename || this.operationPending()) return;
-    this.pendingOperation.set({ kind: 'download', key: this.operationKey(document) });
+  async download(version: DocumentVersion): Promise<void> {
+    if (!version.id || this.operationPending()) return;
+    this.pendingOperation.set({ kind: 'download', key: this.versionKey(version) });
     try {
-      await Promise.resolve(this.repository.downloadDocument(this.code(), document.versionId, document.filename));
+      await Promise.resolve(this.repository.downloadDocument(this.code(), version.id, version.filename));
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible descargar el documento.', 'Cerrar', { duration: 4000 });
     } finally {
@@ -149,12 +171,12 @@ export class DocumentsComponent {
     }
   }
 
-  async togglePublication(document: DocumentRecord): Promise<void> {
-    if (!document.versionId || document.optimisticVersion === undefined || this.operationPending() || !this.canAdministerRecord()) return;
-    this.pendingOperation.set({ kind: 'publication', key: this.operationKey(document) });
+  async togglePublication(version: DocumentVersion): Promise<void> {
+    if (!version.id || version.optimisticVersion === undefined || this.operationPending() || !this.canAdministerRecord()) return;
+    this.pendingOperation.set({ kind: 'publication', key: this.versionKey(version) });
     try {
-      await Promise.resolve(this.repository.setDocumentPublication(this.code(), document.versionId, !document.externallyPublished, document.optimisticVersion));
-      this.snackBar.open(document.externallyPublished ? 'Documento retirado de consulta externa.' : 'Documento publicado para consulta externa.', 'Cerrar', { duration: 3200 });
+      await Promise.resolve(this.repository.setDocumentPublication(this.code(), version.id, !version.externallyPublished, version.optimisticVersion));
+      this.snackBar.open(version.externallyPublished ? 'Documento retirado de consulta externa.' : 'Documento publicado para consulta externa.', 'Cerrar', { duration: 3200 });
     } catch (error) {
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible cambiar la publicación.', 'Cerrar', { duration: 4000 });
     } finally {
@@ -162,9 +184,24 @@ export class DocumentsComponent {
     }
   }
 
+  async deleteFile(file: DocumentFile): Promise<void> {
+    if (file.id === null || this.operationPending() || !this.canAdministerRecord()) return;
+    const filename = file.current?.filename ?? `archivo ${file.id}`;
+    if (!window.confirm(`¿Eliminar el archivo ${filename}? Esta acción no afecta a los demás archivos del tipo.`)) return;
+    this.pendingOperation.set({ kind: 'delete-file', key: this.fileKey(file) });
+    try {
+      await Promise.resolve(this.repository.deleteDocumentFile(this.code(), file.id));
+      this.snackBar.open('Archivo eliminado correctamente.', 'Cerrar', { duration: 3000 });
+    } catch (error) {
+      this.snackBar.open(error instanceof Error ? error.message : 'No fue posible eliminar el archivo.', 'Cerrar', { duration: 4000 });
+    } finally {
+      this.pendingOperation.set(null);
+    }
+  }
+
   async markNotApplicable(document: DocumentRecord): Promise<void> {
     if (!document.documentTypeId || this.operationPending() || !this.canAdministerRecord()) return;
-    this.pendingOperation.set({ kind: 'not-applicable', key: this.operationKey(document) });
+    this.pendingOperation.set({ kind: 'not-applicable', key: this.documentKey(document) });
     try {
       await Promise.resolve(this.repository.markDocumentNotApplicable(this.code(), document.documentTypeId, 'Marcado desde el expediente PIIP'));
       this.snackBar.open('Documento marcado como No aplica.', 'Cerrar', { duration: 3000 });
@@ -175,16 +212,24 @@ export class DocumentsComponent {
     }
   }
 
-  isPending(kind: DocumentOperationKind, document?: DocumentRecord): boolean {
+  isPending(kind: DocumentOperationKind, key?: string): boolean {
     const operation = this.pendingOperation();
-    return operation?.kind === kind && (!document || operation.key === this.operationKey(document));
+    return operation?.kind === kind && (!key || operation.key === key);
   }
 
   isDocumentPending(document: DocumentRecord): boolean {
-    return this.pendingOperation()?.key === this.operationKey(document);
+    return this.pendingOperation()?.key === this.documentKey(document);
   }
 
-  operationKey(document: DocumentRecord): string {
-    return String(document.versionId ?? document.type ?? document.name);
+  documentKey(document: DocumentRecord): string {
+    return String(document.documentTypeId ?? document.type ?? document.name);
+  }
+
+  fileKey(file: DocumentFile): string {
+    return `file:${file.id ?? 'legacy'}`;
+  }
+
+  versionKey(version: DocumentVersion): string {
+    return `version:${version.id ?? version.number}`;
   }
 }

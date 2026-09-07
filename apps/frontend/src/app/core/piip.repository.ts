@@ -76,6 +76,9 @@ export abstract class PiipRepository {
   abstract updateInitiative(code: string, input: InitiativeUpdateInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract updateProject(code: string, input: ProjectUpdateInput): RepositoryOperation<PiipPortfolioRecord>;
   abstract uploadDocument(code: string, documentTypeId: number, file: File): RepositoryOperation<void>;
+  abstract addDocumentFile(code: string, documentTypeId: number, file: File): RepositoryOperation<void>;
+  abstract addDocumentFileVersion(code: string, fileId: number, file: File): RepositoryOperation<void>;
+  abstract deleteDocumentFile(code: string, fileId: number): RepositoryOperation<void>;
   abstract markDocumentNotApplicable(code: string, documentTypeId: number, reason: string): RepositoryOperation<void>;
   abstract downloadDocument(code: string, versionId: number, filename: string): RepositoryOperation<void>;
   abstract setDocumentPublication(code: string, versionId: number, published: boolean, version: number): RepositoryOperation<void>;
