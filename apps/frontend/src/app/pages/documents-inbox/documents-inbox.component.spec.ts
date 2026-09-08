@@ -55,6 +55,42 @@ describe('DocumentsInboxComponent', () => {
     expect(fixture.componentInstance.filteredDossiers().map((item) => item.code)).toEqual([target.code]);
   });
 
+  it('muestra todas las Unidades Orgánicas Involucradas en orden y no la Unidad Ejecutora legada', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const firstUnit = repository.organizationalUnits()[0];
+    const secondUnit = { ...firstUnit, id: 102, code: 'UO-DEMO-2', name: 'Segunda Unidad Orgánica', acronym: 'UO2' };
+    const target = {
+      ...repository.getDocumentDossierSummaries()[0],
+      unit: 'Unidad Ejecutora legada',
+      organizationalUnits: [firstUnit, secondUnit],
+    };
+    vi.spyOn(repository, 'getDocumentDossierSummaries').mockReturnValue([target]);
+    const fixture = TestBed.createComponent(DocumentsInboxComponent);
+    fixture.detectChanges();
+
+    const cell = (fixture.nativeElement as HTMLElement).querySelector('tbody tr td:nth-child(4)') as HTMLElement;
+    expect(cell.textContent).toContain('1 · UO');
+    expect(cell.textContent).toContain('2 · UO2');
+    expect(cell.textContent).not.toContain('Unidad Ejecutora legada');
+    expect(Array.from(cell.querySelectorAll('.unit-chip')).map((chip) => chip.getAttribute('title'))).toEqual([
+      firstUnit.name,
+      secondUnit.name,
+    ]);
+    expect(cell.querySelector('.unit-stack')?.getAttribute('aria-label')).toBe('Unidades Orgánicas Involucradas');
+  });
+
+  it('informa cuando el expediente no tiene asociaciones de Unidades Orgánicas', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const target = { ...repository.getDocumentDossierSummaries()[0], unit: 'Unidad Ejecutora legada', organizationalUnits: [] };
+    vi.spyOn(repository, 'getDocumentDossierSummaries').mockReturnValue([target]);
+    const fixture = TestBed.createComponent(DocumentsInboxComponent);
+    fixture.detectChanges();
+
+    const cell = (fixture.nativeElement as HTMLElement).querySelector('tbody tr td:nth-child(4)') as HTMLElement;
+    expect(cell.textContent).toContain('Sin Unidades Orgánicas registradas');
+    expect(cell.textContent).not.toContain('Unidad Ejecutora legada');
+  });
+
   it('presenta carga, vacío y error para las opciones de catálogo', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const fixture = TestBed.createComponent(DocumentsInboxComponent);

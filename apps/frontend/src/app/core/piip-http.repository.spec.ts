@@ -306,12 +306,17 @@ describe('PiipHttpRepository', () => {
     const load = (repository as unknown as { loadDocumentSummaries(): Promise<void> }).loadDocumentSummaries.call(repository);
     const request = http.expectOne((candidate) => candidate.url === 'http://127.0.0.1:4001/api/v1/documents' && candidate.params.get('executingUnitId') === '1');
     request.flush([
-      { code: 'I-001-2026', name: 'UE 001', recordType: 'Iniciativa', status: 'Presentado', executingUnitId: 1, loadedCount: 0, pendingCount: 1 },
+      { code: 'I-001-2026', name: 'UE 001', recordType: 'Iniciativa', status: 'Presentado', executingUnitId: 1, loadedCount: 0, pendingCount: 1,
+        organizationalUnits: [
+          { id: 101, code: 'UE-001-UO-01', name: 'Unidad uno', acronym: 'UO1', executingUnitId: 1, active: true },
+          { id: 102, code: 'UE-001-UO-02', name: 'Unidad dos', acronym: 'UO2', executingUnitId: 1, active: true },
+        ] },
       { code: 'I-002-2026', name: 'UE 002', recordType: 'Iniciativa', status: 'Presentado', executingUnitId: 2, loadedCount: 0, pendingCount: 1 },
     ]);
     await load;
 
     expect(repository.getDocumentDossierSummaries().map((item) => item.code)).toEqual(['I-001-2026']);
+    expect(repository.getDocumentDossierSummaries()[0].organizationalUnits?.map((unit) => unit.id)).toEqual([101, 102]);
   });
 
   it('no muestra eventos ni accesos de otra UE cuando la UE activa no tiene registros', async () => {
