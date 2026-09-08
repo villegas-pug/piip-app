@@ -54,13 +54,34 @@ describe('DerivedProjectFormComponent', () => {
     expect(fixture.componentInstance.form.controls.source.value).toBe(String(record.sourceReference?.id));
   });
 
+  it('reacciona cuando el detalle de la iniciativa llega después de crear el formulario', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const initiative = repository.initiatives().find((item) => item.code === 'I-019-2026')!;
+    const portfolioRecord = repository.portfolioRecords().find((item) => item.code === 'I-019-2026')!;
+    repository.initiatives.set(repository.initiatives().filter((item) => item.code !== initiative.code));
+    repository.portfolioRecords.set(repository.portfolioRecords().filter((item) => item.code !== portfolioRecord.code));
+
+    const fixture = TestBed.createComponent(DerivedProjectFormComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Iniciativa no encontrada');
+
+    repository.initiatives.set([...repository.initiatives(), initiative]);
+    repository.portfolioRecords.set([...repository.portfolioRecords(), portfolioRecord]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Crear proyecto desde I-019-2026');
+    expect(fixture.componentInstance.form.controls.name.value).toBe(portfolioRecord.name);
+    expect(fixture.componentInstance.responsibleUnitIds()).toEqual(portfolioRecord.responsibleUnitReferences?.map((unit) => unit.id));
+  });
+
   it('habilita la revisión solo después de reemplazar una referencia inactiva', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const record = repository.portfolioRecords().find((item) => item.code === 'I-019-2026')!;
     record.sourceReference = { id: 99, code: 'LEGACY', name: 'Fuente histórica', displayOrder: 1, active: false };
     const fixture = TestBed.createComponent(DerivedProjectFormComponent);
     const component = fixture.componentInstance;
-    component.form.patchValue({ startDate: '2026-08-20', responsibleUnits: '101' });
+    component.form.patchValue({ startDate: '2026-08-20' });
+    component.onUnitsChange({ unitIds: [101], rowCount: 1, hasPendingSelection: false });
 
     component.openReview();
     expect(open).not.toHaveBeenCalled();
@@ -84,10 +105,10 @@ describe('DerivedProjectFormComponent', () => {
       source: String(source.id),
       digitalComponent: 'Si',
       responsible: 'Responsable PIIP',
-      responsibleUnits: String(unit.id),
       description: 'Descripción para la revisión',
       keyResults: '',
     });
+    component.onUnitsChange({ unitIds: [unit.id], rowCount: 1, hasPendingSelection: false });
 
     component.openReview();
     component.openReview();
@@ -106,11 +127,11 @@ describe('DerivedProjectFormComponent', () => {
     expect(config.data).toEqual(expect.objectContaining({
       solutionType: solutionType.name,
       source: source.name,
-      organizationalUnit: unit.acronym === unit.name ? unit.acronym : `${unit.acronym} — ${unit.name}`,
+      organizationalUnits: [unit],
       startDate: expect.stringContaining('2026'),
       keyResults: '',
     }));
-    expect(config.data.organizationalUnit).not.toBe(String(unit.id));
+    expect(config.data.organizationalUnits).toEqual([unit]);
     expect(block).toHaveBeenCalledOnce();
   });
 
@@ -121,5 +142,21 @@ describe('DerivedProjectFormComponent', () => {
 
     await expect(fixture.componentInstance.registerProject()).resolves.toBe(false);
     expect(fixture.componentInstance.submitting()).toBe(false);
+  });
+
+  it('precarga en orden las unidades de la iniciativa y permite reportar una fila backend', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const origin = repository.portfolioRecords().find((item) => item.code === 'I-019-2026')!;
+    const second = { id: 102, code: 'UO-102', name: 'Unidad dos', acronym: 'UD', parentId: null, executingUnitId: 1, active: true };
+    repository.organizationalUnits.set([...repository.organizationalUnits(), second]);
+    origin.responsibleUnitReferences = [repository.organizationalUnits()[0], second];
+    const fixture = TestBed.createComponent(DerivedProjectFormComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(component.responsibleUnitIds()).toEqual([101, 102]);
+    vi.spyOn(repository, 'registerDerivedProject').mockRejectedValue(new (await import('../../core/piip-http.repository')).PiipApiError(422, 'Unidad inválida.', undefined, 'responsibleUnits[1]'));
+    await component.registerProject();
+    expect(component.responsibleUnitErrors()).toEqual({ 0: 'Unidad inválida.' });
   });
 });

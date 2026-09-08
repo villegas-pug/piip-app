@@ -71,15 +71,23 @@ interface ApiWorkTask {
   version: number;
 }
 
-interface ApiProblem {
+export interface ApiProblem {
   title?: string;
   detail?: string;
   status?: number;
   problemCode?: string;
+  referenceField?: string;
+  referenceId?: string | number;
 }
 
 export class PiipApiError extends Error {
-  constructor(readonly status: number, message: string, readonly problemCode?: string) {
+  constructor(
+    readonly status: number,
+    message: string,
+    readonly problemCode?: string,
+    readonly referenceField?: string,
+    readonly referenceId?: string | number,
+  ) {
     super(message);
     this.name = 'PiipApiError';
   }
@@ -400,7 +408,7 @@ export class PiipHttpRepository extends PiipRepository {
       solutionTypeId: input.solutionTypeId,
       sourceId: input.sourceId,
       responsible: input.responsible,
-      responsibleUnits: [{ organizationalUnitId: input.organizationalUnitId }],
+      responsibleUnits: responsibleUnitRequests(input),
       peiObjectiveId: input.peiObjectiveId,
       poiActivityId: input.poiActivityId,
       description: input.description,
@@ -468,7 +476,7 @@ export class PiipHttpRepository extends PiipRepository {
       solutionTypeId: input.solutionTypeId,
       sourceId: input.sourceId,
       responsible: input.responsible,
-      responsibleUnits: [{ organizationalUnitId: input.organizationalUnitId }],
+      responsibleUnits: responsibleUnitRequests(input),
       peiObjectiveId: input.peiObjectiveId,
       poiActivityId: input.poiActivityId,
       description: input.description,
@@ -489,7 +497,7 @@ export class PiipHttpRepository extends PiipRepository {
       name: input.name,
       sourceId: input.sourceId,
       responsible: input.responsible,
-      responsibleUnits: [{ organizationalUnitId: input.organizationalUnitId }],
+      responsibleUnits: responsibleUnitRequests(input),
       peiObjectiveId: input.peiObjectiveId,
       poiActivityId: input.poiActivityId,
       description: input.description,
@@ -910,7 +918,11 @@ export class PiipHttpRepository extends PiipRepository {
     const message = problemCode
       ? problemMessage(problemCode) ?? detail ?? httpStatusMessage(status)
       : detail ?? httpStatusMessage(status);
-    const apiError = new PiipApiError(status, message, problemCode);
+    const referenceField = typeof problem === 'object' && typeof problem?.referenceField === 'string' ? problem.referenceField : undefined;
+    const referenceId = typeof problem === 'object' && (typeof problem?.referenceId === 'string' || typeof problem?.referenceId === 'number')
+      ? problem.referenceId
+      : undefined;
+    const apiError = new PiipApiError(status, message, problemCode, referenceField, referenceId);
     this.lastError.set(apiError.message);
     return apiError;
   }
@@ -1003,6 +1015,21 @@ function updateFields(input: InitiativeUpdateInput | ProjectUpdateInput): Record
       ? undefined
       : input.digitalComponent === 'Si' ? 'YES' : 'NO',
   };
+}
+
+/** Convierte únicamente referencias de fila válidas del contrato backend a índices de UI. */
+export function responsibleUnitRowErrors(error: unknown): Readonly<Record<number, string>> | null {
+  if (!(error instanceof PiipApiError) || !error.referenceField) return null;
+  const match = /^responsibleUnits\[([1-9]\d*)\]$/.exec(error.referenceField);
+  if (!match) return null;
+  const position = Number(match[1]);
+  if (!Number.isSafeInteger(position) || position < 1) return null;
+  return { [position - 1]: error.message };
+}
+
+function responsibleUnitRequests(input: InitiativeInput | DerivedProjectInput | PreexistingProjectInput): { organizationalUnitId: number }[] {
+  const ids = input.responsibleUnitIds ?? (input.organizationalUnitId === undefined ? [] : [input.organizationalUnitId]);
+  return ids.map((organizationalUnitId) => ({ organizationalUnitId }));
 }
 
 function upsertByCode<T extends { code: string }>(items: T[], value: T): T[] {

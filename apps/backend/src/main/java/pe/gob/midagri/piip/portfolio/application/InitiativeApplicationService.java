@@ -117,8 +117,10 @@ public class InitiativeApplicationService {
         portfolioDocumentService.initializeSlots(record.getId());
         UserEntity assigned = users.findById(actor.userId()).orElseThrow();
         portfolioWorkService.createDecisionTask(record, assigned, actor.subject());
+        // FR-018: el alta registra la lista ordenada confirmada con unidad, nombre, sigla y Nro por elemento.
         audit.event("INICIATIVA_REGISTRADA", "REGISTRO_PORTAFOLIO", code,
-            Map.of("estado", record.getStatus().label()), actor.subject());
+            PortfolioUpdateAuditDetail.registrationDetail(Map.of("estado", record.getStatus().label()),
+                responsibleUnitService.list(record)), actor.subject());
         return assembler.toResponse(record);
     }
 

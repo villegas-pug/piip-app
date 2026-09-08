@@ -12,6 +12,8 @@ import { canEditInitiative, canEditProject } from '../../core/portfolio-edit-per
 import type { OrganizationalUnit } from '../../core/piip.models';
 import type { PendingChangesAware } from '../../core/pending-changes.guard';
 import { PendingChangesDialogComponent } from './pending-changes-dialog.component';
+import { OrganizationalUnitListComponent, OrganizationalUnitListValue } from '../../shared/organizational-unit-list/organizational-unit-list.component';
+import { responsibleUnitRowErrors } from '../../core/piip-http.repository';
 import { finalize, map, Observable, Subscription } from 'rxjs';
 
 interface EditSnapshot {
@@ -38,7 +40,7 @@ const SECTION_ID_SET: ReadonlySet<string> = new Set(SECTION_IDS);
 @Component({
   selector: 'app-portfolio-record-edit',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, MatIconModule],
+  imports: [ReactiveFormsModule, RouterLink, MatIconModule, OrganizationalUnitListComponent],
   templateUrl: './portfolio-record-edit.component.html',
   styleUrl: './portfolio-record-edit.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -73,6 +75,8 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
   readonly loading = signal(true);
   readonly conflict = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly responsibleUnitErrors = signal<Readonly<Record<number, string>>>({});
+  readonly pendingResponsibleUnit = signal(false);
   readonly baseline = signal<EditSnapshot | null>(null);
   readonly selectedSection = signal<SectionId>(this.initialSection());
   @ViewChildren('editSection', { read: ElementRef }) private readonly sectionElements!: QueryList<ElementRef<HTMLElement>>;
@@ -89,6 +93,8 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
     peiObjectiveId: [''],
     poiActivityId: [''],
     responsibleUnitIds: this.formBuilder.nonNullable.control<number[]>([], Validators.minLength(1)),
+    // Se conserva mientras las pruebas de migración usan el control legado; la UI usa la lista.
+    responsibleUnits: [''],
     description: ['', [Validators.required, Validators.maxLength(1000)]],
     keyResults: [''],
     note: [''],
@@ -195,37 +201,35 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
   }
 
   setResponsibleUnitIds(ids: readonly number[]): void {
-    if (this.hasMultipleResponsibleUnits()) return;
-    this.form.controls.responsibleUnitIds.setValue(ids.length ? [ids[0]] : []);
+    if (this.form.controls.responsibleUnitIds.value.length === ids.length
+      && this.form.controls.responsibleUnitIds.value.every((id, index) => id === ids[index])) return;
+    this.form.controls.responsibleUnitIds.setValue([...ids]);
     this.form.controls.responsibleUnitIds.markAsDirty();
   }
 
-  setResponsibleUnitFromEvent(event: Event): void {
-    const rawValue = (event.target as HTMLSelectElement).value;
-    const id = Number(rawValue);
-    this.setResponsibleUnitIds(Number.isInteger(id) && id > 0 ? [id] : []);
-  }
-
-  selectedResponsibleUnitId(): string {
-    const ids = this.form.controls.responsibleUnitIds.value;
-    return ids.length === 1 ? String(ids[0]) : '';
-  }
-
-  hasMultipleResponsibleUnits(): boolean {
-    return (this.baseline()?.responsibleUnitIds.length ?? 0) > 1;
-  }
+  selectedResponsibleUnitId(): string { return this.form.controls.responsibleUnitIds.value.length === 1 ? String(this.form.controls.responsibleUnitIds.value[0]) : ''; }
 
   responsibleUnitOptions(): readonly OrganizationalUnit[] {
     const currentIds = this.baseline()?.responsibleUnitIds ?? [];
     const candidates = [...this.units(), ...(this.record()?.responsibleUnitReferences ?? [])];
     return candidates.filter((unit, index, all) =>
-      (unit.active || currentIds.includes(unit.id)) && all.findIndex((candidate) => candidate.id === unit.id) === index,
+      ((unit.active && unit.acronym.trim()) || currentIds.includes(unit.id)) && all.findIndex((candidate) => candidate.id === unit.id) === index,
     );
   }
 
   currentResponsibleUnits(): readonly OrganizationalUnit[] {
-    const ids = this.baseline()?.responsibleUnitIds ?? this.form.controls.responsibleUnitIds.value;
+    const ids = this.form.controls.responsibleUnitIds.value;
     return ids.flatMap((id) => this.responsibleUnitOptions().filter((unit) => unit.id === id));
+  }
+
+  selectableResponsibleUnits(): readonly OrganizationalUnit[] {
+    return this.units().filter((unit) => unit.active && unit.acronym.trim());
+  }
+
+  onUnitsChange(value: OrganizationalUnitListValue): void {
+    this.pendingResponsibleUnit.set(value.hasPendingSelection);
+    this.responsibleUnitErrors.set({});
+    this.setResponsibleUnitIds(value.unitIds);
   }
 
   isHistorical(id: string, field: 'solutionTypeId' | 'sourceId' | 'peiObjectiveId' | 'poiActivityId'): boolean {
@@ -249,8 +253,8 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
   async save(): Promise<void> {
     if (this.submitting() || this.conflict() || !this.isEditable()) return;
     this.form.markAllAsTouched();
-    if (this.form.invalid) {
-      this.errorMessage.set('Completa los campos requeridos y selecciona al menos una Unidad Orgánica responsable.');
+    if (this.form.invalid || this.pendingResponsibleUnit() || this.unitsState().phase !== 'ready') {
+      this.errorMessage.set('Completa los campos requeridos y selecciona al menos una Unidad Orgánica Involucrada válida.');
       return;
     }
     const baseline = this.baseline();
@@ -465,6 +469,12 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
     if (status === 409) {
       this.conflict.set(true);
       this.errorMessage.set('La versión abierta está desactualizada. Tus cambios locales se conservaron; recarga la versión vigente para continuar.');
+      return;
+    }
+    const rowErrors = responsibleUnitRowErrors(error);
+    if (rowErrors) {
+      this.responsibleUnitErrors.set(rowErrors);
+      this.errorMessage.set(null);
       return;
     }
     this.conflict.set(false);

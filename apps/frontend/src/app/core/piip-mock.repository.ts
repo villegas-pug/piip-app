@@ -540,12 +540,14 @@ export class PiipMockRepository extends PiipRepository {
     this.assertAdministrator('El perfil Consulta externa no puede registrar iniciativas.');
     const solutionType = this.catalogName('solutionTypes', input.solutionTypeId);
     const source = this.catalogName('sources', input.sourceId);
-    const unit = this.unitName(input.organizationalUnitId);
+    const unitIds = input.responsibleUnitIds ?? (input.organizationalUnitId === undefined ? [] : [input.organizationalUnitId]);
+    const unit = this.unitNames(unitIds);
+    const responsibleUnitReferences = this.unitsByIds(unitIds);
     const record: PiipPortfolioRecord = {
       recordType: 'Iniciativa', code: input.code, originCode: 'NA', name: input.name,
       solutionType: solutionType as PiipPortfolioRecord['solutionType'], source, startDate: input.startDate,
       responsible: input.responsible, peiObjective: this.optionalCatalogName('peiObjectives', input.peiObjectiveId), poiActivity: this.optionalCatalogName('poiActivities', input.poiActivityId),
-      responsibleUnits: unit, description: input.description, keyResults: '', note: input.note,
+       responsibleUnits: unit, responsibleUnitReferences, description: input.description, keyResults: '', note: input.note,
       status: 'Presentado', finalProductType: 'NA', digitalComponent: input.digitalComponent, closingDate: '',
       technicalOpinionReport: '', formalApprovalDecision: '', finalProductApprovalDocument: '',
       projectManagementDocumentation: '', finalClosureReport: '',
@@ -603,12 +605,14 @@ export class PiipMockRepository extends PiipRepository {
     }
 
     const originCode = resolveProjectOriginCode({ mode: 'DERIVED_FROM_INITIATIVE', initiativeCode: input.initiativeCode });
-    const unit = this.unitName(input.organizationalUnitId);
+    const unitIds = input.responsibleUnitIds ?? (input.organizationalUnitId === undefined ? [] : [input.organizationalUnitId]);
+    const unit = this.unitNames(unitIds);
+    const responsibleUnitReferences = this.unitsByIds(unitIds);
     const portfolioRecord: PiipPortfolioRecord = {
       recordType: 'Proyecto', code: input.code, originCode, name: input.name,
       solutionType: this.catalogName('solutionTypes', input.solutionTypeId) as PiipPortfolioRecord['solutionType'], source: this.catalogName('sources', input.sourceId), startDate: input.startDate,
       responsible: input.responsible, peiObjective: this.optionalCatalogName('peiObjectives', input.peiObjectiveId), poiActivity: this.optionalCatalogName('poiActivities', input.poiActivityId),
-      responsibleUnits: unit, description: input.description, keyResults: input.keyResults,
+       responsibleUnits: unit, responsibleUnitReferences, description: input.description, keyResults: input.keyResults,
       note: input.note, status: 'Proyecto en ejecución', finalProductType: 'NA',
       digitalComponent: input.digitalComponent, closingDate: '', technicalOpinionReport: '',
       formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '',
@@ -736,7 +740,9 @@ export class PiipMockRepository extends PiipRepository {
     this.assertAdministrator('El perfil Consulta externa no puede registrar proyectos.');
 
     const originCode = resolveProjectOriginCode({ mode: 'PREEXISTING', initiativeCode: 'NA' });
-    const unit = this.unitName(input.organizationalUnitId);
+    const unitIds = input.responsibleUnitIds ?? (input.organizationalUnitId === undefined ? [] : [input.organizationalUnitId]);
+    const unit = this.unitNames(unitIds);
+    const responsibleUnitReferences = this.unitsByIds(unitIds);
     const portfolioRecord: PiipPortfolioRecord = {
       recordType: 'Proyecto',
       code: input.code,
@@ -748,7 +754,7 @@ export class PiipMockRepository extends PiipRepository {
       responsible: input.responsible,
       peiObjective: this.optionalCatalogName('peiObjectives', input.peiObjectiveId),
       poiActivity: this.optionalCatalogName('poiActivities', input.poiActivityId),
-      responsibleUnits: unit,
+       responsibleUnits: unit, responsibleUnitReferences,
       description: input.description,
       keyResults: input.keyResults,
       note: input.note,
@@ -891,8 +897,12 @@ export class PiipMockRepository extends PiipRepository {
     return id === undefined ? '' : this.catalogs().value[key].find((item) => item.id === id)?.name ?? '';
   }
 
-  private unitName(id: number): string {
-    return this.organizationalUnits().find((item) => item.id === id)?.name ?? '';
+  private unitsByIds(ids: readonly number[]): OrganizationalUnit[] {
+    return ids.flatMap((id) => this.organizationalUnits().filter((item) => item.id === id));
+  }
+
+  private unitNames(ids: readonly number[]): string {
+    return this.unitsByIds(ids).map((unit) => unit.name).join(', ');
   }
 
   private hasGrantForExecutingUnit(executingUnitId: number | null | undefined, role?: 'ADMINISTRADOR_PIIP' | 'CONSULTA_EXTERNA'): boolean {

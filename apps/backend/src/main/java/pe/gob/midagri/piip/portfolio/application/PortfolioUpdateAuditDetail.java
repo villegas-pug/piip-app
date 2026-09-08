@@ -1,6 +1,5 @@
 package pe.gob.midagri.piip.portfolio.application;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,6 +12,17 @@ import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitEntity;
 public final class PortfolioUpdateAuditDetail {
     private PortfolioUpdateAuditDetail() {}
 
+    /**
+     * Detalle de los eventos de alta (FR-018): contexto vigente del evento más la lista ordenada
+     * confirmada de Unidades Orgánicas Involucradas bajo la clave técnica responsibleUnits.
+     */
+    public static Map<String, Object> registrationDetail(Map<String, Object> context, List<ResponsibleUnitEntity> units) {
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.putAll(context);
+        detail.put("responsibleUnits", responsibleUnitsAuditValue(units));
+        return detail;
+    }
+
     public static Map<String, Object> snapshot(PortfolioRecordEntity record, List<ResponsibleUnitEntity> units) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("name", record.getName());
@@ -22,7 +32,7 @@ public final class PortfolioUpdateAuditDetail {
         snapshot.put("responsible", record.getResponsible());
         snapshot.put("peiObjective", catalog(record.getPeiObjective()));
         snapshot.put("poiActivity", catalog(record.getPoiActivity()));
-        snapshot.put("responsibleUnits", units(units));
+        snapshot.put("responsibleUnits", responsibleUnitsAuditValue(units));
         snapshot.put("description", record.getDescription());
         snapshot.put("keyResults", record.getKeyResults());
         snapshot.put("note", record.getNote());
@@ -66,15 +76,22 @@ public final class PortfolioUpdateAuditDetail {
         return value;
     }
 
-    private static List<Map<String, Object>> units(List<ResponsibleUnitEntity> values) {
-        List<Map<String, Object>> result = new ArrayList<>();
+    /**
+     * Elemento auditado compartido por altas y ediciones (FR-020): identidad y código de la unidad,
+     * nombre y sigla del maestro organizacional, y Nro de presentación, que corresponde exactamente
+     * a la posición 1..N persistida en ORDEN_PRESENTACION. La sigla puede ser null solo cuando la
+     * asociación histórica retenida se conserva como contexto; nunca se inventa ni completa.
+     */
+    public static List<Map<String, Object>> responsibleUnitsAuditValue(List<ResponsibleUnitEntity> values) {
+        List<Map<String, Object>> result = new ArrayList<>(values.size());
         for (ResponsibleUnitEntity value : values) {
             var unit = value.getOrganizationalUnit();
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", unit.getId());
             item.put("code", unit.getCode());
             item.put("name", unit.getName());
-            item.put("displayOrder", value.getDisplayOrder());
+            item.put("sigla", unit.getAcronym());
+            item.put("nro", value.getDisplayOrder());
             result.add(item);
         }
         return result;

@@ -1,0 +1,81 @@
+<div class="ou-list">
+  @if (catalogPhase() === 'error') {
+    <p class="ou-state ou-state-error" role="alert">{{ catalogError() || 'No fue posible cargar las Unidades Orgánicas.' }}
+      <button type="button" class="ou-retry" (click)="retryCatalog()">Reintentar</button>
+    </p>
+  } @else if (catalogPhase() === 'ready' && !catalog().length) {
+    <p class="ou-state" role="status">No hay Unidades Orgánicas disponibles para la Unidad Ejecutora.</p>
+  } @else if (catalogPhase() !== 'ready') {
+    <p class="ou-state" role="status">Cargando Unidades Orgánicas...</p>
+  }
+
+  <table class="ou-table">
+    <caption class="ou-caption">{{ label() }}</caption>
+    <thead class="ou-table-head">
+      <tr>
+        <th class="ou-col-number" scope="col">Nro</th>
+        <th class="ou-col-description" scope="col">Descripción</th>
+        <th class="ou-col-acronym" scope="col">Abreviatura</th>
+        <th class="ou-col-actions" scope="col">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track $index) {
+        <tr [class.ou-row-invalid]="rowErrorMessage($index) !== null">
+          <td class="ou-number">
+            <span class="ou-cell-label">Nro</span>
+            <span class="ou-number-value">{{ $index + 1 }}</span>
+          </td>
+          <td class="ou-description">
+            <span class="ou-cell-label">Descripción</span>
+            @if (row; as unit) {
+              <span class="ou-unit-name">{{ unit.name }}</span>
+            } @else {
+              <select #pendingSelect class="ou-select"
+                [disabled]="catalogPhase() !== 'ready' || disabled()"
+                [attr.aria-label]="'Unidad Orgánica de la fila ' + ($index + 1)"
+                aria-required="true"
+                [attr.aria-describedby]="pendingDescribedBy($index)"
+                (change)="onSelectUnit($event)">
+                <option value="">Seleccionar Unidad Orgánica</option>
+                @for (option of availableUnits(); track option.id) {
+                  <option [value]="option.id">{{ option.name }} ({{ option.acronym }})</option>
+                }
+              </select>
+            }
+            @if (rowErrorMessage($index); as message) {
+              <small class="ou-row-error" role="alert" [id]="instanceId + '-row-' + $index + '-error'">Fila {{ $index + 1 }}: {{ message }}</small>
+            }
+          </td>
+          <td class="ou-acronym">
+            <span class="ou-cell-label">Abreviatura</span>
+            @if (row; as unit) {
+              <span class="ou-acronym-value">{{ unit.acronym }}</span>
+            } @else {
+              <span class="ou-acronym-value">—</span>
+            }
+          </td>
+          <td class="ou-actions">
+            <span class="ou-cell-label">Acciones</span>
+            <button type="button" class="icon-action ou-remove"
+              [disabled]="!canRemoveRow()"
+              [attr.aria-label]="removeRowLabel($index)"
+              (click)="removeRow($index)">
+              <mat-icon aria-hidden="true">delete</mat-icon>
+            </button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <div class="ou-footer">
+    <button #addButton type="button" class="secondary-button ou-add" [disabled]="!canAddRow()" (click)="addRow()">
+      <mat-icon aria-hidden="true">add</mat-icon>Agregar unidad
+    </button>
+    @if (addDisabledReason(); as reason) {
+      <small class="ou-add-hint" role="status">{{ reason }}</small>
+    }
+    <small class="ou-hint" [id]="instanceId + '-hint'">Mínimo una unidad. La numeración se recalcula al retirar filas y las unidades seleccionadas no se repiten.</small>
+  </div>
+</div>

@@ -22,20 +22,40 @@ class PortfolioDtosValidationTest {
     }
 
     @Test
-    void rejectsMoreThanOneResponsibleUnitOnCreate() {
+    void acceptsSeveralResponsibleUnitsOnCreate() {
         var request = new InitiativeCreateRequest(1L, "Iniciativa", 2L, 3L,
             LocalDate.of(2026, 8, 22), "Responsable", null, null, "Descripción", null,
             DigitalComponent.NO, List.of(new ResponsibleUnitInput(8L), new ResponsibleUnitInput(9L)));
+
+        assertThat(validator.validate(request)).noneMatch(violation ->
+            violation.getPropertyPath().toString().equals("responsibleUnits"));
+    }
+
+    @Test
+    void rejectsEmptyResponsibleUnitListOnCreate() {
+        var request = new InitiativeCreateRequest(1L, "Iniciativa", 2L, 3L,
+            LocalDate.of(2026, 8, 22), "Responsable", null, null, "Descripción", null,
+            DigitalComponent.NO, List.of());
 
         assertThat(validator.validate(request)).anyMatch(violation ->
             violation.getPropertyPath().toString().equals("responsibleUnits"));
     }
 
     @Test
-    void rejectsMoreThanOneResponsibleUnitOnPatchWhenFieldIsPresent() {
+    void acceptsSeveralResponsibleUnitsOnPatchWhenFieldIsPresent() {
         var request = new InitiativeUpdateRequest();
         request.setVersion(0L);
         request.setResponsibleUnits(List.of(new ResponsibleUnitInput(8L), new ResponsibleUnitInput(9L)));
+
+        assertThat(validator.validate(request)).noneMatch(violation ->
+            violation.getPropertyPath().toString().equals("responsibleUnits"));
+    }
+
+    @Test
+    void rejectsEmptyResponsibleUnitListOnPatchWhenFieldIsPresent() {
+        var request = new InitiativeUpdateRequest();
+        request.setVersion(0L);
+        request.setResponsibleUnits(List.of());
 
         assertThat(validator.validate(request)).anyMatch(violation ->
             violation.getPropertyPath().toString().equals("responsibleUnits"));

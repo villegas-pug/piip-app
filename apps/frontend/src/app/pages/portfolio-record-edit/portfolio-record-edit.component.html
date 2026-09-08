@@ -57,17 +57,10 @@
             </article>
 
             <article #editSection id="responsabilidad" class="panel edit-section" aria-labelledby="responsabilidad-title">
-              <header class="section-heading"><span aria-hidden="true">03</span><div><h3 id="responsabilidad-title">Responsabilidad</h3><p>Persona y Unidad Orgánica responsables del registro.</p></div></header>
+               <header class="section-heading"><span aria-hidden="true">03</span><div><h3 id="responsabilidad-title">Responsabilidad</h3><p>Persona y Unidades Orgánicas Involucradas en el registro.</p></div></header>
               <div class="form-grid">
                 <label class="field span-2" for="responsible"><span>Responsable *</span><input id="responsible" formControlName="responsible" [attr.aria-invalid]="form.controls.responsible.touched && form.controls.responsible.invalid ? 'true' : null" aria-describedby="responsible-error" />@if (form.controls.responsible.touched && form.controls.responsible.invalid) {<small id="responsible-error" class="error" role="alert">Ingresa el responsable.</small>}</label>
-                @if (hasMultipleResponsibleUnits()) {
-                  <div class="responsible-unit-context span-2" role="status">
-                    <p>Este registro conserva varias Unidades Orgánicas responsables históricas. Se muestran como contexto y no se modifican desde esta pantalla.</p>
-                    <ul>@for (unit of currentResponsibleUnits(); track unit.id) {<li><strong>{{ unit.acronym || unit.code }}</strong><span>{{ unit.name }}</span></li>}</ul>
-                  </div>
-                } @else {
-                  <label class="field span-2" for="responsible-unit"><span>Unidad Orgánica responsable *</span><select id="responsible-unit" aria-label="Unidad Orgánica responsable" [value]="selectedResponsibleUnitId()" (change)="setResponsibleUnitFromEvent($event)" [disabled]="unitsState().phase !== 'ready'" [attr.aria-invalid]="form.controls.responsibleUnitIds.touched && form.controls.responsibleUnitIds.invalid ? 'true' : null" aria-describedby="responsible-unit-status responsible-unit-error"><option value="">Seleccionar unidad responsable</option>@for (unit of responsibleUnitOptions(); track unit.id) {<option [value]="unit.id" [disabled]="!unit.active">{{ unit.acronym || unit.code }} — {{ unit.name }}{{ unit.active ? '' : ' · Histórica' }}</option>}</select><span id="responsible-unit-status">@if (unitsState().phase === 'loading') {<small>Cargando Unidades Orgánicas...</small>} @else if (unitsState().phase === 'error') {<small class="error" role="alert">{{ unitsState().error }} <button type="button" (click)="repository.reloadOrganizationalUnits()">Reintentar</button></small>} @else if (!responsibleUnitOptions().length) {<small>No hay Unidades Orgánicas disponibles para la Unidad Ejecutora del registro.</small>}</span>@if (form.controls.responsibleUnitIds.touched && form.controls.responsibleUnitIds.invalid) {<small id="responsible-unit-error" class="error" role="alert">Selecciona la unidad responsable.</small>}</label>
-                }
+                 <div class="field span-2"><app-organizational-unit-list [catalog]="selectableResponsibleUnits()" [catalogPhase]="unitsState().phase" [catalogError]="unitsState().error" [value]="currentResponsibleUnits()" [rowErrors]="responsibleUnitErrors()" [disabled]="submitting() || conflict()" (listChange)="onUnitsChange($event)" (catalogRetry)="repository.reloadOrganizationalUnits()" /></div>
               </div>
             </article>
 

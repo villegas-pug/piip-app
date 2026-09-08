@@ -58,7 +58,7 @@
           <dl class="data-grid">
             <div><dt>Responsable</dt><dd>{{ detail.portfolioRecord.responsible }}</dd></div>
             <div><dt>Unidad Ejecutora</dt><dd>@if (executingUnit(); as unit) {<span>{{ unit.name }}</span>} @else {No registrada}</dd></div>
-            <div><dt>Unidades responsables</dt><dd>{{ responsibleUnitsLabel() }}</dd></div>
+            <div class="wide"><dt>Unidades Orgánicas Involucradas</dt><dd><table><thead><tr><th>Nro</th><th>Descripción</th><th>Abreviatura</th></tr></thead><tbody>@for (unit of detail.portfolioRecord.responsibleUnitReferences; track unit.id; let index = $index) {<tr><td>{{ index + 1 }}</td><td>{{ unit.name }}@if (!unit.active) { <small class="reference-state">Inactiva (histórica)</small>}</td><td>{{ unit.acronym }}</td></tr>} @empty {<tr><td colspan="3">Sin información registrada</td></tr>}</tbody></table></dd></div>
             <div><dt>Resultados clave</dt><dd>{{ detail.portfolioRecord.keyResults || 'Sin información registrada' }}</dd></div>
             <div><dt>Producto final aprobado</dt><dd>{{ detail.portfolioRecord.finalProductType }}</dd></div>
             <div><dt>Fecha de cierre</dt><dd>@if (detail.portfolioRecord.closingDate) {<time [attr.datetime]="detail.portfolioRecord.closingDate">{{ formatDate(detail.portfolioRecord.closingDate) }}</time>} @else {Sin fecha registrada}</dd></div>

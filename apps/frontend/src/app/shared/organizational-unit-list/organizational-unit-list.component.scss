@@ -1,0 +1,53 @@
+:host { display: block; }
+
+.ou-list { display: grid; gap: 12px; font-size: 14px; }
+
+.ou-caption { padding-bottom: 2px; color: var(--piip-ink); font-size: 14px; font-weight: 600; text-align: left; }
+
+.ou-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; color: var(--piip-muted); font-size: 13px; }
+.ou-state-error { color: var(--piip-red); }
+.ou-retry { min-height: 28px; padding: 2px 10px; border: 1px solid var(--piip-border); border-radius: 5px; color: var(--piip-green-900); background: #fff; cursor: pointer; }
+.ou-retry:hover { border-color: var(--piip-green-700); }
+
+.ou-table { width: 100%; border-collapse: collapse; }
+.ou-table-head th { padding: 7px 10px 9px; border-bottom: 2px solid var(--piip-border); color: var(--piip-muted); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+.ou-table td { padding: 9px 10px; border-bottom: 1px solid var(--piip-border); vertical-align: middle; }
+
+.ou-number { width: 64px; text-align: center; }
+.ou-number-value { color: var(--piip-muted); font-weight: 700; }
+.ou-description { min-width: 0; }
+.ou-unit-name { color: var(--piip-ink); }
+.ou-acronym { width: 150px; }
+.ou-acronym-value { color: var(--piip-green-900); font-weight: 600; white-space: nowrap; }
+.ou-actions { width: 76px; text-align: right; }
+
+/* Etiqueta por celda: oculta en escritorio (la tabla nativa expone los th) y visible
+   en la presentación apilada de pantallas pequeñas (FR-015). */
+.ou-cell-label { display: none; }
+
+.ou-row-invalid .ou-number-value, .ou-row-invalid .ou-acronym-value { color: var(--piip-red); }
+.ou-row-error { display: block; margin-top: 5px; color: var(--piip-red); font-size: 12px; }
+
+.ou-select { box-sizing: border-box; width: 100%; max-width: 420px; height: 40px; padding: 0 10px; border: 1px solid var(--piip-border); border-radius: 5px; color: var(--piip-ink); background: #fff; }
+.ou-select:focus-visible { outline: 3px solid rgba(230, 169, 0, .3); outline-offset: 2px; }
+.ou-select:disabled { color: #87948c; background: #f5f7f5; cursor: not-allowed; }
+
+.ou-remove { color: var(--piip-muted); }
+.ou-remove:not(:disabled):hover { color: var(--piip-red); background: var(--piip-red-soft); }
+
+.ou-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.ou-add-hint { color: var(--piip-muted); font-size: 12px; }
+.ou-hint { margin-left: auto; color: var(--piip-muted); font-size: 12px; }
+
+/* Presentación adaptable (FR-015): en pantallas pequeñas cada fila se apila con su
+   etiqueta visible por celda; la información Nro/Descripción/Abreviatura se conserva. */
+@media (max-width: 640px) {
+  .ou-table, .ou-table tbody, .ou-table tr, .ou-table td { display: block; width: 100%; }
+  .ou-table thead { display: none; }
+  .ou-table tr { padding: 6px 0; }
+  .ou-table td { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 0; padding: 5px 2px; text-align: right; }
+  .ou-cell-label { display: block; flex: 0 0 auto; color: var(--piip-muted); font-size: 12px; font-weight: 600; text-align: left; }
+  .ou-number, .ou-acronym, .ou-actions { width: auto; }
+  .ou-select { max-width: none; }
+  .ou-hint { width: 100%; margin-left: 0; }
+}

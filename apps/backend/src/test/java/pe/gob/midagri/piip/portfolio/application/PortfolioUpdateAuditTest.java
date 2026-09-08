@@ -34,12 +34,13 @@ class PortfolioUpdateAuditTest {
         assertThat(((Map<?, ?>) changes.get("note")).get("nuevo")).isNull();
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void recordsCatalogAndResponsibleUnitOrderAsStableStructuredValues() {
         PortfolioRecordEntity record = record();
         ExecutingUnitEntity unit = record.getExecutingUnit();
-        OrganizationalUnitEntity first = organizationalUnit(8L, unit, "UO-1");
-        OrganizationalUnitEntity second = organizationalUnit(9L, unit, "UO-2");
+        OrganizationalUnitEntity first = organizationalUnit(8L, unit, "UO-1", "UOA");
+        OrganizationalUnitEntity second = organizationalUnit(9L, unit, "UO-2", "UOB");
         List<ResponsibleUnitEntity> beforeUnits = List.of(
             new ResponsibleUnitEntity(record, first, "Unidad 1", 1),
             new ResponsibleUnitEntity(record, second, "Unidad 2", 2));
@@ -53,13 +54,71 @@ class PortfolioUpdateAuditTest {
 
         assertThat(changes).containsOnlyKeys("responsibleUnits");
         Map<?, ?> unitChange = (Map<?, ?>) changes.get("responsibleUnits");
-        assertThat((List<?>) unitChange.get("anterior")).hasSize(2);
-        assertThat((List<?>) unitChange.get("nuevo")).hasSize(2);
+        List<?> previous = (List<?>) unitChange.get("anterior");
+        List<?> current = (List<?>) unitChange.get("nuevo");
+        assertThat(previous).hasSize(2);
+        assertThat(current).hasSize(2);
+        // FR-020: cada elemento identifica unidad, nombre, sigla y Nro de presentación (K=String para contains*).
+        assertThat((Map<String, Object>) previous.get(0)).containsOnlyKeys("id", "code", "name", "sigla", "nro")
+            .containsEntry("id", 8L).containsEntry("code", "UO-1").containsEntry("name", "UO-1")
+            .containsEntry("sigla", "UOA").containsEntry("nro", 1);
+        assertThat((Map<String, Object>) previous.get(1)).containsEntry("id", 9L).containsEntry("sigla", "UOB").containsEntry("nro", 2);
+        assertThat((Map<String, Object>) current.get(0)).containsEntry("id", 9L).containsEntry("sigla", "UOB").containsEntry("nro", 1);
+        assertThat((Map<String, Object>) current.get(1)).containsEntry("id", 8L).containsEntry("sigla", "UOA").containsEntry("nro", 2);
         Map<String, Object> detail = PortfolioUpdateAuditDetail.detail(record, 2L, 3L, before, after);
         assertThat(detail).containsKeys("tipoRegistro", "unidadEjecutoraId", "versionAnterior", "versionNueva", "cambios", "resultado");
         assertThat(detail).doesNotContainKeys("request", "body", "token", "motivo");
         assertThat(detail.get("versionAnterior")).isEqualTo(2L);
         assertThat(detail.get("versionNueva")).isEqualTo(3L);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void addingAndRemovingUnitsIsReflectedInTheResponsibleUnitsDiff() {
+        PortfolioRecordEntity record = record();
+        ExecutingUnitEntity unit = record.getExecutingUnit();
+        OrganizationalUnitEntity first = organizationalUnit(8L, unit, "UO-1", "UOA");
+        OrganizationalUnitEntity second = organizationalUnit(9L, unit, "UO-2", "UOB");
+        List<ResponsibleUnitEntity> single = List.of(new ResponsibleUnitEntity(record, first, "Unidad 1", 1));
+        List<ResponsibleUnitEntity> pair = List.of(
+            new ResponsibleUnitEntity(record, first, "Unidad 1", 1),
+            new ResponsibleUnitEntity(record, second, "Unidad 2", 2));
+
+        Map<?, ?> addition = (Map<?, ?>) PortfolioUpdateAuditDetail
+            .diff(PortfolioUpdateAuditDetail.snapshot(record, single), PortfolioUpdateAuditDetail.snapshot(record, pair))
+            .get("responsibleUnits");
+        assertThat((List<?>) addition.get("anterior")).hasSize(1);
+        assertThat((List<?>) addition.get("nuevo")).hasSize(2);
+        assertThat((Map<String, Object>) ((List<?>) addition.get("nuevo")).get(1)).containsEntry("id", 9L)
+            .containsEntry("sigla", "UOB").containsEntry("nro", 2);
+
+        Map<?, ?> removal = (Map<?, ?>) PortfolioUpdateAuditDetail
+            .diff(PortfolioUpdateAuditDetail.snapshot(record, pair), PortfolioUpdateAuditDetail.snapshot(record, single))
+            .get("responsibleUnits");
+        assertThat((List<?>) removal.get("anterior")).hasSize(2);
+        assertThat((List<?>) removal.get("nuevo")).hasSize(1);
+        assertThat((Map<String, Object>) ((List<?>) removal.get("nuevo")).get(0)).containsEntry("id", 8L).containsEntry("nro", 1);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void registrationDetailCarriesContextAndOrderedListWithoutRequestBodies() {
+        PortfolioRecordEntity record = record();
+        ExecutingUnitEntity unit = record.getExecutingUnit();
+        List<ResponsibleUnitEntity> units = List.of(
+            new ResponsibleUnitEntity(record, organizationalUnit(8L, unit, "UO-1", "UOA"), "Unidad 1", 1),
+            new ResponsibleUnitEntity(record, organizationalUnit(9L, unit, "UO-2", "UOB"), "Unidad 2", 2));
+
+        Map<String, Object> detail = PortfolioUpdateAuditDetail.registrationDetail(Map.of("estado", "Presentado"), units);
+
+        assertThat(detail).containsOnlyKeys("estado", "responsibleUnits");
+        assertThat(detail.get("estado")).isEqualTo("Presentado");
+        List<?> audited = (List<?>) detail.get("responsibleUnits");
+        assertThat(audited).hasSize(2);
+        assertThat((Map<String, Object>) audited.get(0)).containsOnlyKeys("id", "code", "name", "sigla", "nro")
+            .containsEntry("id", 8L).containsEntry("sigla", "UOA").containsEntry("nro", 1);
+        assertThat((Map<String, Object>) audited.get(1)).containsEntry("id", 9L).containsEntry("sigla", "UOB").containsEntry("nro", 2);
+        assertThat(detail).doesNotContainKeys("request", "body", "token", "motivo");
     }
 
     @Test
@@ -85,8 +144,8 @@ class PortfolioUpdateAuditTest {
             pe.gob.midagri.piip.portfolio.domain.DigitalComponent.NO, "actor");
     }
 
-    private OrganizationalUnitEntity organizationalUnit(Long id, ExecutingUnitEntity unit, String code) {
-        OrganizationalUnitEntity value = new OrganizationalUnitEntity(unit, code, code, "U");
+    private OrganizationalUnitEntity organizationalUnit(Long id, ExecutingUnitEntity unit, String code, String acronym) {
+        OrganizationalUnitEntity value = new OrganizationalUnitEntity(unit, code, code, acronym);
         ReflectionTestUtils.setField(value, "id", id);
         return value;
     }

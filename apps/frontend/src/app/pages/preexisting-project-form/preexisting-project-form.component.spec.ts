@@ -47,13 +47,14 @@ describe('PreexistingProjectFormComponent', () => {
     const fixture = TestBed.createComponent(PreexistingProjectFormComponent);
     fixture.componentInstance.form.patchValue({
       startDate: '2026-08-20', name: 'Proyecto preexistente', source: '10', responsible: 'Responsable',
-      responsibleUnits: '101', peiObjective: '20', poiActivity: '30', description: 'Descripción', digitalComponent: 'No',
+      peiObjective: '20', poiActivity: '30', description: 'Descripción', digitalComponent: 'No',
     });
+    fixture.componentInstance.onUnitsChange({ unitIds: [101, 102], rowCount: 2, hasPendingSelection: false });
 
     await fixture.componentInstance.registerProject();
 
     expect(fixture.componentInstance.form.getRawValue()).toEqual(expect.objectContaining({ recordType: 'Proyecto', originCode: 'NA' }));
-    expect(register).toHaveBeenCalledWith(expect.objectContaining({ sourceId: 10, organizationalUnitId: 101, peiObjectiveId: 20, poiActivityId: 30 }));
+    expect(register).toHaveBeenCalledWith(expect.objectContaining({ sourceId: 10, responsibleUnitIds: [101, 102], peiObjectiveId: 20, poiActivityId: 30 }));
   });
 
   it('presenta vacío y error de Unidades Orgánicas sin fallback local', () => {
@@ -67,5 +68,15 @@ describe('PreexistingProjectFormComponent', () => {
     repository.organizationalUnitsState.set({ phase: 'error', value: [], error: 'Unidades no disponibles', requestId: 3 });
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Unidades no disponibles');
+  });
+
+  it('mantiene las selecciones al recibir un error de fila del backend', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    vi.spyOn(repository, 'registerPreexistingProject').mockRejectedValue(new (await import('../../core/piip-http.repository')).PiipApiError(422, 'Unidad duplicada.', undefined, 'responsibleUnits[2]'));
+    const fixture = TestBed.createComponent(PreexistingProjectFormComponent);
+    fixture.componentInstance.onUnitsChange({ unitIds: [101, 102], rowCount: 2, hasPendingSelection: false });
+    await fixture.componentInstance.registerProject();
+    expect(fixture.componentInstance.responsibleUnitIds()).toEqual([101, 102]);
+    expect(fixture.componentInstance.responsibleUnitErrors()).toEqual({ 1: 'Unidad duplicada.' });
   });
 });

@@ -42,7 +42,8 @@ const DETAIL_LABELS: Record<string, string> = {
   asignadoA: 'Asignado a', rol: 'Rol', institucion: 'Institución', unidadEjecutora: 'Unidad Ejecutora', unidadEjecutoraId: 'Unidad Ejecutora', resultado: 'Resultado',
   tipoRegistro: 'Tipo de registro', versionAnterior: 'Versión anterior', versionNueva: 'Versión nueva', cambios: 'Cambios', anterior: 'Anterior', nuevo: 'Nuevo',
   name: 'Nombre', solutionType: 'Tipo de solución', source: 'Fuente u origen', startDate: 'Fecha de inicio', responsible: 'Responsable',
-  peiObjective: 'Objetivo PEI', poiActivity: 'Actividad POI', responsibleUnits: 'Unidades responsables', description: 'Descripción', keyResults: 'Resultados clave', note: 'Nota', digitalComponent: 'Componente digital',
+  peiObjective: 'Objetivo PEI', poiActivity: 'Actividad POI', responsibleUnits: 'Unidades Orgánicas Involucradas', description: 'Descripción', keyResults: 'Resultados clave', note: 'Nota', digitalComponent: 'Componente digital',
+  nro: 'Nro', displayOrder: 'Nro', code: 'Código', sigla: 'Abreviatura',
 };
 
 type AuditDetail = Record<string, unknown>;

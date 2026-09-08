@@ -5,7 +5,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { PIIP_CATALOGS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { PreexistingProjectInput } from '../../core/piip.models';
+import { responsibleUnitRowErrors } from '../../core/piip-http.repository';
+import { OrganizationalUnit, PreexistingProjectInput } from '../../core/piip.models';
+import { OrganizationalUnitListComponent, OrganizationalUnitListValue } from '../../shared/organizational-unit-list/organizational-unit-list.component';
 
 type DocumentField =
   | 'technicalOpinionReport'
@@ -18,7 +20,7 @@ type DocumentMode = 'NOT_APPLICABLE' | 'FILE' | 'PENDING';
 
 @Component({
   selector: 'app-preexisting-project-form',
-  imports: [ReactiveFormsModule, RouterLink, MatIconModule],
+  imports: [ReactiveFormsModule, RouterLink, MatIconModule, OrganizationalUnitListComponent],
   templateUrl: './preexisting-project-form.component.html',
   styleUrl: './preexisting-project-form.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +39,9 @@ export class PreexistingProjectFormComponent {
   readonly provisionalCode = `P-${String(this.repository.projects().length + 3).padStart(3, '0')}-2026`;
   readonly reviewOpen = signal(false);
   readonly submitting = signal(false);
+  readonly responsibleUnitIds = signal<readonly number[]>([]);
+  readonly pendingResponsibleUnit = signal(true);
+  readonly responsibleUnitErrors = signal<Readonly<Record<number, string>>>({});
   readonly documentFiles = signal<Record<DocumentField, File | null>>({
     technicalOpinionReport: null,
     formalApprovalDecision: null,
@@ -55,7 +60,7 @@ export class PreexistingProjectFormComponent {
     name: ['', [Validators.required, Validators.maxLength(180)]],
     source: [{ value: '', disabled: this.catalogState().phase !== 'ready' }, Validators.required],
     responsible: ['', Validators.required],
-    responsibleUnits: [{ value: '', disabled: this.unitsState().phase !== 'ready' }, Validators.required],
+    responsibleUnits: [''],
     peiObjective: [{ value: '', disabled: this.catalogState().phase !== 'ready' }],
     poiActivity: [{ value: '', disabled: this.catalogState().phase !== 'ready' }],
     description: ['', [Validators.required, Validators.maxLength(1000)]],
@@ -76,12 +81,10 @@ export class PreexistingProjectFormComponent {
       this.syncDisabled(this.form.controls.source, !catalogsReady);
       this.syncDisabled(this.form.controls.peiObjective, !catalogsReady);
       this.syncDisabled(this.form.controls.poiActivity, !catalogsReady);
-      this.syncDisabled(this.form.controls.responsibleUnits, !unitsReady);
       const catalogs = this.catalogState().value;
       this.reconcile(this.form.controls.source, catalogs.sources);
       this.reconcile(this.form.controls.peiObjective, catalogs.peiObjectives);
       this.reconcile(this.form.controls.poiActivity, catalogs.poiActivities);
-      this.reconcile(this.form.controls.responsibleUnits, this.units());
     });
   }
 
@@ -103,7 +106,7 @@ export class PreexistingProjectFormComponent {
 
   openReview(): void {
     this.form.markAllAsTouched();
-    if (!this.dependenciesReady() || this.form.invalid || this.hasMissingSelectedFile()) {
+    if (!this.dependenciesReady() || this.form.invalid || this.hasMissingSelectedFile() || !this.hasValidUnits()) {
       this.snackBar.open('Completa los campos requeridos y adjunta los archivos seleccionados.', 'Cerrar', { duration: 4200 });
       return;
     }
@@ -111,7 +114,7 @@ export class PreexistingProjectFormComponent {
   }
 
   async registerProject(): Promise<void> {
-    if (this.submitting() || !this.dependenciesReady()) return;
+    if (this.submitting() || !this.dependenciesReady() || !this.hasValidUnits()) return;
     this.submitting.set(true);
     try {
       const record = await Promise.resolve(this.repository.registerPreexistingProject(this.buildRegistrationInput()));
@@ -119,6 +122,11 @@ export class PreexistingProjectFormComponent {
       this.snackBar.open(`Proyecto preexistente ${record.code} incorporado al portafolio.`, 'Cerrar', { duration: 3600 });
       await this.router.navigate(['/proyectos', record.code, 'documentos']);
     } catch (error) {
+      const rowErrors = responsibleUnitRowErrors(error);
+      if (rowErrors) {
+        this.responsibleUnitErrors.set(rowErrors);
+        return;
+      }
       const message = error instanceof Error ? error.message : 'No fue posible registrar el proyecto.';
       this.snackBar.open(message, 'Cerrar', { duration: 4200 });
     } finally {
@@ -146,7 +154,7 @@ export class PreexistingProjectFormComponent {
       startDate: value.startDate,
       sourceId: Number(value.source),
       responsible: value.responsible,
-      organizationalUnitId: Number(value.responsibleUnits),
+       responsibleUnitIds: this.responsibleUnitIds(),
       peiObjectiveId: value.peiObjective ? Number(value.peiObjective) : undefined,
       poiActivityId: value.poiActivity ? Number(value.poiActivity) : undefined,
       description: value.description,
@@ -189,8 +197,13 @@ export class PreexistingProjectFormComponent {
     const catalogs = this.catalogState();
     const units = this.unitsState();
     return catalogs.phase === 'ready' && catalogs.value.sources.length > 0
-      && units.phase === 'ready' && units.value.length > 0;
+       && units.phase === 'ready' && units.value.length > 0 && this.hasValidUnits();
   }
+
+  selectableUnits(): readonly OrganizationalUnit[] { return this.units().filter((unit) => unit.active && unit.acronym.trim()); }
+  selectedUnits(): readonly OrganizationalUnit[] { return this.responsibleUnitIds().flatMap((id) => this.selectableUnits().filter((unit) => unit.id === id)); }
+  onUnitsChange(value: OrganizationalUnitListValue): void { this.responsibleUnitIds.set(value.unitIds); this.pendingResponsibleUnit.set(value.hasPendingSelection); this.responsibleUnitErrors.set({}); }
+  private hasValidUnits(): boolean { return this.unitsState().phase === 'ready' && this.responsibleUnitIds().length > 0 && !this.pendingResponsibleUnit() && !Object.keys(this.responsibleUnitErrors()).length; }
 
   private syncDisabled(control: AbstractControl, disabled: boolean): void {
     if (disabled && control.enabled) control.disable({ emitEvent: false });

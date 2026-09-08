@@ -36,6 +36,7 @@ describe('InitiativeFormComponent', () => {
     });
     const registerInitiative = vi.spyOn(repository, 'registerInitiative').mockReturnValue(pendingRegistration);
     const fixture = TestBed.createComponent(InitiativeFormComponent);
+    fixture.componentInstance.onUnitsChange({ unitIds: [101], rowCount: 1, hasPendingSelection: false });
 
     const first = fixture.componentInstance.registerInitiative();
     const duplicate = fixture.componentInstance.registerInitiative();
@@ -52,8 +53,9 @@ describe('InitiativeFormComponent', () => {
     const component = fixture.componentInstance;
     component.form.patchValue({
       startDate: '2026-08-14', name: 'Iniciativa', solutionType: '2', source: '10',
-      digitalComponent: 'Si', description: 'Descripción', responsible: 'Responsable', responsibleUnits: '101',
+      digitalComponent: 'Si', description: 'Descripción', responsible: 'Responsable',
     });
+    component.onUnitsChange({ unitIds: [101], rowCount: 1, hasPendingSelection: false });
     component.uploadedFilename.set('ficha.pdf');
 
     component.openReview();
@@ -69,7 +71,7 @@ describe('InitiativeFormComponent', () => {
     fixture.componentInstance.form.markAllAsTouched();
     fixture.detectChanges();
 
-    for (const errorId of ['initiative-name-error', 'initiative-description-error', 'initiative-responsible-error', 'initiative-responsible-unit-error', 'initiative-file-error']) {
+    for (const errorId of ['initiative-name-error', 'initiative-description-error', 'initiative-responsible-error', 'initiative-file-error']) {
       expect(fixture.nativeElement.querySelector(`#${errorId}`)?.getAttribute('role')).toBe('alert');
     }
     expect(fixture.nativeElement.querySelector('[formControlName="name"]')?.getAttribute('aria-describedby')).toBe('initiative-name-error');
@@ -116,8 +118,9 @@ describe('InitiativeFormComponent', () => {
     const fixture = TestBed.createComponent(InitiativeFormComponent);
     fixture.componentInstance.form.patchValue({
       startDate: '2026-08-20', name: 'Iniciativa por ID', solutionType: '2', source: '10', digitalComponent: 'Si',
-      description: 'Descripción', responsible: 'Responsable', responsibleUnits: '101', peiObjective: '20', poiActivity: '30',
+      description: 'Descripción', responsible: 'Responsable', peiObjective: '20', poiActivity: '30',
     });
+    fixture.componentInstance.onUnitsChange({ unitIds: [101, 102], rowCount: 2, hasPendingSelection: false });
     fixture.componentInstance.uploadedFilename.set('ficha.pdf');
     repository.catalogs.update((state) => ({
       ...state,
@@ -130,7 +133,19 @@ describe('InitiativeFormComponent', () => {
     await fixture.componentInstance.registerInitiative();
 
     expect(register).toHaveBeenCalledWith(expect.objectContaining({
-      solutionTypeId: 2, sourceId: 10, organizationalUnitId: 101, peiObjectiveId: 20, poiActivityId: 30,
+      solutionTypeId: 2, sourceId: 10, responsibleUnitIds: [101, 102], peiObjectiveId: 20, poiActivityId: 30,
     }));
+  });
+
+  it('conserva las unidades y muestra el error de la fila identificado por backend', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    vi.spyOn(repository, 'registerInitiative').mockRejectedValue(new (await import('../../core/piip-http.repository')).PiipApiError(422, 'La unidad ya no está vigente.', undefined, 'responsibleUnits[2]'));
+    const fixture = TestBed.createComponent(InitiativeFormComponent);
+    const component = fixture.componentInstance;
+    component.onUnitsChange({ unitIds: [101, 102], rowCount: 2, hasPendingSelection: false });
+    await component.registerInitiative();
+
+    expect(component.responsibleUnitIds()).toEqual([101, 102]);
+    expect(component.responsibleUnitErrors()).toEqual({ 1: 'La unidad ya no está vigente.' });
   });
 });

@@ -120,8 +120,10 @@ public class ProjectApplicationService {
             task.complete();
             audit.event("TAREA_COMPLETADA", "TAREA_TRABAJO", task.getId().toString(), Map.of("registro", initiative.getCode()), actor.subject());
         });
+        // FR-018: el alta registra la lista ordenada confirmada con unidad, nombre, sigla y Nro por elemento.
         audit.event("PROYECTO_DERIVADO_REGISTRADO", "REGISTRO_PORTAFOLIO", code,
-            Map.of("iniciativaOrigen", initiative.getCode()), actor.subject());
+            PortfolioUpdateAuditDetail.registrationDetail(Map.of("iniciativaOrigen", initiative.getCode()),
+                responsibleUnitService.list(project)), actor.subject());
         return assembler.toResponse(project);
     }
 
@@ -139,8 +141,10 @@ public class ProjectApplicationService {
             request.keyResults(), request.note(), request.digitalComponent(), actor.subject()));
         responsibleUnitService.save(project, request.responsibleUnits());
         portfolioDocumentService.initializeSlots(project.getId());
+        // FR-018: el alta registra la lista ordenada confirmada con unidad, nombre, sigla y Nro por elemento.
         audit.event("PROYECTO_PREEXISTENTE_REGISTRADO", "REGISTRO_PORTAFOLIO", code,
-            Map.of("origen", "NA"), actor.subject());
+            PortfolioUpdateAuditDetail.registrationDetail(Map.of("origen", "NA"),
+                responsibleUnitService.list(project)), actor.subject());
         return assembler.toResponse(project);
     }
 

@@ -45,6 +45,31 @@ class OrganizationQueryServiceTest {
         assertThat(service.executingUnits()).extracting(OrganizationReadModels.ExecutingUnitView::id).containsExactly(100L);
     }
 
+    @Test
+    void organizationalUnitsHideActiveUnitsWithBlankOrNullAcronym() {
+        ExecutingUnitEntity unit = unit(100L, institution(10L, "MIDAGRI"));
+        OrganizationalUnitEntity complete = organizationalUnit(201L, unit, "UO-1", "Unidad con sigla", "U1");
+        OrganizationalUnitEntity blank = organizationalUnit(202L, unit, "UO-2", "Unidad con sigla en blanco", "   ");
+        OrganizationalUnitEntity missing = organizationalUnit(203L, unit, "UO-3", "Unidad sin sigla", null);
+        when(organizationalUnits.findByExecutingUnitIdAndActiveTrueAndAcronymIsNotNullOrderByName(100L))
+            .thenReturn(List.of(complete, blank, missing));
+        OrganizationQueryService service = new OrganizationQueryService(institutions, executingUnits, organizationalUnits, authorization);
+
+        List<OrganizationReadModels.OrganizationalUnitView> result = service.organizationalUnits(100L);
+
+        // FR-012: el catálogo ofrece solo unidades con sigla no vacía; la sigla en blanco supera el
+        // filtro del repositorio y la null se cubre además como defensa en profundidad del servicio.
+        assertThat(result).extracting(OrganizationReadModels.OrganizationalUnitView::id).containsExactly(201L);
+        assertThat(result).extracting(OrganizationReadModels.OrganizationalUnitView::acronym).containsExactly("U1");
+    }
+
+    private OrganizationalUnitEntity organizationalUnit(Long id, ExecutingUnitEntity unit, String code, String name,
+            String acronym) {
+        OrganizationalUnitEntity value = new OrganizationalUnitEntity(unit, code, name, acronym);
+        ReflectionTestUtils.setField(value, "id", id);
+        return value;
+    }
+
     private InstitutionEntity institution(Long id, String code) {
         InstitutionEntity value = new InstitutionEntity(code, code);
         ReflectionTestUtils.setField(value, "id", id);

@@ -16,7 +16,10 @@ describe('DerivedProjectReviewDialogComponent', () => {
     source: 'Innovación abierta',
     digitalComponent: 'No',
     responsible: 'Responsable PIIP',
-    organizationalUnit: 'OPM — Oficina de Planeamiento y Modernización',
+    organizationalUnits: [
+      { id: 1, code: 'UO-1', name: 'Oficina de Planeamiento y Modernización', acronym: 'OPM', parentId: null, executingUnitId: 1, active: true },
+      { id: 2, code: 'UO-2', name: 'Oficina de Innovación', acronym: 'OIN', parentId: null, executingUnitId: 1, active: true },
+    ],
     description: 'Descripción del proyecto derivado.',
     keyResults: '',
     registerProject,
@@ -43,7 +46,13 @@ describe('DerivedProjectReviewDialogComponent', () => {
     expect(content).toContain('I-007-2026');
     expect(content).toContain('P-005-2026');
     expect(content).toContain('Solución por definir');
-    expect(content).toContain('OPM — Oficina de Planeamiento y Modernización');
+    expect(content).toContain('Unidades Orgánicas Involucradas');
+    expect(Array.from<Element>(fixture.nativeElement.querySelectorAll('tbody tr')).map((row) =>
+      Array.from(row.querySelectorAll('td')).map((cell) => cell.textContent?.trim()),
+    )).toEqual([
+      ['1', 'Oficina de Planeamiento y Modernización', 'OPM'], ['2', 'Oficina de Innovación', 'OIN'],
+    ]);
+    expect(Array.from<Element>(fixture.nativeElement.querySelectorAll('th')).map((header) => header.textContent?.trim())).toEqual(['Nro', 'Descripción', 'Abreviatura']);
     expect(content).toContain('Sin información registrada');
     expect(content).toContain('Los documentos no se duplicarán');
     expect(fixture.nativeElement.querySelector('time')?.getAttribute('datetime')).toBe('2026-08-23');

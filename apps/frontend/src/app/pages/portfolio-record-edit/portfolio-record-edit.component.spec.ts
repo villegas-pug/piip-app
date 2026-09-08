@@ -522,25 +522,30 @@ describe('PortfolioRecordEditComponent', () => {
     expect(unrelatedHistorical?.disabled).toBe(true);
   });
 
-  it('muestra un selector único y no renderiza el editor de orden', async () => {
+  it('permite agregar, retirar y renumerar las Unidades Orgánicas Involucradas', async () => {
     const { fixture, component, repository } = await setup();
     const host = fixture.nativeElement as HTMLElement;
-
-    expect(host.querySelector('select[aria-label="Unidad Orgánica responsable"]')).not.toBeNull();
-    expect(host.querySelectorAll('select').length).toBe(6);
-    expect(host.querySelectorAll('input[type="checkbox"]').length).toBe(0);
-    expect(host.textContent).not.toContain('Orden de presentación');
-    expect(host.textContent).not.toContain('Opciones disponibles');
-    expect(component.selectedResponsibleUnitId()).toBe('101');
-    expect((host.querySelector('select[aria-label="Unidad Orgánica responsable"]') as HTMLSelectElement).value).toBe('101');
-
-    repository.organizationalUnits.update((units) => units.map((unit) => unit.id === 101 ? { ...unit, active: false } : unit));
+    const second = { id: 102, code: 'UO-102', name: 'Unidad secundaria', acronym: 'US', parentId: null, executingUnitId: 1, active: true };
+    repository.organizationalUnits.set([...repository.organizationalUnits(), second]);
     fixture.detectChanges();
-    const historicalOption = host.querySelector<HTMLOptionElement>('select[aria-label="Unidad Orgánica responsable"] option[value="101"]');
-    expect(historicalOption?.disabled).toBe(true);
+
+    expect(host.textContent).toContain('Unidades Orgánicas Involucradas');
+    host.querySelector<HTMLButtonElement>('button.ou-add')?.click();
+    fixture.detectChanges();
+    const select = host.querySelector<HTMLSelectElement>('select.ou-select')!;
+    select.value = '102';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(Array.from(host.querySelectorAll('.ou-number-value')).map((cell) => cell.textContent?.trim())).toEqual(['1', '2']);
+
+    host.querySelectorAll<HTMLButtonElement>('button.ou-remove')[0].click();
+    fixture.detectChanges();
+    expect(Array.from(host.querySelectorAll('.ou-number-value')).map((cell) => cell.textContent?.trim())).toEqual(['1']);
+    expect(host.querySelector<HTMLButtonElement>('button.ou-remove')?.disabled).toBe(true);
+    expect(component.form.controls.responsibleUnitIds.value).toEqual([102]);
   });
 
-  it('conserva varias UO históricas como contexto y no las envía al editar otro campo', async () => {
+  it('conserva varias UO históricas al editar un campo ajeno a la lista', async () => {
     const { fixture, component, repository, code } = await setup();
     const current = repository.getInitiativeDetail(code)!.portfolioRecord;
     const secondUnit = { id: 102, code: 'UO-102', name: 'Unidad histórica', acronym: 'UH', parentId: null, executingUnitId: 1, active: true };
@@ -556,9 +561,7 @@ describe('PortfolioRecordEditComponent', () => {
     component.form.controls.responsibleUnitIds.setValue([101, 102]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('varias Unidades Orgánicas responsables históricas');
-    expect(fixture.nativeElement.querySelector('input[type="checkbox"]')).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('Orden de presentación');
+    expect(component.currentResponsibleUnits().map((unit) => unit.id)).toEqual([101, 102]);
 
     const update = vi.spyOn(repository, 'updateInitiative').mockResolvedValue({ ...current, note: 'Nota editada', version: 1 });
     component.form.controls.note.setValue('Nota editada');
@@ -566,5 +569,19 @@ describe('PortfolioRecordEditComponent', () => {
     await component.save();
 
     expect(update.mock.calls[0]?.[1]).not.toHaveProperty('responsibleUnitIds');
+  });
+
+  it('mapea el rechazo backend a la fila sin perder los cambios locales', async () => {
+    const { component, repository } = await setup();
+    const error = new (await import('../../core/piip-http.repository')).PiipApiError(422, 'La unidad ya no está vigente.', undefined, 'responsibleUnits[1]');
+    vi.spyOn(repository, 'updateInitiative').mockRejectedValue(error);
+    component.setResponsibleUnitIds([101]);
+    markEditableField(component);
+
+    await component.save();
+
+    expect(component.responsibleUnitErrors()).toEqual({ 0: 'La unidad ya no está vigente.' });
+    expect(component.form.controls.name.value).toBe('Nombre actualizado');
+    expect(component.form.controls.responsibleUnitIds.value).toEqual([101]);
   });
 });

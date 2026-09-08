@@ -128,6 +128,22 @@ describe('ProjectDetailComponent', () => {
     expect(Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('a')).some((link) => link.textContent?.includes('Editar'))).toBe(false);
   });
 
+  it('presenta Nro, Descripción y Abreviatura en el orden confirmado sin depender del layout', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const units = [
+      { id: 102, code: 'UO-102', name: 'Unidad dos', acronym: 'UD', parentId: null, executingUnitId: 1, active: true },
+      { id: 101, code: 'UO-101', name: 'Unidad uno', acronym: 'UU', parentId: null, executingUnitId: 1, active: true },
+    ];
+    repository.portfolioRecords.update((records) => records.map((record) => record.code === 'P-005-2026' ? { ...record, responsibleUnitReferences: units } : record));
+    const fixture = TestBed.createComponent(ProjectDetailComponent);
+    fixture.detectChanges();
+    const table = Array.from<HTMLTableElement>(fixture.nativeElement.querySelectorAll('table')).find((candidate) => candidate.textContent?.includes('Unidad dos'))!;
+    expect(Array.from(table.querySelectorAll('th')).map((header) => header.textContent?.trim())).toEqual(['Nro', 'Descripción', 'Abreviatura']);
+    expect(Array.from(table.querySelectorAll('tbody tr')).map((row) =>
+      Array.from(row.querySelectorAll('td')).map((cell) => cell.textContent?.trim()),
+    )).toEqual([['1', 'Unidad dos', 'UD'], ['2', 'Unidad uno', 'UU']]);
+  });
+
   it('oculta edición para un proyecto fuera de la UE activa o en estado no editable', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.executingUnits.set([{ id: 1, code: 'UE-001', name: 'UE 001', institutionId: 1 }, { id: 2, code: 'UE-002', name: 'UE 002', institutionId: 1 }]);

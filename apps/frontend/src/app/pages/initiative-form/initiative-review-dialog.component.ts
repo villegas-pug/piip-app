@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { OrganizationalUnit } from '../../core/piip.models';
 
 export interface InitiativeReviewDialogData {
   pendingCode: string;
   name: string;
   responsible: string;
+  organizationalUnits?: readonly OrganizationalUnit[];
   uploadedFilename: string | null;
   registerInitiative: () => Promise<boolean>;
 }

@@ -46,7 +46,7 @@
       <h3 id="review-responsibility-title">Responsabilidad</h3>
       <dl class="summary-grid">
         <div><dt>Responsable</dt><dd>{{ data.responsible }}</dd></div>
-        <div><dt>Unidad Orgánica</dt><dd>{{ data.organizationalUnit }}</dd></div>
+        <div class="wide"><dt>Unidades Orgánicas Involucradas</dt><dd><table><thead><tr><th>Nro</th><th>Descripción</th><th>Abreviatura</th></tr></thead><tbody>@for (unit of data.organizationalUnits ?? []; track unit.id; let index = $index) {<tr><td>{{ index + 1 }}</td><td>{{ unit.name }}</td><td>{{ unit.acronym }}</td></tr>}</tbody></table></dd></div>
       </dl>
     </section>
 

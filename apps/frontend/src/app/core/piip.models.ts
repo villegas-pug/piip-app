@@ -137,7 +137,9 @@ export interface PreexistingProjectInput {
   startDate: string;
   sourceId: number;
   responsible: string;
-  organizationalUnitId: number;
+  responsibleUnitIds?: readonly number[];
+  /** Compatibilidad transitoria para consumidores de prueba pendientes de migrar. */
+  organizationalUnitId?: number;
   peiObjectiveId?: number;
   poiActivityId?: number;
   description: string;
@@ -159,7 +161,9 @@ export interface InitiativeInput {
   solutionTypeId: number;
   sourceId: number;
   responsible: string;
-  organizationalUnitId: number;
+  responsibleUnitIds?: readonly number[];
+  /** Compatibilidad transitoria para consumidores de prueba pendientes de migrar. */
+  organizationalUnitId?: number;
   peiObjectiveId?: number;
   poiActivityId?: number;
   description: string;
@@ -195,7 +199,9 @@ export interface DerivedProjectInput {
   solutionTypeId: number;
   sourceId: number;
   responsible: string;
-  organizationalUnitId: number;
+  responsibleUnitIds?: readonly number[];
+  /** Compatibilidad transitoria para consumidores de prueba pendientes de migrar. */
+  organizationalUnitId?: number;
   peiObjectiveId?: number;
   poiActivityId?: number;
   description: string;

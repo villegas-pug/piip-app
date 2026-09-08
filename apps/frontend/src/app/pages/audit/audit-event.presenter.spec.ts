@@ -77,14 +77,14 @@ describe('presentAuditEvent', () => {
     ]));
   });
 
-  it('presenta el snapshot documental recibido sin sustituirlo por un mapa local', () => {
+  it('presenta la etiqueta funcional del tipo documental y conserva el snapshot técnico recibido', () => {
     const event = presentAuditEvent({
       ...baseEvent,
       observation: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Nombre histórico recibido del backend","version":4}',
       rawDetail: '{"tipoCodigo":"INITIATIVE_TECHNICAL_OPINION","tipoNombre":"Nombre histórico recibido del backend","version":4}',
     });
 
-    expect(event.observation).toBe('Se cargó Nombre histórico recibido del backend, versión 4.');
+    expect(event.observation).toBe('Se cargó Informe de opinión técnica de evaluación de iniciativa, versión 4.');
     expect(event.detailFields).toContainEqual({ label: 'Tipo documental', value: 'Nombre histórico recibido del backend' });
     expect(event.technicalDetail).toContain('Nombre histórico recibido del backend');
   });
@@ -98,17 +98,20 @@ describe('presentAuditEvent', () => {
         tipoRegistro: 'Proyecto', unidadEjecutoraId: 1, unidadEjecutora: 'UE Demo', versionAnterior: 4, versionNueva: 5,
         cambios: {
           name: { anterior: 'Proyecto anterior', nuevo: 'Proyecto actualizado' },
-          responsibleUnits: { anterior: [{ id: 10, code: 'UO-10' }], nuevo: [{ id: 11, code: 'UO-11' }] },
+          responsibleUnits: {
+            anterior: [{ id: 10, code: 'UO-10', name: 'Unidad anterior', sigla: 'UA', nro: 1 }],
+            nuevo: [{ id: 11, code: 'UO-11', name: 'Unidad nueva', sigla: 'UN', nro: 1 }],
+          },
         }, resultado: 'EXITOSO',
       }),
       rawDetail: JSON.stringify({
         tipoRegistro: 'Proyecto', unidadEjecutoraId: 1, unidadEjecutora: 'UE Demo', versionAnterior: 4, versionNueva: 5,
-        cambios: { name: { anterior: 'Proyecto anterior', nuevo: 'Proyecto actualizado' }, responsibleUnits: { anterior: [{ id: 10 }], nuevo: [{ id: 11 }] } }, resultado: 'EXITOSO',
+        cambios: { name: { anterior: 'Proyecto anterior', nuevo: 'Proyecto actualizado' }, responsibleUnits: { anterior: [{ id: 10, code: 'UO-10', name: 'Unidad anterior', sigla: 'UA', nro: 1 }], nuevo: [{ id: 11, code: 'UO-11', name: 'Unidad nueva', sigla: 'UN', nro: 1 }] } }, resultado: 'EXITOSO',
       }),
     });
 
     expect(event.eventLabel).toBe('Proyecto actualizado');
-    expect(event.observation).toBe('El proyecto se actualizó de la versión 4 a la 5. Campos modificados: Nombre, Unidades responsables.');
+    expect(event.observation).toBe('El proyecto se actualizó de la versión 4 a la 5. Campos modificados: Nombre, Unidades Orgánicas Involucradas.');
     expect(event.detailFields).toEqual(expect.arrayContaining([
       { label: 'Tipo de registro', value: 'Proyecto' },
       { label: 'Versión anterior', value: '4' },
@@ -116,6 +119,7 @@ describe('presentAuditEvent', () => {
       { label: 'Cambios', value: expect.stringContaining('Anterior: Proyecto anterior; Nuevo: Proyecto actualizado') },
     ]));
     expect(event.detailFields.find((field) => field.label === 'Cambios')?.value).not.toContain('[object Object]');
+    expect(event.detailFields.find((field) => field.label === 'Cambios')?.value).toContain('Nombre: Unidad nueva; Abreviatura: UN; Nro: 1');
     expect(event.technicalDetail).toContain('"versionAnterior": 4');
   });
 

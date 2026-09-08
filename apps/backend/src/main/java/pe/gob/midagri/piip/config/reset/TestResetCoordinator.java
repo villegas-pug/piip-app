@@ -3,6 +3,7 @@ package pe.gob.midagri.piip.config.reset;
 import jakarta.persistence.EntityManagerFactory;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.function.Function;
 import javax.sql.DataSource;
 import org.hibernate.boot.Metadata;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
@@ -97,6 +98,7 @@ public class TestResetCoordinator implements ApplicationRunner {
                     || catalogs.count() != 4 || catalogItems.count() != 17 || documentTypes.count() != 6) {
                 throw new IllegalStateException("El seed de identidad, organización o catálogos quedó incompleto");
             }
+            validateSyntheticOrganization(executingUnits.findAll(), organizationalUnits::findByExecutingUnitIdOrderByCode);
             if (!operationalTablesAreEmpty()) throw new IllegalStateException("Las tablas operativas, auditoría o notificaciones recibieron datos durante test-reset");
         });
         LOGGER.info("test-reset completado correctamente sobre el esquema allowlisted");
@@ -150,6 +152,43 @@ public class TestResetCoordinator implements ApplicationRunner {
         return portfolios.count() == 0 && responsibleUnits.count() == 0 && codeCounters.count() == 0
             && documents.count() == 0 && documentVersions.count() == 0 && documentContents.count() == 0
             && workTasks.count() == 0 && auditEvents.count() == 0 && accessAudits.count() == 0 && notifications.count() == 0;
+    }
+
+    /**
+     * Postvalidación de las Unidades Orgánicas sintéticas (FR-027/FR-030): por cada unidad cargada,
+     * código y nombre no vacíos, sigla no vacía y asociación correcta con su Unidad Ejecutora (el
+     * código de la unidad lleva como prefijo el código de la Unidad Ejecutora, convención del seed
+     * versionado); por cada Unidad Ejecutora sintética, al menos dos unidades activas y sin códigos
+     * duplicados dentro de ella. Recorre por Unidad Ejecutora para no navegar relaciones lazy fuera
+     * de transacción. Cualquier fallo deja la inicialización incompleta (fail-safe).
+     */
+    static void validateSyntheticOrganization(List<ExecutingUnitEntity> syntheticExecutingUnits,
+            Function<Long, List<OrganizationalUnitEntity>> unitsOfExecutingUnit) {
+        for (ExecutingUnitEntity executingUnit : syntheticExecutingUnits) {
+            Set<String> codes = new HashSet<>();
+            int activeCount = 0;
+            for (OrganizationalUnitEntity unit : unitsOfExecutingUnit.apply(executingUnit.getId())) {
+                if (unit.getCode() == null || unit.getCode().isBlank())
+                    throw new IllegalStateException("La Unidad Orgánica sintética de la Unidad Ejecutora "
+                        + executingUnit.getCode() + " tiene el código vacío");
+                if (!codes.add(unit.getCode()))
+                    throw new IllegalStateException("La Unidad Orgánica sintética " + unit.getCode()
+                        + " está duplicada en la Unidad Ejecutora " + executingUnit.getCode());
+                if (unit.getName() == null || unit.getName().isBlank())
+                    throw new IllegalStateException("La Unidad Orgánica sintética " + unit.getCode()
+                        + " tiene el nombre vacío");
+                if (unit.getAcronym() == null || unit.getAcronym().isBlank())
+                    throw new IllegalStateException("La Unidad Orgánica sintética " + unit.getCode()
+                        + " no tiene sigla registrada");
+                if (!unit.getCode().startsWith(executingUnit.getCode() + "-"))
+                    throw new IllegalStateException("La Unidad Orgánica sintética " + unit.getCode()
+                        + " no pertenece a la Unidad Ejecutora esperada " + executingUnit.getCode());
+                if (unit.isActive()) activeCount++;
+            }
+            if (activeCount < 2)
+                throw new IllegalStateException("La Unidad Ejecutora sintética " + executingUnit.getCode()
+                    + " no dispone de dos Unidades Orgánicas activas");
+        }
     }
     static void stage(String name, Runnable action) {
         try { action.run(); }

@@ -48,7 +48,10 @@ public class OrganizationQueryService {
     @Transactional(readOnly = true)
     public List<OrganizationalUnitView> organizationalUnits(Long executingUnitId) {
         authorization.requireReadableUnit(executingUnitId);
-        return organizationalUnits.findByExecutingUnitIdAndActiveTrueOrderByName(executingUnitId).stream()
+        return organizationalUnits.findByExecutingUnitIdAndActiveTrueAndAcronymIsNotNullOrderByName(executingUnitId).stream()
+            // El repositorio descarta las siglas nulas y este filtro completa la exclusión de siglas en blanco,
+            // que una consulta derivada no puede expresar; la sigla es requisito de datos maestros (FR-011/FR-012).
+            .filter(item -> item.getAcronym() != null && !item.getAcronym().isBlank())
             .map(item -> new OrganizationalUnitView(item.getId(), item.getCode(), item.getName(), item.isActive(),
                 item.getAcronym(), item.getParent() == null ? null : item.getParent().getId(),
                 item.getExecutingUnit().getId()))

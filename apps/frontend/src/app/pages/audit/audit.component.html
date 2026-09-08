@@ -14,17 +14,17 @@
 
     <div class="audit-grid">
       <article class="panel history-panel">
-        <h2>Historial de eventos de expedientes</h2>
+         <h2>Historial de eventos de expedientes</h2><p class="audit-units-help">Los eventos que registran o modifican <strong>Unidades Orgánicas Involucradas</strong> muestran el conjunto confirmado y, cuando corresponde, los valores anterior y nuevo con Nro, Descripción y Abreviatura.</p>
         <div class="audit-head"><span></span><span>Fecha y hora</span><span>Expediente</span><span>Evento</span><span>Usuario</span><span>Observación</span><span>Documento</span><span>Acción</span></div>
         <div class="timeline">
-          @for (event of pagedEvents(); track event.source.timestamp + event.source.event) {
+          @for (event of pagedEvents(); track event.source.timestamp + event.source.event + $index) {
             <div class="audit-row">
               <span class="event-icon"><mat-icon>{{ event.source.icon }}</mat-icon></span>
               <span class="timestamp" data-label="Fecha y hora">{{ event.source.timestamp }}</span>
               <span class="audit-record" data-label="Expediente">{{ event.source.recordCode ?? '—' }}</span>
               <strong class="event-name" data-label="Evento">{{ event.eventLabel }}</strong>
               <span class="audit-user" data-label="Usuario">{{ event.source.user }}@if (event.source.email) {<small>{{ event.source.email }}</small>}</span>
-              <span class="audit-observation" data-label="Observación">{{ event.observation }}</span>
+               <span class="audit-observation" data-label="Observación">{{ event.observation }}</span>
               <span class="audit-document" data-label="Documento">@if (event.documentName) {<span class="document-link"><mat-icon>description</mat-icon>{{ event.documentName }}</span>} @else {—}</span>
               <button class="secondary-button" type="button" (click)="showDetail(event)">Ver detalle <mat-icon>chevron_right</mat-icon></button>
             </div>

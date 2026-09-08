@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import java.time.LocalDate;
 import java.util.*;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.access.AccessDeniedException;
@@ -95,13 +96,199 @@ class ResponsibleUnitValidationTest {
             && saved.getOriginalDesignation().equals("Unidad válida") && saved.getDisplayOrder() == 1));
     }
 
-    @Test void rechazaMasDeUnaUnidadOrganicaAntesDeConsultarOCrearAsociaciones() {
+    @Test void guardaVariasUnidadesActivasConOrdenContinuoYDenominacionDelMaestro() {
+        TestContext context = context();
+        OrganizationalUnitEntity first = organizationalUnit(context, 8L, true, "U8");
+        OrganizationalUnitEntity second = organizationalUnit(context, 9L, true, "U9");
+        when(context.organizational().findHistoricalById(8L)).thenReturn(Optional.of(first));
+        when(context.organizational().findHistoricalById(9L)).thenReturn(Optional.of(second));
+
+        context.responsibleService().save(context.record(),
+            List.of(new ResponsibleUnitInput(8L), new ResponsibleUnitInput(9L)));
+
+        var saved = ArgumentCaptor.forClass(ResponsibleUnitEntity.class);
+        verify(context.responsible(), times(2)).save(saved.capture());
+        assertThat(saved.getAllValues()).extracting(ResponsibleUnitEntity::getDisplayOrder).containsExactly(1, 2);
+        assertThat(saved.getAllValues()).extracting(unit -> unit.getOrganizationalUnit().getId())
+            .containsExactly(8L, 9L);
+        assertThat(saved.getAllValues()).extracting(ResponsibleUnitEntity::getOriginalDesignation)
+            .containsExactly("Unidad 8", "Unidad 9");
+    }
+
+    @Test void rechazaListaVaciaEnAltaSinConsultarElMaestroOrganico() {
+        TestContext context = context();
+
+        assertThatThrownBy(() -> context.responsibleService().save(context.record(), List.of()))
+            .isInstanceOfSatisfying(InvalidReferenceException.class, exception ->
+                assertThat(exception.getReason()).isEqualTo("INVALID_SIZE"))
+            .hasMessageContaining("al menos una unidad");
+        assertThatThrownBy(() -> context.responsibleService().save(context.record(), null))
+            .isInstanceOf(InvalidReferenceException.class).hasMessageContaining("al menos una unidad");
+        verifyNoInteractions(context.organizational(), context.responsible());
+    }
+
+    @Test void rechazaListaVaciaEnReemplazoSinEliminarAsociaciones() {
+        TestContext context = context();
+
+        assertThatThrownBy(() -> context.responsibleService().replace(context.record(), List.of()))
+            .isInstanceOfSatisfying(InvalidReferenceException.class, exception ->
+                assertThat(exception.getReason()).isEqualTo("INVALID_SIZE"))
+            .hasMessageContaining("al menos una unidad");
+        verifyNoInteractions(context.organizational(), context.responsible());
+    }
+
+    @Test void rechazaUnidadDuplicadaEnAltaIdentificandoLaFilaDuplicada() {
         TestContext context = context();
 
         assertThatThrownBy(() -> context.responsibleService().save(context.record(),
-            List.of(new ResponsibleUnitInput(8L), new ResponsibleUnitInput(9L))))
-            .isInstanceOf(InvalidReferenceException.class).hasMessageContaining("exactamente una");
+            List.of(new ResponsibleUnitInput(8L), new ResponsibleUnitInput(5L), new ResponsibleUnitInput(8L))))
+            .isInstanceOfSatisfying(InvalidReferenceException.class, exception -> {
+                assertThat(exception.getReason()).isEqualTo("DUPLICATED_UNIT");
+                assertThat(exception.getReferenceField()).isEqualTo("responsibleUnits[3]");
+                assertThat(exception.getReferenceId()).isEqualTo(8L);
+            })
+            .hasMessageContaining("fila 3").hasMessageContaining("fila 1");
         verifyNoInteractions(context.organizational(), context.responsible());
+    }
+
+    @Test void rechazaUnidadDuplicadaEnReemplazoSinTocarPersistencia() {
+        TestContext context = context();
+
+        assertThatThrownBy(() -> context.responsibleService().replace(context.record(),
+            List.of(new PortfolioUpdateCommands.ResponsibleUnitUpdate(8L),
+                new PortfolioUpdateCommands.ResponsibleUnitUpdate(8L))))
+            .isInstanceOfSatisfying(InvalidReferenceException.class, exception -> {
+                assertThat(exception.getReason()).isEqualTo("DUPLICATED_UNIT");
+                assertThat(exception.getReferenceField()).isEqualTo("responsibleUnits[2]");
+            })
+            .hasMessageContaining("fila 2");
+        verifyNoInteractions(context.organizational(), context.responsible());
+    }
+
+    @Test void rechazaNuevaIncorporacionSinSiglaEnAltaIdentificandoLaFila() {
+        TestContext context = context();
+        when(context.organizational().findHistoricalById(8L)).thenReturn(Optional.of(organizationalUnit(context, 8L, true, "U8")));
+        when(context.organizational().findHistoricalById(9L)).thenReturn(Optional.of(organizationalUnit(context, 9L, true, null)));
+
+        assertThatThrownBy(() -> context.responsibleService().save(context.record(),
+            List.of(new ResponsibleUnitInput(8L), new ResponsibleUnitInput(9L))))
+            .isInstanceOfSatisfying(InvalidReferenceException.class, exception -> {
+                assertThat(exception.getReason()).isEqualTo("MISSING_ACRONYM");
+                assertThat(exception.getReferenceField()).isEqualTo("responsibleUnits[2]");
+                assertThat(exception.getReferenceId()).isEqualTo(9L);
+            })
+            .hasMessageContaining("fila 2").hasMessageContaining("sigla");
+        verifyNoInteractions(context.responsible());
+    }
+
+    @Test void rechazaNuevaIncorporacionConSiglaEnBlancoEnReemplazoSinModificarAsociaciones() {
+        TestContext context = context();
+        ReflectionTestUtils.setField(context.record(), "id", 50L);
+        OrganizationalUnitEntity retained = organizationalUnit(context, 8L, true, "U8");
+        when(context.organizational().findHistoricalById(8L)).thenReturn(Optional.of(retained));
+        when(context.organizational().findHistoricalById(9L)).thenReturn(Optional.of(organizationalUnit(context, 9L, true, "   ")));
+        ResponsibleUnitEntity current = new ResponsibleUnitEntity(context.record(), retained, retained.getName(), 1);
+        when(context.responsible().findByRecordIdOrderByDisplayOrder(50L)).thenReturn(List.of(current));
+
+        assertThatThrownBy(() -> context.responsibleService().replace(context.record(),
+            List.of(new PortfolioUpdateCommands.ResponsibleUnitUpdate(8L),
+                new PortfolioUpdateCommands.ResponsibleUnitUpdate(9L))))
+            .isInstanceOfSatisfying(InvalidReferenceException.class, exception -> {
+                assertThat(exception.getReason()).isEqualTo("MISSING_ACRONYM");
+                assertThat(exception.getReferenceField()).isEqualTo("responsibleUnits[2]");
+            })
+            .hasMessageContaining("fila 2");
+        verify(context.responsible(), never()).deleteAll(any(Iterable.class));
+        verify(context.responsible(), never()).save(any());
+    }
+
+    @Test void conservaRetenidasInactivasComoContextoAlReemplazar() {
+        TestContext context = context();
+        ReflectionTestUtils.setField(context.record(), "id", 50L);
+        OrganizationalUnitEntity retainedInactive = organizationalUnit(context, 8L, false, "U8");
+        OrganizationalUnitEntity nueva = organizationalUnit(context, 9L, true, "U9");
+        when(context.organizational().findHistoricalById(8L)).thenReturn(Optional.of(retainedInactive));
+        when(context.organizational().findHistoricalById(9L)).thenReturn(Optional.of(nueva));
+        ResponsibleUnitEntity current = new ResponsibleUnitEntity(context.record(), retainedInactive,
+            retainedInactive.getName(), 1);
+        when(context.responsible().findByRecordIdOrderByDisplayOrder(50L)).thenReturn(List.of(current));
+
+        context.responsibleService().replace(context.record(),
+            List.of(new PortfolioUpdateCommands.ResponsibleUnitUpdate(8L),
+                new PortfolioUpdateCommands.ResponsibleUnitUpdate(9L)));
+
+        verify(context.responsible()).deleteAll(List.of(current));
+        var saved = ArgumentCaptor.forClass(ResponsibleUnitEntity.class);
+        verify(context.responsible(), times(2)).save(saved.capture());
+        assertThat(saved.getAllValues()).extracting(ResponsibleUnitEntity::getDisplayOrder).containsExactly(1, 2);
+        assertThat(saved.getAllValues()).extracting(unit -> unit.getOrganizationalUnit().getId())
+            .containsExactly(8L, 9L);
+        assertThat(saved.getAllValues()).extracting(ResponsibleUnitEntity::getOriginalDesignation)
+            .containsExactly("Unidad 8", "Unidad 9");
+    }
+
+    @Test void conservaRetenidasSinSiglaComoContextoAlReemplazar() {
+        TestContext context = context();
+        ReflectionTestUtils.setField(context.record(), "id", 50L);
+        OrganizationalUnitEntity retainedWithoutAcronym = organizationalUnit(context, 8L, true, null);
+        OrganizationalUnitEntity nueva = organizationalUnit(context, 9L, true, "U9");
+        when(context.organizational().findHistoricalById(8L)).thenReturn(Optional.of(retainedWithoutAcronym));
+        when(context.organizational().findHistoricalById(9L)).thenReturn(Optional.of(nueva));
+        ResponsibleUnitEntity current = new ResponsibleUnitEntity(context.record(), retainedWithoutAcronym,
+            retainedWithoutAcronym.getName(), 1);
+        when(context.responsible().findByRecordIdOrderByDisplayOrder(50L)).thenReturn(List.of(current));
+
+        context.responsibleService().replace(context.record(),
+            List.of(new PortfolioUpdateCommands.ResponsibleUnitUpdate(8L),
+                new PortfolioUpdateCommands.ResponsibleUnitUpdate(9L)));
+
+        verify(context.responsible()).deleteAll(List.of(current));
+        verify(context.responsible(), times(2)).save(any(ResponsibleUnitEntity.class));
+    }
+
+    @Test void reemplazoConFilaInvalidaNoModificaAsociacionesPrevias() {
+        TestContext context = context();
+        ReflectionTestUtils.setField(context.record(), "id", 50L);
+        OrganizationalUnitEntity retained = organizationalUnit(context, 8L, true, "U8");
+        when(context.organizational().findHistoricalById(8L)).thenReturn(Optional.of(retained));
+        when(context.organizational().findHistoricalById(9L)).thenReturn(Optional.of(organizationalUnit(context, 9L, false, "U9")));
+        ResponsibleUnitEntity current = new ResponsibleUnitEntity(context.record(), retained, retained.getName(), 1);
+        when(context.responsible().findByRecordIdOrderByDisplayOrder(50L)).thenReturn(List.of(current));
+
+        assertThatThrownBy(() -> context.responsibleService().replace(context.record(),
+            List.of(new PortfolioUpdateCommands.ResponsibleUnitUpdate(8L),
+                new PortfolioUpdateCommands.ResponsibleUnitUpdate(9L))))
+            .isInstanceOfSatisfying(InvalidReferenceException.class, exception ->
+                assertThat(exception.getReason()).isEqualTo("INACTIVE"))
+            .hasMessageContaining("inactiva");
+        verify(context.responsible(), never()).deleteAll(any(Iterable.class));
+        verify(context.responsible(), never()).save(any());
+    }
+
+    @Test void reemplazaEnElOrdenDeIncorporacionRenumerandoDeFormaContinua() {
+        TestContext context = context();
+        ReflectionTestUtils.setField(context.record(), "id", 50L);
+        OrganizationalUnitEntity eight = organizationalUnit(context, 8L, true, "U8");
+        OrganizationalUnitEntity nine = organizationalUnit(context, 9L, true, "U9");
+        when(context.organizational().findHistoricalById(8L)).thenReturn(Optional.of(eight));
+        when(context.organizational().findHistoricalById(9L)).thenReturn(Optional.of(nine));
+        List<ResponsibleUnitEntity> current = List.of(
+            new ResponsibleUnitEntity(context.record(), nine, nine.getName(), 1),
+            new ResponsibleUnitEntity(context.record(), eight, eight.getName(), 2));
+        when(context.responsible().findByRecordIdOrderByDisplayOrder(50L)).thenReturn(current);
+
+        context.responsibleService().replace(context.record(),
+            List.of(new PortfolioUpdateCommands.ResponsibleUnitUpdate(8L),
+                new PortfolioUpdateCommands.ResponsibleUnitUpdate(9L)));
+
+        verify(context.responsible()).deleteAll(current);
+        var saved = ArgumentCaptor.forClass(ResponsibleUnitEntity.class);
+        verify(context.responsible(), times(2)).save(saved.capture());
+        assertThat(saved.getAllValues()).extracting(ResponsibleUnitEntity::getDisplayOrder).containsExactly(1, 2);
+        assertThat(saved.getAllValues()).extracting(unit -> unit.getOrganizationalUnit().getId())
+            .containsExactly(8L, 9L);
+        assertThat(saved.getAllValues()).extracting(ResponsibleUnitEntity::getOriginalDesignation)
+            .containsExactly("Unidad 8", "Unidad 9");
     }
 
     @Test void lasCreacionesConResponsablesConservanFronteraTransaccional() throws NoSuchMethodException {
@@ -138,6 +325,15 @@ class ResponsibleUnitValidationTest {
             mock(NotificationRepository.class), mock(DocumentRepository.class), mock(CodeGeneratorService.class), authorization,
             mock(AuditService.class), mock(CatalogReferenceService.class), mock(DocumentTypeRepository.class));
         return new TestContext(service, new ResponsibleUnitService(responsible, organizational), record, responsible, organizational, executing, authorization);
+    }
+
+    /** Unidad Orgánica de la misma Unidad Ejecutora del registro, con identidad y vigencia configurables. */
+    private static OrganizationalUnitEntity organizationalUnit(TestContext context, Long id, boolean active, String acronym) {
+        OrganizationalUnitEntity value = new OrganizationalUnitEntity(context.record().getExecutingUnit(),
+            "UO-" + id, "Unidad " + id, acronym);
+        ReflectionTestUtils.setField(value, "id", id);
+        ReflectionTestUtils.setField(value, "active", active);
+        return value;
     }
 
     private record TestContext(InitiativeApplicationService service, ResponsibleUnitService responsibleService, PortfolioRecordEntity record,

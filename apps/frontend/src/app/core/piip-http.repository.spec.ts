@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { PortfolioControllerService } from '../api/generated';
 import type { PortfolioRecordResponse } from '../api/generated/models';
-import { PiipHttpRepository } from './piip-http.repository';
+import { PiipApiError, PiipHttpRepository, responsibleUnitRowErrors } from './piip-http.repository';
 
 describe('PiipHttpRepository', () => {
   let http: HttpTestingController;
@@ -43,6 +43,21 @@ describe('PiipHttpRepository', () => {
     await initialization;
     expect(repository.lastError()).toBe('Usuario sin asignación local activa');
     expect(repository.role()).toBeNull();
+  });
+
+  it('preserva la referencia de ProblemDetail y convierte solo filas responsibleUnits 1-based válidas', async () => {
+    consumeStartup(http);
+    const operation = repository.assignUserRole({ userSubject: 'user-1', role: 'CONSULTA_EXTERNA', institutionId: 1 });
+    http.expectOne('http://127.0.0.1:4001/api/v1/admin/role-assignments').flush(
+      jsonBlob({ detail: 'La unidad no está vigente.', referenceField: 'responsibleUnits[2]', referenceId: 202 }),
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+    await expect(operation).rejects.toMatchObject({ status: 422, referenceField: 'responsibleUnits[2]', referenceId: 202 });
+
+    expect(responsibleUnitRowErrors(new PiipApiError(422, 'Fila inválida', undefined, 'responsibleUnits[3]'))).toEqual({ 2: 'Fila inválida' });
+    for (const field of ['responsibleUnits[0]', 'responsibleUnits[-1]', 'responsibleUnits[1.5]', 'responsibleUnits[01]', 'other[1]']) {
+      expect(responsibleUnitRowErrors(new PiipApiError(422, 'Fila inválida', undefined, field))).toBeNull();
+    }
   });
 
   it('carga el bundle de catálogos como JSON y conserva sus opciones', async () => {

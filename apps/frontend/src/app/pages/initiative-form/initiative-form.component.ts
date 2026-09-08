@@ -7,11 +7,14 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { PIIP_CATALOGS } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
+import { responsibleUnitRowErrors } from '../../core/piip-http.repository';
 import { InitiativeReviewDialogComponent } from './initiative-review-dialog.component';
+import { OrganizationalUnit, ResourcePhase } from '../../core/piip.models';
+import { OrganizationalUnitListComponent, OrganizationalUnitListValue } from '../../shared/organizational-unit-list/organizational-unit-list.component';
 
 @Component({
   selector: 'app-initiative-form',
-  imports: [ReactiveFormsModule, MatIconModule],
+  imports: [ReactiveFormsModule, MatIconModule, OrganizationalUnitListComponent],
   templateUrl: './initiative-form.component.html',
   styleUrl: './initiative-form.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,6 +36,10 @@ export class InitiativeFormComponent {
   readonly uploadedFilename = signal<string | null>(null);
   readonly uploadedFile = signal<File | null>(null);
   readonly submitting = signal(false);
+  readonly responsibleUnitIds = signal<readonly number[]>([]);
+  readonly responsibleUnitRows = signal(1);
+  readonly pendingResponsibleUnit = signal(true);
+  readonly responsibleUnitErrors = signal<Readonly<Record<number, string>>>({});
   readonly canAdministerActiveScope = computed(() => this.repository.canAdministerExecutingUnit(this.repository.selectedExecutingUnitId()));
 
   readonly form = this.formBuilder.nonNullable.group({
@@ -47,7 +54,7 @@ export class InitiativeFormComponent {
     digitalComponent: ['', Validators.required],
     description: ['', [Validators.required, Validators.maxLength(1000)]],
     responsible: ['', Validators.required],
-    responsibleUnits: [{ value: '', disabled: this.unitsState().phase !== 'ready' }, Validators.required],
+    responsibleUnits: [''],
     note: [''],
     peiObjective: [{ value: '', disabled: this.catalogState().phase !== 'ready' }],
     poiActivity: [{ value: '', disabled: this.catalogState().phase !== 'ready' }],
@@ -61,13 +68,11 @@ export class InitiativeFormComponent {
       this.syncDisabled(this.form.controls.source, !catalogsReady);
       this.syncDisabled(this.form.controls.peiObjective, !catalogsReady);
       this.syncDisabled(this.form.controls.poiActivity, !catalogsReady);
-      this.syncDisabled(this.form.controls.responsibleUnits, !unitsReady);
       const catalogs = this.catalogState().value;
       this.reconcile(this.form.controls.solutionType, catalogs.solutionTypes);
       this.reconcile(this.form.controls.source, catalogs.sources);
       this.reconcile(this.form.controls.peiObjective, catalogs.peiObjectives);
       this.reconcile(this.form.controls.poiActivity, catalogs.poiActivities);
-      this.reconcile(this.form.controls.responsibleUnits, this.units());
     });
   }
 
@@ -95,7 +100,7 @@ export class InitiativeFormComponent {
       return;
     }
     this.form.markAllAsTouched();
-    if (!this.dependenciesReady() || this.form.invalid || !this.uploadedFilename()) {
+    if (!this.dependenciesReady() || this.form.invalid || !this.uploadedFilename() || !this.hasValidUnits()) {
       this.snackBar.open('Completa los campos requeridos y adjunta la ficha inicial.', 'Cerrar', { duration: 4200 });
       return;
     }
@@ -112,6 +117,7 @@ export class InitiativeFormComponent {
         pendingCode: this.pendingCode,
         name: this.form.controls.name.value,
         responsible: this.form.controls.responsible.value,
+        organizationalUnits: this.selectedUnits(),
         uploadedFilename: this.uploadedFilename(),
         registerInitiative: () => this.registerInitiative(),
       },
@@ -119,14 +125,14 @@ export class InitiativeFormComponent {
   }
 
   async registerInitiative(): Promise<boolean> {
-    if (this.submitting() || !this.canAdministerActiveScope() || !this.dependenciesReady()) return false;
+    if (this.submitting() || !this.canAdministerActiveScope() || !this.dependenciesReady() || !this.hasValidUnits()) return false;
     const value = this.form.getRawValue();
     this.submitting.set(true);
     try {
       const record = await Promise.resolve(this.repository.registerInitiative({
         code: value.code, startDate: value.startDate, name: value.name,
         solutionTypeId: Number(value.solutionType), sourceId: Number(value.source), responsible: value.responsible,
-        organizationalUnitId: Number(value.responsibleUnits),
+        responsibleUnitIds: this.responsibleUnitIds(),
         peiObjectiveId: value.peiObjective ? Number(value.peiObjective) : undefined,
         poiActivityId: value.poiActivity ? Number(value.poiActivity) : undefined, description: value.description,
         note: value.note, digitalComponent: value.digitalComponent as 'Si' | 'No',
@@ -137,6 +143,11 @@ export class InitiativeFormComponent {
       await this.router.navigate(['/iniciativas', record.code]);
       return true;
     } catch (error) {
+      const rowErrors = responsibleUnitRowErrors(error);
+      if (rowErrors) {
+        this.responsibleUnitErrors.set(rowErrors);
+        return false;
+      }
       this.snackBar.open(error instanceof Error ? error.message : 'No fue posible registrar la iniciativa.', 'Cerrar', { duration: 4200 });
       return false;
     } finally {
@@ -154,8 +165,13 @@ export class InitiativeFormComponent {
     const catalogs = this.catalogState();
     const units = this.unitsState();
     return catalogs.phase === 'ready' && catalogs.value.solutionTypes.length > 0 && catalogs.value.sources.length > 0
-      && units.phase === 'ready' && units.value.length > 0;
+       && units.phase === 'ready' && units.value.length > 0 && this.hasValidUnits();
   }
+
+  selectableUnits(): readonly OrganizationalUnit[] { return this.units().filter((unit) => unit.active && unit.acronym.trim()); }
+  selectedUnits(): readonly OrganizationalUnit[] { return this.responsibleUnitIds().flatMap((id) => this.selectableUnits().filter((unit) => unit.id === id)); }
+  onUnitsChange(value: OrganizationalUnitListValue): void { this.responsibleUnitIds.set(value.unitIds); this.responsibleUnitRows.set(value.rowCount); this.pendingResponsibleUnit.set(value.hasPendingSelection); this.responsibleUnitErrors.set({}); }
+  private hasValidUnits(): boolean { return this.unitsState().phase === 'ready' && this.responsibleUnitIds().length > 0 && !this.pendingResponsibleUnit() && Object.keys(this.responsibleUnitErrors()).length === 0; }
 
   private syncDisabled(control: AbstractControl, disabled: boolean): void {
     if (disabled && control.enabled) control.disable({ emitEvent: false });

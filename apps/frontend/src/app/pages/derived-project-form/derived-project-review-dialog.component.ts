@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { OrganizationalUnit } from '../../core/piip.models';
 
 export interface DerivedProjectReviewDialogData {
   initiativeCode: string;
@@ -12,7 +13,8 @@ export interface DerivedProjectReviewDialogData {
   source: string;
   digitalComponent: string;
   responsible: string;
-  organizationalUnit: string;
+  organizationalUnits?: readonly OrganizationalUnit[];
+  organizationalUnit?: string;
   description: string;
   keyResults: string;
   registerProject: () => Promise<boolean>;
