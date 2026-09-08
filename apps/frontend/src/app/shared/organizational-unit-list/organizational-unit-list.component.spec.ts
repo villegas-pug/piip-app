@@ -41,26 +41,24 @@ describe('OrganizationalUnitListComponent', () => {
     await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
   });
 
-  it('muestra la denominación visible, encabezados de columna y etiquetas por celda', () => {
+  it('muestra una lista ordenada con denominación, posición y abreviatura visibles', () => {
     const { host, fixture, element } = setup();
     host.catalog.set(UNITS);
     host.value.set([UNITS[0], UNITS[1]]);
     fixture.detectChanges();
 
-    expect(element.querySelector('caption')?.textContent?.trim()).toBe('Unidades Orgánicas Involucradas');
-    const headers = Array.from(element.querySelectorAll('th')).map((th) => th.textContent?.trim());
-    expect(headers).toEqual(['Nro', 'Descripción', 'Abreviatura', 'Acciones']);
-    for (const th of Array.from(element.querySelectorAll('th'))) expect(th.getAttribute('scope')).toBe('col');
+    expect(element.querySelector('.ou-caption')?.textContent?.trim()).toBe('Unidades Orgánicas Involucradas');
+    expect(element.querySelector('ol.ou-rows')).toBeTruthy();
+    expect(element.querySelector('table')).toBeNull();
+    expect(element.querySelectorAll('.ou-row')).toHaveLength(2);
+    expect(Array.from(element.querySelectorAll('.ou-acronym-value')).map((cell) => cell.textContent?.trim())).toEqual(['U101', 'U202']);
 
     const removeLabels = Array.from(element.querySelectorAll('button.ou-remove')).map((button) => button.getAttribute('aria-label'));
     expect(removeLabels).toEqual(['Retirar fila 1: Unidad 101', 'Retirar fila 2: Unidad 202']);
 
-    // Presentación adaptable: cada fila conserva la etiqueta de cada columna (FR-015).
-    expect(element.querySelectorAll('tbody .ou-cell-label')).toHaveLength(8);
-
     host.label.set('Otra denominación de edición');
     fixture.detectChanges();
-    expect(element.querySelector('caption')?.textContent?.trim()).toBe('Otra denominación de edición');
+    expect(element.querySelector('.ou-caption')?.textContent?.trim()).toBe('Otra denominación de edición');
   });
 
   it('renumera automáticamente la secuencia 1..N al retirar una fila intermedia', () => {
@@ -88,7 +86,7 @@ describe('OrganizationalUnitListComponent', () => {
     host.list().removeRow(0); // Guarda interna: el retiro de la última fila no está disponible.
     fixture.detectChanges();
 
-    expect(element.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(element.querySelectorAll('.ou-row')).toHaveLength(1);
     expect(host.listChanges.length).toBe(emissionsBefore);
   });
 
@@ -265,7 +263,7 @@ function unit(id: number, overrides: Partial<OrganizationalUnit> = {}): Organiza
 }
 
 function visibleNumbers(element: HTMLElement): string[] {
-  return Array.from(element.querySelectorAll('td.ou-number .ou-number-value')).map((cell) => cell.textContent?.trim() ?? '');
+  return Array.from(element.querySelectorAll('.ou-number .ou-number-value')).map((cell) => cell.textContent?.trim() ?? '');
 }
 
 function unitNames(element: HTMLElement): string[] {

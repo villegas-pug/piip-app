@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { OrganizationalUnit } from '../../core/piip.models';
+import { OrganizationalUnitSummaryComponent } from '../../shared/organizational-unit-summary/organizational-unit-summary.component';
 
 export interface InitiativeReviewDialogData {
   pendingCode: string;
@@ -14,7 +15,7 @@ export interface InitiativeReviewDialogData {
 
 @Component({
   selector: 'app-initiative-review-dialog',
-  imports: [MatDialogModule, MatIconModule],
+  imports: [MatDialogModule, MatIconModule, OrganizationalUnitSummaryComponent],
   templateUrl: './initiative-review-dialog.component.html',
   styleUrl: './initiative-review-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

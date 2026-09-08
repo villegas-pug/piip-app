@@ -8,6 +8,7 @@ import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { responsibleUnitRowErrors } from '../../core/piip-http.repository';
 import { OrganizationalUnit, PreexistingProjectInput } from '../../core/piip.models';
 import { OrganizationalUnitListComponent, OrganizationalUnitListValue } from '../../shared/organizational-unit-list/organizational-unit-list.component';
+import { OrganizationalUnitSummaryComponent } from '../../shared/organizational-unit-summary/organizational-unit-summary.component';
 
 type DocumentField =
   | 'technicalOpinionReport'
@@ -20,7 +21,7 @@ type DocumentMode = 'NOT_APPLICABLE' | 'FILE' | 'PENDING';
 
 @Component({
   selector: 'app-preexisting-project-form',
-  imports: [ReactiveFormsModule, RouterLink, MatIconModule, OrganizationalUnitListComponent],
+  imports: [ReactiveFormsModule, RouterLink, MatIconModule, OrganizationalUnitListComponent, OrganizationalUnitSummaryComponent],
   templateUrl: './preexisting-project-form.component.html',
   styleUrl: './preexisting-project-form.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

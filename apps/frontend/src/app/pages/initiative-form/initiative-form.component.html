@@ -1,7 +1,7 @@
 <section class="page form-page">
   <div class="section-nav" aria-label="Secciones del registro">
     <button type="button" (click)="scrollTo('general')"><b>01</b>Datos generales</button>
-    <button type="button" (click)="scrollTo('responsible')"><b>02</b>Responsable y unidad</button>
+    <button type="button" (click)="scrollTo('responsible')"><b>02</b>Responsable y unidades</button>
     <button type="button" (click)="scrollTo('alignment')"><b>03</b>Alineamiento</button>
     <button type="button" (click)="scrollTo('documents')"><b>04</b>Documentos iniciales</button>
   </div>
@@ -28,7 +28,7 @@
     </article>
 
     <article class="panel form-section" id="responsible">
-      <header><h3>02 / Responsable y unidad</h3><p>Responsable funcional y Unidad Orgánica responsable.</p></header>
+      <header><h3>02 / Responsable y unidades</h3><p>Responsable funcional y Unidades Orgánicas Involucradas.</p></header>
       <div class="form-grid three">
         <label class="field"><span>Responsable *</span><input formControlName="responsible" placeholder="Nombre del punto focal o responsable" [attr.aria-invalid]="form.controls.responsible.touched && form.controls.responsible.invalid ? 'true' : null" [attr.aria-describedby]="form.controls.responsible.touched && form.controls.responsible.invalid ? 'initiative-responsible-error' : null" />@if (form.controls.responsible.touched && form.controls.responsible.invalid) {<small class="error" id="initiative-responsible-error" role="alert">Ingresa el responsable de la iniciativa.</small>}</label>
         <div class="field span-2"><app-organizational-unit-list [catalog]="selectableUnits()" [catalogPhase]="unitsState().phase" [catalogError]="unitsState().error" [value]="selectedUnits()" [rowErrors]="responsibleUnitErrors()" [disabled]="submitting()" (listChange)="onUnitsChange($event)" (catalogRetry)="repository.reloadOrganizationalUnits()" /></div>

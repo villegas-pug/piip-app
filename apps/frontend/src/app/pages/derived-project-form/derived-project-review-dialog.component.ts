@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { OrganizationalUnit } from '../../core/piip.models';
+import { OrganizationalUnitSummaryComponent } from '../../shared/organizational-unit-summary/organizational-unit-summary.component';
 
 export interface DerivedProjectReviewDialogData {
   initiativeCode: string;
@@ -22,7 +23,7 @@ export interface DerivedProjectReviewDialogData {
 
 @Component({
   selector: 'app-derived-project-review-dialog',
-  imports: [MatDialogModule, MatIconModule],
+  imports: [MatDialogModule, MatIconModule, OrganizationalUnitSummaryComponent],
   templateUrl: './derived-project-review-dialog.component.html',
   styleUrl: './derived-project-review-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

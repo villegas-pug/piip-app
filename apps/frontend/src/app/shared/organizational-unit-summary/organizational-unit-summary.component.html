@@ -1,0 +1,32 @@
+<section class="ou-summary" [attr.aria-label]="label()">
+  @if (showHeader()) {
+    <header class="ou-summary-header">
+      <div>
+        <p>Participación registrada</p>
+        <h3>{{ label() }}</h3>
+      </div>
+      <span class="ou-summary-count">{{ units().length }} unidad{{ units().length === 1 ? '' : 'es' }}</span>
+    </header>
+  }
+
+  @if (units().length) {
+    <ol class="ou-summary-list">
+      @for (unit of units(); track unit.id; let index = $index) {
+        <li class="ou-summary-item">
+          <span class="ou-summary-number" [attr.aria-label]="'Nro ' + (index + 1)">{{ index + 1 }}</span>
+          <div class="ou-summary-description">
+            <span class="ou-summary-label">Descripción</span>
+            <strong>{{ unit.name }}</strong>
+            @if (!unit.active) { <span class="ou-summary-history">Inactiva (histórica)</span> }
+          </div>
+          <div class="ou-summary-acronym">
+            <span class="ou-summary-label">Abreviatura</span>
+            <span>{{ unit.acronym }}</span>
+          </div>
+        </li>
+      }
+    </ol>
+  } @else {
+    <p class="ou-summary-empty" role="status">{{ emptyText() }}</p>
+  }
+</section>

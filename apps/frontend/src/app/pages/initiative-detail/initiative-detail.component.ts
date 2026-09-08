@@ -13,6 +13,7 @@ import { initiativeStatusVisual, type InitiativeStatusVisual } from '../initiati
 import { projectStatusVisual, type ProjectStatusVisual } from '../projects/project-status-visual';
 import { InitiativeApprovalDialogComponent, type InitiativeApprovalDialogResult } from './initiative-approval-dialog.component';
 import { InitiativeStatusTransitionDialogComponent, type InitiativeStatusTransitionDialogResult } from './initiative-status-transition-dialog.component';
+import { OrganizationalUnitSummaryComponent } from '../../shared/organizational-unit-summary/organizational-unit-summary.component';
 
 const TECHNICAL_REPORT = 'Informe de opinión técnica de evaluación de iniciativa';
 const FORMAL_DECISION = 'Documento formal de decisión de aprobación';
@@ -24,7 +25,7 @@ interface ActivityStatusChange {
 
 @Component({
   selector: 'app-initiative-detail',
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, OrganizationalUnitSummaryComponent],
   templateUrl: './initiative-detail.component.html',
   styleUrl: './initiative-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

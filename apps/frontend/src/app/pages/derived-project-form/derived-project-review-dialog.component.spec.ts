@@ -47,12 +47,12 @@ describe('DerivedProjectReviewDialogComponent', () => {
     expect(content).toContain('P-005-2026');
     expect(content).toContain('Solución por definir');
     expect(content).toContain('Unidades Orgánicas Involucradas');
-    expect(Array.from<Element>(fixture.nativeElement.querySelectorAll('tbody tr')).map((row) =>
-      Array.from(row.querySelectorAll('td')).map((cell) => cell.textContent?.trim()),
-    )).toEqual([
-      ['1', 'Oficina de Planeamiento y Modernización', 'OPM'], ['2', 'Oficina de Innovación', 'OIN'],
+    const units = Array.from<Element>(fixture.nativeElement.querySelectorAll('.ou-summary-item'));
+    expect(units.map((item) => item.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      '1 Descripción Oficina de Planeamiento y Modernización Abreviatura OPM',
+      '2 Descripción Oficina de Innovación Abreviatura OIN',
     ]);
-    expect(Array.from<Element>(fixture.nativeElement.querySelectorAll('th')).map((header) => header.textContent?.trim())).toEqual(['Nro', 'Descripción', 'Abreviatura']);
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
     expect(content).toContain('Sin información registrada');
     expect(content).toContain('Los documentos no se duplicarán');
     expect(fixture.nativeElement.querySelector('time')?.getAttribute('datetime')).toBe('2026-08-23');

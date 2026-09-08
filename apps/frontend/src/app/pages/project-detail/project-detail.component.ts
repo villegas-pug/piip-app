@@ -11,10 +11,11 @@ import { canEditProject } from '../../core/portfolio-edit-permissions';
 import { presentAuditEvent, type PresentedAuditEvent } from '../audit/audit-event.presenter';
 import { ProjectStatusTransitionDialogComponent, type ProjectStatusTransitionDialogResult } from './project-status-transition-dialog.component';
 import { projectStatusVisual, type ProjectStatusVisual } from '../projects/project-status-visual';
+import { OrganizationalUnitSummaryComponent } from '../../shared/organizational-unit-summary/organizational-unit-summary.component';
 
 @Component({
   selector: 'app-project-detail',
-  imports: [RouterLink, MatIconModule],
+  imports: [RouterLink, MatIconModule, OrganizationalUnitSummaryComponent],
   templateUrl: './project-detail.component.html',
   styleUrl: './project-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

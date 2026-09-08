@@ -2,33 +2,37 @@
 
 .ou-list { display: grid; gap: 12px; font-size: 14px; }
 
-.ou-caption { padding-bottom: 2px; color: var(--piip-ink); font-size: 14px; font-weight: 600; text-align: left; }
-
 .ou-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; color: var(--piip-muted); font-size: 13px; }
 .ou-state-error { color: var(--piip-red); }
 .ou-retry { min-height: 28px; padding: 2px 10px; border: 1px solid var(--piip-border); border-radius: 5px; color: var(--piip-green-900); background: #fff; cursor: pointer; }
 .ou-retry:hover { border-color: var(--piip-green-700); }
 
-.ou-table { width: 100%; border-collapse: collapse; }
-.ou-table-head th { padding: 7px 10px 9px; border-bottom: 2px solid var(--piip-border); color: var(--piip-muted); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-align: left; text-transform: uppercase; white-space: nowrap; }
-.ou-table td { padding: 9px 10px; border-bottom: 1px solid var(--piip-border); vertical-align: middle; }
+.ou-editor { overflow: hidden; border: 1px solid var(--piip-border); border-radius: 12px; background: #fff; }
+.ou-editor-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 16px; border-bottom: 1px solid var(--piip-border); background: linear-gradient(100deg, #f6faf7, #fff); }
+.ou-kicker { margin: 0 0 2px; color: var(--piip-muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.ou-caption { margin: 0; color: var(--piip-ink); font-size: 15px; font-weight: 700; }
+.ou-count { flex: 0 0 auto; padding: 4px 9px; border-radius: 999px; color: var(--piip-green-900); background: var(--piip-green-100, #e8f3eb); font-size: 12px; font-weight: 700; }
 
-.ou-number { width: 64px; text-align: center; }
-.ou-number-value { color: var(--piip-muted); font-weight: 700; }
+.ou-rows { display: grid; gap: 8px; margin: 0; padding: 10px; list-style: none; }
+.ou-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto 40px; align-items: center; gap: 12px; min-height: 64px; padding: 10px 10px 10px 8px; border: 1px solid var(--piip-border); border-radius: 9px; background: #fff; transition: border-color .16s ease, box-shadow .16s ease; }
+.ou-row:focus-within { border-color: var(--piip-green-700); box-shadow: 0 0 0 3px rgba(35, 103, 66, .12); }
+.ou-row-pending { border-style: dashed; background: #fbfdfb; }
+.ou-number { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: var(--piip-green-900); background: var(--piip-green-100, #e8f3eb); }
+.ou-number-value { font-weight: 800; }
 .ou-description { min-width: 0; }
-.ou-unit-name { color: var(--piip-ink); }
-.ou-acronym { width: 150px; }
-.ou-acronym-value { color: var(--piip-green-900); font-weight: 600; white-space: nowrap; }
-.ou-actions { width: 76px; text-align: right; }
-
-/* Etiqueta por celda: oculta en escritorio (la tabla nativa expone los th) y visible
-   en la presentación apilada de pantallas pequeñas (FR-015). */
-.ou-cell-label { display: none; }
+.ou-unit-name { display: block; color: var(--piip-ink); font-weight: 600; }
+.ou-acronym { min-width: 104px; }
+.ou-acronym-value { display: inline-flex; padding: 4px 8px; border-radius: 5px; color: var(--piip-green-900); background: #f1f6f2; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.ou-actions { display: grid; place-items: center; }
+.ou-cell-label, .ou-select-label > span { display: block; margin-bottom: 4px; color: var(--piip-muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.ou-number .ou-cell-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ou-acronym .ou-cell-label { display: none; }
 
 .ou-row-invalid .ou-number-value, .ou-row-invalid .ou-acronym-value { color: var(--piip-red); }
 .ou-row-error { display: block; margin-top: 5px; color: var(--piip-red); font-size: 12px; }
 
-.ou-select { box-sizing: border-box; width: 100%; max-width: 420px; height: 40px; padding: 0 10px; border: 1px solid var(--piip-border); border-radius: 5px; color: var(--piip-ink); background: #fff; }
+.ou-select-label { display: block; }
+.ou-select { box-sizing: border-box; width: 100%; max-width: 520px; height: 40px; padding: 0 10px; border: 1px solid var(--piip-border); border-radius: 6px; color: var(--piip-ink); background: #fff; }
 .ou-select:focus-visible { outline: 3px solid rgba(230, 169, 0, .3); outline-offset: 2px; }
 .ou-select:disabled { color: #87948c; background: #f5f7f5; cursor: not-allowed; }
 
@@ -39,15 +43,17 @@
 .ou-add-hint { color: var(--piip-muted); font-size: 12px; }
 .ou-hint { margin-left: auto; color: var(--piip-muted); font-size: 12px; }
 
-/* Presentación adaptable (FR-015): en pantallas pequeñas cada fila se apila con su
-   etiqueta visible por celda; la información Nro/Descripción/Abreviatura se conserva. */
 @media (max-width: 640px) {
-  .ou-table, .ou-table tbody, .ou-table tr, .ou-table td { display: block; width: 100%; }
-  .ou-table thead { display: none; }
-  .ou-table tr { padding: 6px 0; }
-  .ou-table td { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 0; padding: 5px 2px; text-align: right; }
-  .ou-cell-label { display: block; flex: 0 0 auto; color: var(--piip-muted); font-size: 12px; font-weight: 600; text-align: left; }
-  .ou-number, .ou-acronym, .ou-actions { width: auto; }
+  .ou-editor-header { align-items: flex-start; padding: 12px; }
+  .ou-rows { padding: 8px; }
+  .ou-row { grid-template-columns: 36px minmax(0, 1fr) 36px; gap: 8px; padding: 10px 8px; }
+  .ou-acronym { grid-column: 2; min-width: 0; }
+  .ou-acronym .ou-cell-label { display: block; }
+  .ou-actions { grid-column: 3; grid-row: 1 / span 2; }
   .ou-select { max-width: none; }
   .ou-hint { width: 100%; margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ou-row { transition: none; }
 }

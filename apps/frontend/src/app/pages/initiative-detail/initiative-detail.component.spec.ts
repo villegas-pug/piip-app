@@ -298,7 +298,7 @@ describe('InitiativeDetailComponent', () => {
     expect(Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('a')).some((link) => link.textContent?.includes('Editar'))).toBe(false);
   });
 
-  it('presenta las unidades en orden confirmado con todas las columnas, también en presentación adaptable', () => {
+  it('presenta las unidades en orden confirmado mediante una lista adaptable', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const units = [
       { id: 102, code: 'UO-102', name: 'Unidad segunda', acronym: 'US', parentId: null, executingUnitId: 1, active: true },
@@ -307,11 +307,11 @@ describe('InitiativeDetailComponent', () => {
     repository.portfolioRecords.update((records) => records.map((record) => record.code === 'I-024-2026' ? { ...record, responsibleUnitReferences: units } : record));
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
     fixture.detectChanges();
-    const table = Array.from<HTMLTableElement>(fixture.nativeElement.querySelectorAll('table')).find((candidate) => candidate.textContent?.includes('Unidad segunda'))!;
-    expect(Array.from(table.querySelectorAll('th')).map((header) => header.textContent?.trim())).toEqual(['Nro', 'Descripción', 'Abreviatura']);
-    expect(Array.from(table.querySelectorAll('tbody tr')).map((row) =>
-      Array.from(row.querySelectorAll('td')).map((cell) => cell.textContent?.trim()),
-    )).toEqual([['1', 'Unidad segunda', 'US'], ['2', 'Unidad primera', 'UP']]);
+    const summary = fixture.nativeElement.querySelector('app-organizational-unit-summary') as HTMLElement;
+    expect(summary.querySelector('table')).toBeNull();
+    expect(Array.from(summary.querySelectorAll('.ou-summary-item')).map((item) => item.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      '1 Descripción Unidad segunda Abreviatura US', '2 Descripción Unidad primera Abreviatura UP',
+    ]);
   });
 
   it('oculta edición cuando la iniciativa aprobada ya tiene proyecto derivado', () => {
