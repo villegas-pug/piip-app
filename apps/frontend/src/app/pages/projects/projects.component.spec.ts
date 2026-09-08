@@ -191,6 +191,26 @@ describe('ProjectsComponent', () => {
     expect(Object.keys(fixture.componentInstance.filters.getRawValue()).sort()).toEqual(['digital', 'search', 'status', 'unit']);
   });
 
+  it('muestra las siglas de todas las Unidades Orgánicas en orden y oculta el campo legado', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const first = { ...repository.organizationalUnits()[0], id: 101, name: 'Primera Unidad Orgánica', acronym: 'UO1' };
+    const second = { ...first, id: 102, name: 'Segunda Unidad Orgánica', acronym: 'UO2' };
+    repository.projects.set([{ ...repository.projects()[0], unit: 'Descripción legado', organizationalUnits: [first, second] }]);
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.detectChanges();
+
+    const cell = (fixture.nativeElement as HTMLElement).querySelector('tbody tr td:nth-child(4)') as HTMLElement;
+    expect(cell.textContent).toContain('UO1');
+    expect(cell.textContent).toContain('UO2');
+    expect(cell.textContent).not.toContain('Primera Unidad Orgánica');
+    expect(cell.textContent).not.toContain('Descripción legado');
+    expect(Array.from(cell.querySelectorAll('.unit-chip')).map((chip) => chip.getAttribute('title'))).toEqual([first.name, second.name]);
+    expect(Array.from(cell.querySelectorAll('.unit-chip')).map((chip) => chip.getAttribute('aria-label'))).toEqual([
+      `Unidad Orgánica: ${first.name} (${first.acronym})`,
+      `Unidad Orgánica: ${second.name} (${second.acronym})`,
+    ]);
+  });
+
   it('presenta carga, vacío y error de Unidades Orgánicas', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const fixture = TestBed.createComponent(ProjectsComponent);

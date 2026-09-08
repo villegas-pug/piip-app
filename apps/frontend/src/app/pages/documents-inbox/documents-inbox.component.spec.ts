@@ -69,12 +69,18 @@ describe('DocumentsInboxComponent', () => {
     fixture.detectChanges();
 
     const cell = (fixture.nativeElement as HTMLElement).querySelector('tbody tr td:nth-child(4)') as HTMLElement;
-    expect(cell.textContent).toContain('1 · UO');
-    expect(cell.textContent).toContain('2 · UO2');
+    expect(cell.textContent).toContain('UO');
+    expect(cell.textContent).toContain('UO2');
+    expect(cell.textContent).not.toContain('1 ·');
+    expect(cell.textContent).not.toContain('2 ·');
     expect(cell.textContent).not.toContain('Unidad Ejecutora legada');
     expect(Array.from(cell.querySelectorAll('.unit-chip')).map((chip) => chip.getAttribute('title'))).toEqual([
       firstUnit.name,
       secondUnit.name,
+    ]);
+    expect(Array.from(cell.querySelectorAll('.unit-chip')).map((chip) => chip.getAttribute('aria-label'))).toEqual([
+      `Unidad Orgánica: ${firstUnit.name} (${firstUnit.acronym})`,
+      `Unidad Orgánica: ${secondUnit.name} (${secondUnit.acronym})`,
     ]);
     expect(cell.querySelector('.unit-stack')?.getAttribute('aria-label')).toBe('Unidades Orgánicas Involucradas');
   });

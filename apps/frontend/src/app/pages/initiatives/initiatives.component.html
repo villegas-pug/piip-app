@@ -37,7 +37,7 @@
 
       <div class="table-scroll">
         <table>
-          <thead><tr><th>Código</th><th>Iniciativa</th><th>Fuente u origen</th><th>Responsable</th><th>Unidad</th><th>Estado</th><th>Actualización</th><th>Acción</th></tr></thead>
+          <thead><tr><th>Código</th><th>Iniciativa</th><th>Fuente u origen</th><th>Responsable</th><th>Unidades Orgánicas</th><th>Estado</th><th>Actualización</th><th>Acción</th></tr></thead>
           <tbody>
             @for (initiative of pagedInitiatives(); track initiative.code) {
               <tr>
@@ -45,7 +45,17 @@
                 <td class="initiative-name">{{ initiative.name }}</td>
                 <td><span class="clamp" [title]="initiative.source">{{ initiative.source }}</span></td>
                 <td>{{ initiative.responsible }}<small>{{ initiative.role }}</small></td>
-                <td><span class="unit-stack" [attr.aria-label]="'Unidades Orgánicas Involucradas: ' + initiative.unit">@for (unit of initiative.unit.split(','); track unit) {<span class="unit-chip">{{ unit.trim() }}</span>}</span></td>
+                <td>
+                  @if (initiative.organizationalUnits?.length) {
+                    <span class="unit-stack" role="list" [attr.aria-label]="'Unidades Orgánicas Involucradas de ' + initiative.code">
+                      @for (unit of initiative.organizationalUnits; track unit.id) {
+                        <span class="unit-chip" role="listitem" [attr.title]="unit.name" [attr.aria-label]="'Unidad Orgánica: ' + unit.name + ' (' + unit.acronym + ')'">{{ unit.acronym }}</span>
+                      }
+                    </span>
+                  } @else {
+                    <span class="unit-empty">Sin Unidades Orgánicas registradas</span>
+                  }
+                </td>
                 <td><span class="status-tag" [attr.data-tone]="statusVisual(initiative.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(initiative.status).icon }}</mat-icon><span>{{ initiative.status }}</span></span></td>
                 <td>{{ initiative.updatedAt }}</td>
                 <td>

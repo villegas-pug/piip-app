@@ -35,8 +35,8 @@
               <td>
                 @if (dossier.organizationalUnits?.length) {
                   <span class="unit-stack" role="list" aria-label="Unidades Orgánicas Involucradas">
-                    @for (unit of dossier.organizationalUnits; track unit.id; let index = $index) {
-                      <span class="unit-chip" role="listitem" [attr.title]="unit.name" [attr.aria-label]="'Nro ' + (index + 1) + ': ' + unit.name + ' (' + unit.acronym + ')'">{{ index + 1 }} · {{ unit.acronym }}</span>
+                    @for (unit of dossier.organizationalUnits; track unit.id) {
+                      <span class="unit-chip" role="listitem" [attr.title]="unit.name" [attr.aria-label]="'Unidad Orgánica: ' + unit.name + ' (' + unit.acronym + ')'">{{ unit.acronym }}</span>
                     }
                   </span>
                 } @else {
