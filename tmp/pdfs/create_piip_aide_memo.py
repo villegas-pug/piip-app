@@ -6,7 +6,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 
-OUTPUT = Path("output/pdf/ayuda-memoria-visual-piip-midagri.pdf")
+OUTPUT = Path("output/pdf/ayuda-memoria-visual-piip-midagri-final.pdf")
 PAGE_W, PAGE_H = A4
 
 NAVY = HexColor("#103B5C")
@@ -125,17 +125,23 @@ def flow_step(c, index, title, caption, y, color):
     c.setFillColor(color)
     c.circle(x, y + 12, 15, fill=1, stroke=0)
     centered(c, str(index), x, y + 8, 10, white, "Helvetica-Bold")
-    rounded(c, 78, y - 8, 440, 40, white, 9, LINE)
-    text(c, title, 91, y + 13, 9.6, INK, "Helvetica-Bold")
-    text(c, caption, 91, y, 8.1, MUTED)
+    rounded(c, 78, y - 7, 440, 34, white, 9, LINE)
+    text(c, title, 91, y + 10, 9.3, INK, "Helvetica-Bold")
+    text(c, caption, 91, y - 1, 7.7, MUTED)
     if index < 5:
         c.setStrokeColor(LINE)
         c.setLineWidth(2)
-        c.line(x, y - 8, x, y - 22)
+        c.line(x, y - 7, x, y - 18)
         c.setFillColor(LINE)
         c.setStrokeColor(LINE)
-        c.line(x - 3, y - 18, x, y - 22)
-        c.line(x + 3, y - 18, x, y - 22)
+        c.line(x - 3, y - 14, x, y - 18)
+        c.line(x + 3, y - 14, x, y - 18)
+
+
+def status_pill(c, x, y, w, title, body, accent):
+    rounded(c, x, y, w, 24, white, 7, LINE)
+    text(c, title, x + 8, y + 14, 6.1, accent, "Helvetica-Bold")
+    paragraph(c, body, x + 8, y + 6, w - 16, 6.1, 6.7, INK)
 
 
 def draw_pdf():
@@ -160,69 +166,78 @@ def draw_pdf():
     text(c, "Portafolio Institucional de MIDAGRI", 106, PAGE_H - 68, 15, white, "Helvetica-Bold")
     text(c, "Registra y organiza iniciativas y proyectos; las decisiones las toman las personas.", 36, PAGE_H - 94, 9.0, HexColor("#D7EAF6"))
 
-    card(c, 36, 600, 169, 97, "¿Qué es?", "Una plataforma que reúne la información de iniciativas y proyectos del portafolio institucional.", BLUE, icon_folder)
-    card(c, 220, 600, 169, 97, "¿Para qué sirve?", "Para contar con información ordenada, consultable y útil para dar seguimiento.", TEAL, icon_target)
-    comparison_card(c, 404, 600, 155, 97)
+    rounded(c, 36, 678, 523, 50, white, 8, HexColor("#D7EAF6"))
+    text(c, "CÓMO INICIAR", 49, 716, 6.9, TEAL, "Helvetica-Bold")
+    paragraph(c, "Buenos días/tardes. En esta oportunidad presentaremos el avance del proyecto PIIP, el Portafolio Institucional de MIDAGRI. Actualmente, la información se viene consolidando de manera transitoria en un Excel. Con PIIP buscamos organizarla en una plataforma que facilite el registro, la consulta, el seguimiento y la trazabilidad de iniciativas y proyectos. Primero revisaremos su propósito y luego veremos su recorrido principal en una demostración.", 49, 705, 490, 6.35, 6.8, INK)
 
-    text(c, "¿QUÉ PUEDE HACER LA PERSONA USUARIA?", 36, 575, 10.5, NAVY, "Helvetica-Bold")
+    card(c, 36, 590, 169, 97, "¿Qué es?", "Una plataforma para reunir las iniciativas y proyectos del portafolio institucional.", BLUE, icon_folder)
+    card(c, 220, 590, 169, 97, "¿Para qué sirve?", "Para consultar la información y darle seguimiento con mayor orden.", TEAL, icon_target)
+    comparison_card(c, 404, 590, 155, 97)
+
+    text(c, "¿QUÉ PUEDE HACER LA PERSONA USUARIA?", 36, 565, 10.5, NAVY, "Helvetica-Bold")
     actions = [
         ("Registrar", "iniciativas y proyectos"),
-        ("Cargar", "la información y ficha inicial"),
+        ("Cargar", "información y documentos"),
         ("Consultar", "el portafolio y sus registros"),
         ("Dar seguimiento", "a decisiones, tareas y avance"),
     ]
     x = 36
     colors = [BLUE, TEAL, GREEN, GOLD]
     for i, (verb, detail) in enumerate(actions):
-        rounded(c, x, 530, 125, 32, PALE_BLUE if i % 2 == 0 else PALE_GREEN, 8)
+        rounded(c, x, 520, 125, 32, PALE_BLUE if i % 2 == 0 else PALE_GREEN, 8)
         c.setFillColor(colors[i])
-        c.circle(x + 14, 546, 5, fill=1, stroke=0)
-        text(c, verb, x + 26, 548, 8.3, INK, "Helvetica-Bold")
-        text(c, detail, x + 26, 537, 7.2, MUTED)
+        c.circle(x + 14, 536, 5, fill=1, stroke=0)
+        text(c, verb, x + 26, 538, 8.3, INK, "Helvetica-Bold")
+        text(c, detail, x + 26, 527, 7.2, MUTED)
         x += 133
 
-    text(c, "FLUJO GENERAL DE USO", 36, 502, 10.5, NAVY, "Helvetica-Bold")
-    text(c, "Cada paso tiene un propósito claro. La aprobación y el proyecto vinculado son acciones separadas.", 36, 488, 8.2, MUTED)
+    text(c, "FLUJO GENERAL DE USO", 36, 492, 10.5, NAVY, "Helvetica-Bold")
+    text(c, "Cada paso tiene un propósito claro. La aprobación y el proyecto vinculado son acciones separadas.", 36, 478, 8.2, MUTED)
     steps = [
-        ("Registrar iniciativa", "Completar la información y adjuntar la ficha inicial.", BLUE),
-        ("Queda presentada", "La iniciativa se incorpora al portafolio con su propio código.", TEAL),
+        ("Registrar iniciativa", "Completar la información y adjuntar la ficha que la sustenta.", BLUE),
+        ("Queda presentada", "La iniciativa entra al portafolio y recibe su propio código.", TEAL),
         ("Registrar decisión", "La decisión se registra de forma separada.", GOLD),
-        ("Iniciativa aprobada", "La iniciativa queda lista para originar un proyecto, si corresponde.", GREEN),
-        ("Crear proyecto vinculado", "Se registra por separado, con código y expediente propios.", NAVY),
+        ("Iniciativa aprobada", "Si corresponde, puede dar origen a un proyecto.", GREEN),
+        ("Crear proyecto vinculado", "Se registra por separado y tiene sus propios documentos.", NAVY),
     ]
-    y = 435
+    y = 417
     for idx, (title, caption, color) in enumerate(steps, start=1):
         flow_step(c, idx, title, caption, y, color)
-        y -= 51
+        y -= 42
 
-    rounded(c, 36, 143, 255, 81, PALE, 12, LINE)
-    text(c, "EJEMPLO SIMPLE", 51, 204, 10.2, NAVY, "Helvetica-Bold")
-    paragraph(c, "María registra una iniciativa para mejorar un servicio. Adjunta la ficha y esta aparece como Presentado. Luego se registra la decisión. Si se aprueba, María puede crear un proyecto vinculado. Ambos registros quedan organizados y pueden consultarse en el portafolio.", 51, 189, 224, 8.5, 10.5, INK)
+    text(c, "¿QUÉ OCURRE CON LOS ESTADOS?", 36, 204, 9.2, NAVY, "Helvetica-Bold")
+    status_pill(c, 36, 174, 253, "INICIATIVA CERRADA", "No Admisible o Archivada: la iniciativa no continúa.", TEAL)
+    status_pill(c, 306, 174, 253, "INICIATIVA VINCULADA", "Con proyecto vinculado, su estado ya no cambia.", BLUE)
+    status_pill(c, 36, 146, 253, "PROYECTO PUEDE CONTINUAR", "Suspendido o Producto no aprobado: puede retomarse o cancelarse.", GOLD)
+    status_pill(c, 306, 146, 253, "PROYECTO CERRADO", "Cancelado o Finalizado: el proyecto no se reabre.", GREEN)
 
-    rounded(c, 306, 143, 253, 81, NAVY, 12)
-    text(c, "BENEFICIOS PARA MIDAGRI", 321, 204, 10.2, white, "Helvetica-Bold")
+    rounded(c, 36, 86, 255, 50, PALE, 12, LINE)
+    text(c, "EJEMPLO SIMPLE", 51, 120, 9.0, NAVY, "Helvetica-Bold")
+    paragraph(c, "María registra una iniciativa y adjunta su ficha. Queda Presentada. Si se aprueba, puede crearse un proyecto vinculado. Ambos se consultan por separado.", 51, 108, 224, 7.1, 8.3, INK)
+
+    rounded(c, 306, 86, 253, 50, NAVY, 12)
+    text(c, "BENEFICIOS PARA MIDAGRI", 321, 120, 9.0, white, "Helvetica-Bold")
     benefits = ["Información en un solo lugar", "Consulta y seguimiento más simples", "Mejor trazabilidad de las decisiones"]
-    yy = 188
+    yy = 111
     for benefit in benefits:
         c.setFillColor(TEAL)
         c.circle(325, yy + 2, 3, fill=1, stroke=0)
-        text(c, benefit, 335, yy - 1, 8.4, white)
-        yy -= 15
+        text(c, benefit, 335, yy - 1, 7.0, white)
+        yy -= 8
 
-    rounded(c, 36, 42, 523, 82, white, 12, LINE)
+    rounded(c, 36, 21, 523, 57, white, 12, LINE)
     c.setFillColor(BLUE)
-    c.circle(57, 99, 12, fill=1, stroke=0)
-    icon_user(c, 57, 96, white)
-    text(c, "CÓMO EXPLICARLO EN 1 MINUTO", 78, 102, 10.4, NAVY, "Helvetica-Bold")
-    speech = ("PIIP es el Portafolio Institucional de MIDAGRI. Nos ayuda a reunir en un solo lugar "
-              "la información de iniciativas y proyectos, para que sea más fácil registrarla, consultarla y darle seguimiento. "
-              "Una persona registra una iniciativa y esta queda presentada en el portafolio. Después se registra la decisión. "
-              "Si la iniciativa es aprobada y corresponde continuar, se crea un proyecto vinculado, pero como un registro separado. "
-              "Así, MIDAGRI cuenta con información más ordenada, trazable y disponible para el seguimiento.")
-    paragraph(c, speech, 78, 84, 463, 8.2, 10.0, INK)
+    c.circle(57, 57, 11, fill=1, stroke=0)
+    icon_user(c, 57, 54, white)
+    text(c, "CÓMO EXPLICARLO EN 1 MINUTO", 78, 60, 9.5, NAVY, "Helvetica-Bold")
+    speech = ("PIIP reúne en un solo lugar la información de iniciativas y proyectos de MIDAGRI. Primero registramos una iniciativa "
+              "y sus documentos. La iniciativa queda Presentada y la decisión se registra por separado. Si se aprueba y corresponde "
+              "continuar, se crea un proyecto vinculado, con información y documentos propios. Así, el portafolio queda más ordenado "
+              "y es más fácil de consultar y seguir.")
+    paragraph(c, speech, 78, 45, 463, 7.1, 8.3, INK)
 
-    text(c, "PIIP - Portafolio Institucional de MIDAGRI", 36, 20, 7.2, MUTED)
-    text(c, "Ayuda memoria para exposición", 430, 20, 7.2, MUTED)
+    text(c, "PIIP - Portafolio Institucional de MIDAGRI", 36, 10, 7.2, MUTED)
+    text(c, "Ayuda memoria para exposición", 430, 10, 7.2, MUTED)
     c.showPage()
     c.save()
 

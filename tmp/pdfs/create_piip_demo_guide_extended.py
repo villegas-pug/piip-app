@@ -6,7 +6,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 
-OUTPUT = Path("output/pdf/guion-demostracion-en-vivo-piip.pdf")
+OUTPUT = Path("output/pdf/guion-demostracion-en-vivo-piip-final.pdf")
 PAGE_W, PAGE_H = A4
 NAVY = HexColor("#103B5C")
 BLUE = HexColor("#1E73B7")
@@ -69,27 +69,47 @@ def check(c, x, y, label, color):
 
 
 def step(c, number, title, timing, show, say, x, y, color):
-    rounded(c, x, y, 523, 62, white, 9, LINE)
+    rounded(c, x, y, 523, 49, white, 9, LINE)
     c.setFillColor(color)
-    c.circle(x + 20, y + 41, 13, fill=1, stroke=0)
-    centered(c, str(number), x + 20, y + 37, 9.4, white, "Helvetica-Bold")
-    text(c, title, x + 43, y + 42, 9.8, INK, "Helvetica-Bold")
-    rounded(c, x + 176, y + 35, 45, 15, PALE_BLUE, 8)
-    centered(c, timing, x + 198.5, y + 40, 6.8, BLUE, "Helvetica-Bold")
-    text(c, "MUESTRA", x + 43, y + 25, 6.5, color, "Helvetica-Bold")
-    paragraph(c, show, x + 98, y + 25, 397, 7.4, 8.2, INK)
-    text(c, "DI", x + 43, y + 10, 6.5, color, "Helvetica-Bold")
-    paragraph(c, f'“{say}”', x + 61, y + 10, 434, 7.4, 8.2, MUTED)
+    c.circle(x + 20, y + 32, 12, fill=1, stroke=0)
+    centered(c, str(number), x + 20, y + 28, 8.8, white, "Helvetica-Bold")
+    text(c, title, x + 42, y + 33, 9.1, INK, "Helvetica-Bold")
+    rounded(c, x + 176, y + 26, 45, 14, PALE_BLUE, 8)
+    centered(c, timing, x + 198.5, y + 30.5, 6.4, BLUE, "Helvetica-Bold")
+    text(c, "MUESTRA", x + 42, y + 18, 6.0, color, "Helvetica-Bold")
+    paragraph(c, show, x + 98, y + 18, 397, 6.8, 7.4, INK)
+    text(c, "DILO ASÍ", x + 42, y + 6, 5.6, color, "Helvetica-Bold")
+    paragraph(c, f'“{say}”', x + 78, y + 6, 417, 6.8, 7.3, MUTED)
 
 
-def state_card(c, x, title, accent, lines):
-    rounded(c, x, 105, 253, 107, white, 10, LINE)
-    text(c, title, x + 15, 193, 8.8, accent, "Helvetica-Bold")
-    y = 178
-    for label, description in lines:
-        text(c, label, x + 15, y, 7.2, INK, "Helvetica-Bold")
-        paragraph(c, description, x + 15, y - 10, 221, 6.9, 7.7, MUTED)
-        y -= 19
+def state_table(c):
+    x, y, w, h = 36, 127, 523, 77
+    rounded(c, x, y, w, h, white, 10, LINE)
+    text(c, "INICIATIVA", x + 15, y + h - 14, 7.0, TEAL, "Helvetica-Bold")
+    initiative_lines = (
+        ("Presentado", "Espera una decisión."),
+        ("Iniciativa aprobada", "Puede originar un proyecto."),
+        ("No Admisible / Iniciativa archivada", "Se cierra."),
+    )
+    yy = y + h - 27
+    for label, description in initiative_lines:
+        text(c, label, x + 15, yy, 6.2, INK, "Helvetica-Bold")
+        text(c, description, x + 205, yy, 6.2, MUTED)
+        yy -= 13
+
+    project_x = x + 270
+    text(c, "PROYECTO", project_x + 15, y + h - 14, 7.0, GREEN, "Helvetica-Bold")
+    project_lines = (
+        ("Proyecto en ejecución", "En curso."),
+        ("Producto aprobado", "Aceptado; sigue el cierre."),
+        ("Producto no aprobado / Suspendido", "Puede continuar o cancelarse."),
+        ("Cancelado / Finalizado", "Se cierra."),
+    )
+    yy = y + h - 27
+    for label, description in project_lines:
+        text(c, label, project_x + 15, yy, 6.2, INK, "Helvetica-Bold")
+        text(c, description, project_x + 170, yy, 6.2, MUTED)
+        yy -= 11
 
 
 def draw_pdf():
@@ -109,12 +129,12 @@ def draw_pdf():
     rounded(c, 36, PAGE_H - 42, 111, 20, TEAL, 10)
     centered(c, "GUION PERSONAL", 91.5, PAGE_H - 36, 7, white, "Helvetica-Bold")
     text(c, "PIIP", 36, PAGE_H - 73, 25, white, "Helvetica-Bold")
-    text(c, "Demostración en vivo - 5 a 7 minutos", 101, PAGE_H - 64, 14, white, "Helvetica-Bold")
+    text(c, "Demostración en vivo - 8 a 10 minutos", 101, PAGE_H - 64, 14, white, "Helvetica-Bold")
     text(c, "Muestra el valor del registro, los expedientes y los estados sin cambiar decisiones.", 36, PAGE_H - 88, 8.2, HexColor("#D7EAF6"))
 
     rounded(c, 36, 684, 523, 42, PALE, 9, LINE)
-    text(c, "PASO 0 - CONTEXTO", 51, 710, 7.4, GOLD, "Helvetica-Bold")
-    paragraph(c, "Hoy el portafolio se consolida en un Excel transitorio. PIIP organiza este registro en una sola plataforma para facilitar su consulta y seguimiento.", 51, 697, 486, 7.9, 9.0, INK)
+    text(c, "PASO 0 - APERTURA Y CONTEXTO", 51, 710, 7.4, GOLD, "Helvetica-Bold")
+    paragraph(c, "Buenos días/tardes. Presentaremos el avance de PIIP. Hoy la información se reúne de forma transitoria en un Excel; PIIP busca organizar iniciativas y proyectos en una plataforma para consultarlos y darles seguimiento.", 51, 697, 486, 7.9, 9.0, INK)
 
     text(c, "ANTES DE EMPEZAR", 36, 662, 9.7, NAVY, "Helvetica-Bold")
     for index, label in enumerate(("Aplicación abierta", "Sesión iniciada por el expositor", "Iniciativa y proyecto de demostración", "Archivos de prueba sin datos sensibles")):
@@ -123,24 +143,15 @@ def draw_pdf():
     text(c, "RUTA DE DEMOSTRACIÓN", 36, 593, 9.7, NAVY, "Helvetica-Bold")
     text(c, "Muestra una idea por pantalla. Los estados se explican; no se modifican durante la demo.", 36, 581, 7.7, MUTED)
 
-    step(c, 1, "Portafolio y estados", "50 s", "El listado y las etiquetas de iniciativa y proyecto.", "Cada estado indica en qué momento del recorrido se encuentra un registro.", 36, 510, BLUE)
-    step(c, 2, "Nueva iniciativa y ficha", "75 s", "El formulario y la carga de la ficha inicial de prueba.", "La ficha sustenta la iniciativa antes de incorporarla al portafolio.", 36, 440, TEAL)
-    step(c, 3, "Expediente de iniciativa", "60 s", "El detalle y sus documentos de iniciativa.", "La iniciativa tiene expediente propio para su ficha, evaluación y decisión.", 36, 370, GOLD)
-    step(c, 4, "Proyecto y su expediente", "90 s", "Un proyecto existente y su documento de prueba.", "El proyecto tiene código y expediente propios; no copia los documentos de la iniciativa.", 36, 300, GREEN)
-    step(c, 5, "Cierre del recorrido", "30 s", "El vínculo entre la iniciativa y el proyecto consultable.", "Ambos registros se relacionan, pero cada uno conserva sus documentos y seguimiento.", 36, 230, NAVY)
+    step(c, 1, "Inicio: visión del portafolio", "65 s", "Inicio: UE activa, registros, filtros, estados y notificaciones.", "Esta es la página de Inicio. Aquí vemos, en un solo lugar, los registros y su situación actual.", 36, 528, BLUE)
+    step(c, 2, "Registrar una iniciativa", "90 s", "Iniciativas > Nueva iniciativa: datos principales y ficha inicial.", "Desde aquí registramos una nueva iniciativa y adjuntamos la ficha que la sustenta.", 36, 472, TEAL)
+    step(c, 3, "Documentos y expediente", "100 s", "Documentos: bandeja y expediente documental de la iniciativa.", "Aquí revisamos los archivos cargados o pendientes. Estos conteos son informativos y no indican, por sí solos, una obligación.", 36, 416, GOLD)
+    step(c, 4, "Proyecto y expediente propio", "100 s", "Proyectos: proyecto de demostración y sus documentos.", "El proyecto tiene su propia información y documentos. Los de la iniciativa no se copian aquí.", 36, 360, GREEN)
+    step(c, 5, "Auditoría", "80 s", "Auditoría: filtros e historial de eventos del expediente.", "Aquí revisamos qué ocurrió y quién realizó cada acción registrada. Esta vista es para Administrador PIIP.", 36, 304, GOLD)
+    step(c, 6, "Cierre del recorrido", "35 s", "Relación entre la iniciativa, el proyecto y sus expedientes.", "PIIP organiza la información, separa los documentos y deja evidencia de las acciones realizadas.", 36, 248, NAVY)
 
-    text(c, "ESTADOS EN SIMPLE", 36, 214, 9.5, NAVY, "Helvetica-Bold")
-    state_card(c, 36, "INICIATIVA", TEAL, (
-        ("Presentado", "Registrada y pendiente de decisión."),
-        ("Iniciativa aprobada", "Puede originar un proyecto vinculado."),
-        ("No Admisible / Archivada", "Cierran el recorrido de la iniciativa."),
-    ))
-    state_card(c, 306, "PROYECTO", GREEN, (
-        ("Proyecto en ejecución", "Trabajo y seguimiento en curso."),
-        ("Producto aprobado", "Resultado aceptado antes del cierre."),
-        ("No aprobado / Suspendido", "Requiere continuidad, ajuste o cancelación."),
-        ("Cancelado / Finalizado", "Cierran el proyecto."),
-    ))
+    text(c, "ESTADOS: SOLO EXPLICAR", 36, 214, 9.5, NAVY, "Helvetica-Bold")
+    state_table(c)
 
     rounded(c, 36, 51, 523, 35, PALE_BLUE, 9, LINE)
     text(c, "PLAN DE RESPALDO", 51, 70, 7.1, BLUE, "Helvetica-Bold")
