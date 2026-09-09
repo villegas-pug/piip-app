@@ -66,6 +66,30 @@ describe('InitiativeApprovalDialogComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Crear proyecto ahora');
   });
 
+  it('devuelve la intención de crear el proyecto sin navegar desde el diálogo', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    vi.spyOn(repository, 'approveInitiative');
+    const fixture = TestBed.createComponent(InitiativeApprovalDialogComponent);
+    const component = fixture.componentInstance;
+
+    await component.approve();
+    component.createProject();
+
+    expect(close).toHaveBeenCalledWith({ approved: true, nextAction: 'create-project' });
+  });
+
+  it('cierra hacia el detalle sin activar la creación del proyecto', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    vi.spyOn(repository, 'approveInitiative');
+    const fixture = TestBed.createComponent(InitiativeApprovalDialogComponent);
+    const component = fixture.componentInstance;
+
+    await component.approve();
+    component.close();
+
+    expect(close).toHaveBeenCalledWith({ approved: true, nextAction: 'detail' });
+  });
+
   it('mantiene el diálogo abierto y muestra el error de la operación', async () => {
     const repository = TestBed.inject(PiipMockRepository);
     vi.spyOn(repository, 'approveInitiative').mockRejectedValue(new Error('Conflicto de versión'));

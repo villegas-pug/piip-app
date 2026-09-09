@@ -48,9 +48,13 @@ describe('DerivedProjectReviewDialogComponent', () => {
     expect(content).toContain('Solución por definir');
     expect(content).toContain('Unidades Orgánicas Involucradas');
     const units = Array.from<Element>(fixture.nativeElement.querySelectorAll('.ou-summary-item'));
-    expect(units.map((item) => item.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      '1 Descripción Oficina de Planeamiento y Modernización Abreviatura OPM',
-      '2 Descripción Oficina de Innovación Abreviatura OIN',
+    expect(units.map((item) => ({
+      number: item.querySelector('.ou-summary-number')?.getAttribute('aria-label'),
+      description: item.querySelector('.ou-summary-description strong')?.textContent?.trim(),
+      acronym: item.querySelector('.ou-summary-acronym > span:last-child')?.textContent?.trim(),
+    }))).toEqual([
+      { number: 'Nro 1', description: 'Oficina de Planeamiento y Modernización', acronym: 'OPM' },
+      { number: 'Nro 2', description: 'Oficina de Innovación', acronym: 'OIN' },
     ]);
     expect(fixture.nativeElement.querySelector('table')).toBeNull();
     expect(content).toContain('Sin información registrada');

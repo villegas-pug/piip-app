@@ -5,7 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { AuditEvent } from '../../core/piip.models';
+import { AuditAccess, AuditEvent } from '../../core/piip.models';
 import { AuditEventDetailDialogComponent } from './audit-event-detail-dialog.component';
 import { PresentedAuditEvent, presentAuditEvent } from './audit-event.presenter';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
@@ -44,6 +44,10 @@ export class AuditComponent {
   readonly deniedAccesses = computed(() => this.repository.auditAccesses().filter((access) => access.status === 401 || access.status === 403).length);
   readonly deniedAccessDetails = computed(() => this.repository.auditAccesses().filter((access) => access.status === 401 || access.status === 403));
   readonly failedAccesses = computed(() => this.repository.auditAccesses().filter((access) => access.status >= 500).length);
+  readonly filteredAccesses = computed(() => {
+    const record = this.filterValue().record;
+    return this.repository.auditAccesses().filter((access) => !record || access.recordCode === record);
+  });
   readonly presentedEvents = computed(() => this.filteredEvents().map(presentAuditEvent));
   readonly currentPage = computed(() => clampPageIndex(this.pageIndex(), this.presentedEvents().length));
   readonly pagedEvents = computed(() => paginateItems(this.presentedEvents(), this.currentPage()));
@@ -62,6 +66,12 @@ export class AuditComponent {
       maxWidth: 'calc(100vw - 32px)',
       autoFocus: 'first-heading',
     });
+  }
+
+  accessTimestamp(access: AuditAccess): string {
+    if (!access.occurredAt) return 'Fecha no registrada';
+    const date = new Date(access.occurredAt);
+    return Number.isNaN(date.getTime()) ? 'Fecha no registrada' : date.toLocaleString('es-PE');
   }
 
   private eventCategory(event: string): 'Creación' | 'Documento' | 'Transición' {

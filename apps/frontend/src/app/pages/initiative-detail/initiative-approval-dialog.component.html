@@ -8,7 +8,7 @@
       <p class="success-copy">La iniciativa conserva su expediente y ahora puede originar un proyecto derivado.</p>
       <div class="success-actions">
         <button class="secondary-button" type="button" (click)="close()">Volver al detalle</button>
-        <a class="primary-button gold" [routerLink]="['/proyectos/nuevo/derivado', data.initiativeCode]" [mat-dialog-close]="{ approved: true }"><mat-icon aria-hidden="true">account_tree</mat-icon>Crear proyecto ahora</a>
+        <button class="primary-button gold" type="button" (click)="createProject()"><mat-icon aria-hidden="true">account_tree</mat-icon>Crear proyecto ahora</button>
       </div>
     </div>
   } @else {

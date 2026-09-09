@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { INITIATIVE_STATUSES, INITIATIVE_STATUS_TRANSITIONS, type InitiativeStatus } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
@@ -32,6 +32,7 @@ interface ActivityStatusChange {
 })
 export class InitiativeDetailComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   readonly repository = inject(PIIP_REPOSITORY);
@@ -99,7 +100,12 @@ export class InitiativeDetailComponent {
         approvalDocuments: this.approvalDocuments(),
       },
     }).afterClosed().subscribe((result: InitiativeApprovalDialogResult | undefined) => {
-      if (result?.approved) this.snackBar.open('Iniciativa aprobada. El proyecto aún no ha sido creado.', 'Cerrar', { duration: 3800 });
+      if (!result?.approved) return;
+      if (result.nextAction === 'create-project') {
+        void this.router.navigate(['/proyectos/nuevo/derivado', detail.initiative.code]);
+        return;
+      }
+      this.snackBar.open('Iniciativa aprobada. El proyecto aún no ha sido creado.', 'Cerrar', { duration: 3800 });
     });
   }
 

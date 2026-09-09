@@ -50,5 +50,33 @@
         <div class="demo-callout"><mat-icon>info_outline</mat-icon>El checksum documental está disponible; firma digital y antimalware permanecen fuera de esta versión.</div>
       </aside>
     </div>
+
+    <article class="panel access-panel" aria-labelledby="access-log-title">
+      <header class="access-panel-header">
+        <div><h2 id="access-log-title">Detalle de accesos HTTP</h2><p>Metadatos técnicos de las solicitudes registradas para el ámbito visible. No se almacenan cuerpos, tokens ni contenido documental.</p></div>
+        <span class="access-count">{{ filteredAccesses().length }} solicitudes</span>
+      </header>
+      <div class="access-table-wrapper">
+        <table class="access-table">
+          <caption class="visually-hidden">Solicitudes HTTP auditadas</caption>
+          <thead><tr><th scope="col">Fecha y hora</th><th scope="col">Expediente</th><th scope="col">Método</th><th scope="col">Ruta</th><th scope="col">HTTP</th><th scope="col">Correlation ID</th><th scope="col">Duración</th></tr></thead>
+          <tbody>
+            @for (access of filteredAccesses(); track access.correlationId) {
+              <tr>
+                <td data-label="Fecha y hora">{{ accessTimestamp(access) }}</td>
+                <td data-label="Expediente">{{ access.recordCode || '—' }}</td>
+                <td data-label="Método"><code>{{ access.method }}</code></td>
+                <td class="access-path" data-label="Ruta"><code>{{ access.path }}</code></td>
+                <td data-label="HTTP"><span class="http-status" [attr.data-status]="access.status">{{ access.status }}</span></td>
+                <td class="access-correlation" data-label="Correlation ID"><code>{{ access.correlationId }}</code></td>
+                <td data-label="Duración">{{ access.durationMs }} ms</td>
+              </tr>
+            } @empty {
+              <tr><td class="access-empty" colspan="7">No existen accesos para el expediente seleccionado.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
   }
 </section>

@@ -139,8 +139,13 @@ describe('ProjectDetailComponent', () => {
     fixture.detectChanges();
     const summary = fixture.nativeElement.querySelector('app-organizational-unit-summary') as HTMLElement;
     expect(summary.querySelector('table')).toBeNull();
-    expect(Array.from(summary.querySelectorAll('.ou-summary-item')).map((item) => item.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      '1 Descripción Unidad dos Abreviatura UD', '2 Descripción Unidad uno Abreviatura UU',
+    expect(Array.from(summary.querySelectorAll('.ou-summary-item')).map((item) => ({
+      number: item.querySelector('.ou-summary-number')?.getAttribute('aria-label'),
+      description: item.querySelector('.ou-summary-description strong')?.textContent?.trim(),
+      acronym: item.querySelector('.ou-summary-acronym > span:last-child')?.textContent?.trim(),
+    }))).toEqual([
+      { number: 'Nro 1', description: 'Unidad dos', acronym: 'UD' },
+      { number: 'Nro 2', description: 'Unidad uno', acronym: 'UU' },
     ]);
   });
 

@@ -70,4 +70,36 @@ describe('AuditComponent', () => {
     const reasons = Array.from(fixture.nativeElement.querySelectorAll('.access-reasons li')).map((item) => (item as Element).textContent?.trim());
     expect(reasons).toEqual(['info_outline/admin/users: FORBIDDEN_SCOPE', 'info_outline/admin/users: Motivo no disponible']);
   });
+
+  it('filtra y presenta los metadatos técnicos de acceso por expediente', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.auditAccesses.set([
+      { correlationId: 'corr-visible', occurredAt: '2026-08-23T12:00:00Z', subject: 'subject', roles: '', method: 'POST', path: '/initiatives/I-024-2026/approval', status: 200, recordCode: 'I-024-2026', durationMs: 31, safeReason: null },
+      { correlationId: 'corr-other', occurredAt: '2026-08-23T12:01:00Z', subject: 'subject', roles: '', method: 'GET', path: '/projects', status: 200, recordCode: 'P-005-2026', durationMs: 12, safeReason: null },
+    ]);
+    const fixture = TestBed.createComponent(AuditComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    component.filters.patchValue({ record: 'I-024-2026' });
+    fixture.detectChanges();
+
+    expect(component.filteredAccesses().map((access) => access.correlationId)).toEqual(['corr-visible']);
+    expect(fixture.nativeElement.querySelector('.access-table')?.textContent).toContain('/initiatives/I-024-2026/approval');
+    expect(fixture.nativeElement.querySelector('.access-table')?.textContent).not.toContain('corr-other');
+  });
+
+  it('presenta una fecha legible y evita mostrar contenido sensible', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(AuditComponent);
+    const component = fixture.componentInstance;
+    const access = { correlationId: 'corr-1', occurredAt: '2026-08-23T12:00:00Z', subject: 'subject', roles: '', method: 'GET', path: '/audit/accesses', status: 200, durationMs: 10, safeReason: null };
+
+    repository.auditAccesses.set([access]);
+    fixture.detectChanges();
+
+    expect(component.accessTimestamp(access)).not.toBe('Fecha no registrada');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Authorization');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('/audit/accesses');
+  });
 });

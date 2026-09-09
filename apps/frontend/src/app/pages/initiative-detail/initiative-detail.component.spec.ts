@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { PiipMockRepository } from '../../core/piip-mock.repository';
 import { AuditEvent } from '../../core/piip.models';
@@ -13,11 +13,13 @@ import { InitiativeStatusTransitionDialogComponent } from './initiative-status-t
 describe('InitiativeDetailComponent', () => {
   let approvalAction = false;
   const open = vi.fn();
+  const snackBarOpen = vi.fn();
   const paramMap = convertToParamMap({ code: 'I-024-2026' });
 
   beforeEach(async () => {
     approvalAction = false;
     open.mockReset();
+    snackBarOpen.mockReset();
     open.mockReturnValue({ afterClosed: () => of(undefined) });
     await TestBed.configureTestingModule({
       imports: [InitiativeDetailComponent],
@@ -26,7 +28,7 @@ describe('InitiativeDetailComponent', () => {
         PiipMockRepository,
         { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository },
         { provide: MatDialog, useValue: { open } },
-        { provide: MatSnackBar, useValue: { open: vi.fn() } },
+        { provide: MatSnackBar, useValue: { open: snackBarOpen } },
         { provide: ActivatedRoute, useValue: {
           paramMap: of(paramMap),
           snapshot: {
@@ -75,6 +77,18 @@ describe('InitiativeDetailComponent', () => {
     fixture.detectChanges();
 
     expect(open).toHaveBeenCalledWith(InitiativeApprovalDialogComponent, expect.any(Object));
+  });
+
+  it('navigates after the approval dialog closes with the create-project intent', () => {
+    open.mockReturnValue({ afterClosed: () => of({ approved: true, nextAction: 'create-project' }) });
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const fixture = TestBed.createComponent(InitiativeDetailComponent);
+    fixture.detectChanges();
+
+    fixture.componentInstance.openApproval();
+
+    expect(navigate).toHaveBeenCalledWith(['/proyectos/nuevo/derivado', 'I-024-2026']);
+    expect(snackBarOpen).not.toHaveBeenCalled();
   });
 
   it('hides approval when Administrator and record coverage come from different grants', () => {
@@ -309,8 +323,13 @@ describe('InitiativeDetailComponent', () => {
     fixture.detectChanges();
     const summary = fixture.nativeElement.querySelector('app-organizational-unit-summary') as HTMLElement;
     expect(summary.querySelector('table')).toBeNull();
-    expect(Array.from(summary.querySelectorAll('.ou-summary-item')).map((item) => item.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
-      '1 Descripción Unidad segunda Abreviatura US', '2 Descripción Unidad primera Abreviatura UP',
+    expect(Array.from(summary.querySelectorAll('.ou-summary-item')).map((item) => ({
+      number: item.querySelector('.ou-summary-number')?.getAttribute('aria-label'),
+      description: item.querySelector('.ou-summary-description strong')?.textContent?.trim(),
+      acronym: item.querySelector('.ou-summary-acronym > span:last-child')?.textContent?.trim(),
+    }))).toEqual([
+      { number: 'Nro 1', description: 'Unidad segunda', acronym: 'US' },
+      { number: 'Nro 2', description: 'Unidad primera', acronym: 'UP' },
     ]);
   });
 

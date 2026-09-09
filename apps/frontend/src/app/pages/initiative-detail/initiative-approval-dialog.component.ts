@@ -3,7 +3,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import type { DocumentRecord, PiipStatus } from '../../core/piip.models';
 import { initiativeStatusVisual, type InitiativeStatusVisual } from '../initiatives/initiative-status-visual';
@@ -17,11 +16,12 @@ export interface InitiativeApprovalDialogData {
 
 export interface InitiativeApprovalDialogResult {
   readonly approved: true;
+  readonly nextAction: 'detail' | 'create-project';
 }
 
 @Component({
   selector: 'app-initiative-approval-dialog',
-  imports: [ReactiveFormsModule, MatDialogModule, MatIconModule, RouterLink],
+  imports: [ReactiveFormsModule, MatDialogModule, MatIconModule],
   templateUrl: './initiative-approval-dialog.component.html',
   styleUrl: './initiative-approval-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,7 +44,13 @@ export class InitiativeApprovalDialogComponent {
   }
 
   close(): void {
-    if (!this.submitting()) this.dialogRef.close(this.approved() ? { approved: true } : undefined);
+    if (!this.submitting()) this.dialogRef.close(this.approved() ? { approved: true, nextAction: 'detail' } : undefined);
+  }
+
+  createProject(): void {
+    if (!this.submitting() && this.approved()) {
+      this.dialogRef.close({ approved: true, nextAction: 'create-project' });
+    }
   }
 
   async approve(): Promise<void> {
