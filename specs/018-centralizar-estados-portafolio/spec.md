@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-10
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Centralizar los once estados del portafolio en un catálogo persistente y consultable, conservando sus códigos, denominaciones iniciales, significados, históricos y matrices vigentes."
 
