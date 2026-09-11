@@ -73,7 +73,6 @@
 .document-item small { overflow: hidden; color: var(--piip-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .document-link { margin-top: 13px; padding-left: 0; }
 .derived-project-code { color: var(--piip-green-800); font-size: 20px; font-weight: 700; text-decoration: none; }
-.derived-project-name { margin: 5px 0 12px; color: var(--piip-muted); line-height: 1.4; }
 .linked-project-lock, .relation-message { display: flex; align-items: flex-start; gap: 8px; margin: 14px 0 0; color: var(--piip-green-900); font-size: 13px; line-height: 1.45; }
 .linked-project-lock mat-icon, .relation-message mat-icon { width: 19px; height: 19px; flex: 0 0 19px; font-size: 19px; }
 .relation-action { width: 100%; margin-top: 14px; text-decoration: none; }

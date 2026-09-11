@@ -6,6 +6,7 @@ import { OrganizationalUnitSummaryComponent } from '../../shared/organizational-
 
 export interface DerivedProjectReviewDialogData {
   initiativeCode: string;
+  initiativeName?: string;
   projectCode: string;
   name: string;
   startDateIso: string;

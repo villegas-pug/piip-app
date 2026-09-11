@@ -194,6 +194,7 @@ export class DerivedProjectFormComponent {
 
     return {
       initiativeCode: this.initiativeCode,
+      initiativeName: this.detail()?.initiative.name,
       projectCode: this.provisionalCode(),
       name: value.name.trim(),
       startDateIso: value.startDate,

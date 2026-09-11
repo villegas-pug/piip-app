@@ -55,8 +55,7 @@
               >
                 <span class="radio-indicator"><span></span></span>
                 <span class="initiative-main">
-                  <span class="initiative-heading"><strong>{{ initiative.code }}</strong><span class="status approved">{{ approvedStatusName() }}</span></span>
-                  <span class="initiative-name">{{ initiative.name }}</span>
+                  <span class="initiative-heading"><strong>{{ initiative.name }}</strong><span class="status approved">{{ approvedStatusName() }}</span></span>
                   <span class="initiative-meta"><span><mat-icon>domain</mat-icon>{{ initiative.unit }}</span><span><mat-icon>person</mat-icon>{{ initiative.responsible }}</span><span><mat-icon>update</mat-icon>{{ initiative.updatedAt }}</span></span>
                 </span>
               </button>
@@ -70,7 +69,7 @@
       }
     </mat-dialog-content>
     <mat-dialog-actions class="selection-actions">
-      <span class="selection-state">@if (selectedInitiativeCode()) {Seleccionada: <strong>{{ selectedInitiativeCode() }}</strong>} @else {Selecciona una iniciativa para continuar}</span>
+      <span class="selection-state">@if (selectedInitiative(); as initiative) {Seleccionada: <strong>{{ initiative.name }}</strong>} @else {Selecciona una iniciativa para continuar}</span>
       <button class="secondary-button" type="button" mat-dialog-close>Cancelar</button>
       <button class="primary-button" type="button" [disabled]="!selectedInitiativeCode()" (click)="continueWithInitiative()">Continuar<mat-icon>arrow_forward</mat-icon></button>
     </mat-dialog-actions>

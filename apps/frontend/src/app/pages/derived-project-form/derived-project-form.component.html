@@ -22,7 +22,7 @@
 
       <article class="panel form-section" id="origin">
         <header><h3>01 / Trazabilidad de origen</h3><p>La iniciativa y el proyecto conservarán registros, códigos y documentos independientes.</p></header>
-        <div class="origin-banner"><mat-icon>account_tree</mat-icon><div><strong>{{ detail()!.initiative.code }} · {{ detail()!.initiative.name }}</strong><span>Estado: {{ statusName(detail()!.initiative.status) }}</span></div><a class="text-button" [routerLink]="['/iniciativas', initiativeCode]">Ver iniciativa <mat-icon>open_in_new</mat-icon></a></div>
+        <div class="origin-banner"><mat-icon>account_tree</mat-icon><div><strong>{{ detail()!.initiative.name }}</strong><span>Estado: {{ statusName(detail()!.initiative.status) }}</span></div><a class="text-button" [routerLink]="['/iniciativas', initiativeCode]">Ver iniciativa <mat-icon>open_in_new</mat-icon></a></div>
         <div class="form-grid three fixed-fields">
           <label class="field disabled"><span>Tipo de registro</span><input formControlName="recordType" /></label>
           <label class="field disabled"><span>Código del proyecto</span><input formControlName="code" /></label>

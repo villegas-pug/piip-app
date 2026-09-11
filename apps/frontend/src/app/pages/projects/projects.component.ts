@@ -7,7 +7,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
 import { PIIP_CATALOGS, applicableStatusOptions, statusDisplayName } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { PiipStatus, PortfolioStatusReference } from '../../core/piip.models';
+import { PiipStatus, PortfolioStatusReference, ProjectRecord } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 import {
@@ -90,6 +90,10 @@ export class ProjectsComponent {
   }
 
   statusName(status: PortfolioStatusReference | undefined): string { return statusDisplayName(status); }
+
+  originName(project: ProjectRecord): string {
+    return this.repository.initiatives().find((initiative) => initiative.code === project.originCode)?.name ?? project.originCode;
+  }
 
   statusVisual(status: PiipStatus | string): ProjectStatusVisual { return projectStatusVisual(status); }
 }

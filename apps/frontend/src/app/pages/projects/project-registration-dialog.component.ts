@@ -32,6 +32,7 @@ export class ProjectRegistrationDialogComponent {
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly selectedInitiativeCode = signal<string | null>(null);
   readonly eligibleInitiatives = computed(() => this.repository.getInitiativesEligibleForProject());
+  readonly selectedInitiative = computed(() => this.eligibleInitiatives().find((initiative) => initiative.code === this.selectedInitiativeCode()));
   readonly catalogReady = computed(() => this.repository.catalogs().phase === 'ready');
   readonly approvedStatusName = computed(() => this.catalogReady()
     ? resolveStatusName(this.repository.catalogs().value.portfolioStatuses, 'INITIATIVE_APPROVED')

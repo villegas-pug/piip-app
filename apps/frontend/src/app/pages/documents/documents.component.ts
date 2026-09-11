@@ -62,6 +62,12 @@ export class DocumentsComponent {
     ? this.repository.projects().find((project) => project.code === this.code())
     : undefined,
   );
+  readonly originInitiative = computed(() => {
+    const project = this.project();
+    return project?.originMode === 'DERIVED_FROM_INITIATIVE'
+      ? this.repository.initiatives().find((initiative) => initiative.code === project.originCode)
+      : undefined;
+  });
   readonly progress = computed(() => {
     const summary = this.summary();
     if (!summary) return 0;

@@ -26,7 +26,7 @@
             <dl class="data-grid">
               <div><dt>Tipo de registro</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div>
               <div><dt>Origen</dt><dd>{{ detail.project.originMode === 'DERIVED_FROM_INITIATIVE' ? 'Proyecto derivado' : 'Proyecto preexistente' }}</dd></div>
-              <div><dt>Iniciativa de origen</dt><dd>@if (detail.project.originMode === 'PREEXISTING') {<span class="preexisting-badge">Preexistente</span>} @else if (detail.originInitiative) {<a [routerLink]="['/iniciativas', detail.originInitiative.code]">{{ detail.originInitiative.code }}</a>} @else { {{ detail.project.originCode }} }</dd></div>
+              <div><dt>Iniciativa de origen</dt><dd>@if (detail.project.originMode === 'PREEXISTING') {<span class="preexisting-badge">Preexistente</span>} @else if (detail.originInitiative) {<a [routerLink]="['/iniciativas', detail.originInitiative.code]" [attr.aria-label]="'Ver iniciativa de origen ' + detail.originInitiative.code">{{ detail.originInitiative.name }}</a>} @else { {{ detail.project.originCode }} }</dd></div>
               <div><dt>Fecha de inicio</dt><dd><time [attr.datetime]="detail.portfolioRecord.startDate">{{ formatDate(detail.portfolioRecord.startDate) }}</time></dd></div>
             </dl>
           </section>
@@ -34,8 +34,8 @@
           <section class="detail-group" aria-labelledby="project-classification-title">
             <h4 id="project-classification-title">Clasificación</h4>
             <dl class="data-grid">
-              <div><dt>Tipo de solución</dt><dd>@if (detail.portfolioRecord.solutionTypeReference; as value) {<span>{{ value.name }}</span>@if (value.code !== 'NOT_APPLICABLE') {<small class="catalog-code">{{ value.code }}@if (!value.active) {<b> · Inactivo</b>}</small>}} @else { {{ detail.portfolioRecord.solutionType }} }</dd></div>
-              <div><dt>Fuente u origen</dt><dd>@if (detail.portfolioRecord.sourceReference; as value) {<span>{{ value.name }}</span><small class="catalog-code">{{ value.code }}@if (!value.active) {<b> · Inactivo</b>}</small>} @else { {{ detail.portfolioRecord.source }} }</dd></div>
+              <div><dt>Tipo de solución</dt><dd>@if (detail.portfolioRecord.solutionTypeReference; as value) {<span>{{ value.name }}</span>@if (!value.active) {<small class="catalog-code"><b>Inactivo</b></small>}} @else { {{ detail.portfolioRecord.solutionType }} }</dd></div>
+              <div><dt>Fuente u origen</dt><dd>@if (detail.portfolioRecord.sourceReference; as value) {<span>{{ value.name }}</span>@if (!value.active) {<small class="catalog-code"><b>Inactivo</b></small>}} @else { {{ detail.portfolioRecord.source }} }</dd></div>
               <div><dt>Componente digital</dt><dd><span class="value-badge" [class.is-positive]="detail.portfolioRecord.digitalComponent === 'Si'">{{ detail.portfolioRecord.digitalComponent }}</span></dd></div>
             </dl>
           </section>
@@ -43,8 +43,8 @@
           <section class="detail-group" aria-labelledby="project-alignment-title">
             <h4 id="project-alignment-title">Alineamiento institucional</h4>
             <dl class="data-grid">
-              <div class="wide"><dt>Objetivo PEI</dt><dd>@if (detail.portfolioRecord.peiObjectiveReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) {<small class="catalog-code"><b>Inactivo</b></small>}} @else {Sin información registrada}</dd></div>
-              <div class="wide"><dt>Actividad POI</dt><dd>@if (detail.portfolioRecord.poiActivityReference; as value) {<span>{{ value.code }} — {{ value.name }}</span>@if (!value.active) {<small class="catalog-code"><b>Inactivo</b></small>}} @else {Sin información registrada}</dd></div>
+              <div class="wide"><dt>Objetivo PEI</dt><dd>@if (detail.portfolioRecord.peiObjectiveReference; as value) {<span>{{ value.name }}</span>@if (!value.active) {<small class="catalog-code"><b>Inactivo</b></small>}} @else {Sin información registrada}</dd></div>
+              <div class="wide"><dt>Actividad POI</dt><dd>@if (detail.portfolioRecord.poiActivityReference; as value) {<span>{{ value.name }}</span>@if (!value.active) {<small class="catalog-code"><b>Inactivo</b></small>}} @else {Sin información registrada}</dd></div>
             </dl>
           </section>
 
@@ -71,7 +71,7 @@
           <header class="card-header"><span class="card-icon"><mat-icon aria-hidden="true">groups</mat-icon></span><div><h3>Seguimiento</h3><p>Responsabilidad, unidad y cierre del proyecto.</p></div></header>
           <dl class="data-grid">
             <div><dt>Responsable</dt><dd>{{ detail.portfolioRecord.responsible }}</dd></div>
-            <div><dt>Unidad Ejecutora</dt><dd>@if (executingUnit(); as unit) {<span>{{ unit.code }} — {{ unit.name }}</span>} @else {No registrada}</dd></div>
+            <div><dt>Unidad Ejecutora</dt><dd>@if (executingUnit(); as unit) {<span>{{ unit.name }}</span>} @else {No registrada}</dd></div>
             <div class="wide"><dt>Unidades Orgánicas Involucradas</dt><dd><app-organizational-unit-summary [units]="detail.portfolioRecord.responsibleUnitReferences ?? []" [showHeader]="false" /></dd></div>
             <div class="wide"><dt>Resultados clave</dt><dd>{{ detail.portfolioRecord.keyResults || 'Sin información registrada' }}</dd></div>
             <div><dt>Fecha de cierre</dt><dd>@if (detail.portfolioRecord.closingDate) {<time [attr.datetime]="detail.portfolioRecord.closingDate">{{ formatDate(detail.portfolioRecord.closingDate) }}</time>} @else {Sin fecha registrada}</dd></div>

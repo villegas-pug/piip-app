@@ -49,7 +49,7 @@
                   @if (initiative.organizationalUnits?.length) {
                     <span class="unit-stack" role="list" [attr.aria-label]="'Unidades Orgánicas Involucradas de ' + initiative.code">
                       @for (unit of initiative.organizationalUnits; track unit.id) {
-                        <span class="unit-chip" role="listitem" [attr.title]="unit.name" [attr.aria-label]="'Unidad Orgánica: ' + unit.name + ' (' + unit.acronym + ')'">{{ unit.acronym }}</span>
+                        <span class="unit-chip" role="listitem" [attr.title]="unit.name" [attr.aria-label]="'Unidad Orgánica: ' + unit.name + ' (' + unit.acronym + ')'">{{ unit.name }}</span>
                       }
                     </span>
                   } @else {

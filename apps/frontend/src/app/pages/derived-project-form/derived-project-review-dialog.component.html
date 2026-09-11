@@ -19,7 +19,7 @@
 
   <div class="dialog-scroll">
     <section class="traceability" aria-label="Trazabilidad del proyecto">
-      <div><span>Iniciativa origen</span><strong>{{ data.initiativeCode }}</strong></div>
+      <div><span>Iniciativa origen</span><strong>{{ data.initiativeName || data.initiativeCode }}</strong></div>
       <mat-icon aria-hidden="true">arrow_forward</mat-icon>
       <div><span>Proyecto a registrar</span><strong>{{ data.projectCode }}</strong></div>
     </section>

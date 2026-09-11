@@ -61,6 +61,15 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
   readonly detail = computed<InitiativeDetail | ProjectDetail | undefined>(() => this.recordType() === 'Iniciativa'
     ? this.repository.getInitiativeDetail(this.code())
     : this.repository.getProjectDetail(this.code()));
+  readonly originDisplayName = computed(() => {
+    const detail = this.detail();
+    if (!detail) return '';
+    if (this.recordType() === 'Iniciativa') return detail.portfolioRecord.originCode;
+    const projectDetail = detail as ProjectDetail;
+    return projectDetail.project.originMode === 'PREEXISTING'
+      ? 'Preexistente'
+      : projectDetail.originInitiative?.name ?? projectDetail.project.originCode;
+  });
   readonly record = computed(() => this.detail()?.portfolioRecord);
   readonly variant = computed<PortfolioRecordEditVariant | null>(() => {
     if (this.recordType() === 'Iniciativa') return 'INITIATIVE';

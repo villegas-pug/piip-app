@@ -82,8 +82,7 @@
         <article class="panel detail-card relation-card">
           <header class="card-header"><span class="card-icon"><mat-icon aria-hidden="true">account_tree</mat-icon></span><div><h3>Proyecto derivado</h3><p>Trazabilidad con el proyecto originado.</p></div></header>
           @if (detail.derivedProject; as project) {
-            <a class="derived-project-code" [routerLink]="['/proyectos', project.code]">{{ project.code }}</a>
-            <p class="derived-project-name">{{ project.name }}</p>
+            <a class="derived-project-code" [routerLink]="['/proyectos', project.code]" [attr.aria-label]="'Ver proyecto ' + project.code">{{ project.name }}</a>
             <span class="status-tag" [attr.data-tone]="derivedProjectStatusVisual(project.status.code ?? '').tone"><mat-icon aria-hidden="true">{{ derivedProjectStatusVisual(project.status.code ?? '').icon }}</mat-icon><span>{{ statusName(project.status) }}</span>@if (project.status.active === false) {<small>Inactivo</small>}</span>
             <p class="linked-project-lock" role="status"><mat-icon aria-hidden="true">lock</mat-icon><span>Las acciones de cambio de estado están bloqueadas porque ya existe un proyecto vinculado.</span></p>
           } @else if (detail.initiative.status.code === 'INITIATIVE_APPROVED') {

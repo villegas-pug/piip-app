@@ -40,7 +40,7 @@
 
     @if (project(); as project) {
       @if (project.originMode === 'DERIVED_FROM_INITIATIVE') {
-        <div class="origin-document-banner"><mat-icon>account_tree</mat-icon><div><strong>Proyecto derivado de {{ project.originCode }}</strong><span>Los documentos de evaluación y decisión permanecen en el expediente de la iniciativa.</span></div><a class="secondary-button" [routerLink]="['/iniciativas', project.originCode, 'documentos']">Consultar documentos de origen</a></div>
+        <div class="origin-document-banner"><mat-icon>account_tree</mat-icon><div><strong>Proyecto derivado de {{ originInitiative()?.name ?? project.originCode }}</strong><span>Los documentos de evaluación y decisión permanecen en el expediente de la iniciativa.</span></div><a class="secondary-button" [routerLink]="['/iniciativas', project.originCode, 'documentos']">Consultar documentos de origen</a></div>
       }
     }
 
