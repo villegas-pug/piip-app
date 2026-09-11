@@ -1117,11 +1117,12 @@ function toInitiativeRecord(value: ApiPortfolioRecord): InitiativeRecord {
 
 function toProjectRecord(value: ApiPortfolioRecord): ProjectRecord {
   const organizationalUnits = value.responsibleUnits.flatMap((item) => item.organizationalUnit ? mapOrganizationalUnit(item.organizationalUnit) : []);
+  const normalizedOriginCode = value.originCode.trim();
   return {
     code: value.code,
     name: value.name,
     originCode: value.originCode,
-    originMode: value.originCode === 'NA' ? 'PREEXISTING' : 'DERIVED_FROM_INITIATIVE',
+    originMode: !normalizedOriginCode || normalizedOriginCode === 'NA' ? 'PREEXISTING' : 'DERIVED_FROM_INITIATIVE',
     unit: value.responsibleUnits.flatMap((item) => item.organizationalUnit?.name ?? []).join(', '),
     responsible: value.responsible,
     status: requireStatusReference(value.status),

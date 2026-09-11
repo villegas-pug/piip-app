@@ -58,6 +58,7 @@ describe('ProjectDetailComponent', () => {
     expect(text).not.toContain('NA');
     expect(text).not.toContain('NOT_APPLICABLE');
     expect(text).toContain('No aplica');
+    expect(fixture.nativeElement.querySelector('.preexisting-badge')?.textContent).toContain('Preexistente');
   });
 
   it('presenta el estado, fecha y Unidad Ejecutora en formato humano', () => {

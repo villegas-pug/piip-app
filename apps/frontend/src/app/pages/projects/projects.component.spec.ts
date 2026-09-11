@@ -152,6 +152,7 @@ describe('ProjectsComponent', () => {
     const origin = row.querySelector('.origin-value') as HTMLElement;
     expect(origin.textContent).not.toContain('NA');
     expect(origin.textContent).toContain('Preexistente');
+    expect(origin.querySelector('.preexisting-badge')).not.toBeNull();
   });
 
   it('filtra por código y no ofrece NOT_APPLICABLE', () => {

@@ -446,9 +446,15 @@ describe('PiipHttpRepository', () => {
     expect(refreshAudit).toHaveBeenCalledOnce();
 
     const projectResponse = { ...response, recordType: { ...response.recordType, code: 'PROJECT', name: 'Proyecto' }, code: 'P-004-2026', originCode: 'NA', status: { code: 'PROJECT_IN_PROGRESS', name: 'Proyecto en ejecución', active: true } };
-    vi.spyOn(portfolio, 'updateProject').mockReturnValue(of(projectResponse as unknown as PortfolioRecordResponse));
+    const updateProject = vi.spyOn(portfolio, 'updateProject').mockReturnValue(of(projectResponse as unknown as PortfolioRecordResponse));
     await repository.updateProject('P-004-2026', { version: 1, name: 'Proyecto actualizado' });
-    expect(refreshAudit).toHaveBeenCalledTimes(2);
+    expect(repository.projects().find((project) => project.code === 'P-004-2026')?.originMode).toBe('PREEXISTING');
+
+    const emptyOriginResponse = { ...projectResponse, code: 'P-005-2026', originCode: '  ' };
+    updateProject.mockReturnValue(of(emptyOriginResponse as unknown as PortfolioRecordResponse));
+    await repository.updateProject('P-005-2026', { version: 1, name: 'Proyecto sin origen' });
+    expect(repository.projects().find((project) => project.code === 'P-005-2026')?.originMode).toBe('PREEXISTING');
+    expect(refreshAudit).toHaveBeenCalledTimes(3);
   });
 
   it('loads the unified home portfolio with UE, filters and five-row pagination', async () => {
