@@ -35,8 +35,11 @@ import pe.gob.midagri.piip.organization.persistence.OrganizationalUnitRepository
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ProjectStatusTransitionRequest;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatusApplicability;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusCatalogEntity;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
 import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
 import pe.gob.midagri.piip.work.persistence.NotificationRepository;
@@ -57,13 +60,15 @@ class PortfolioProjectStatusServiceTest {
     @Mock AuditService audit;
     @Mock CatalogReferenceService catalogReferences;
     @Mock DocumentTypeRepository documentTypes;
+    @Mock PortfolioStatusRepository statuses;
     private ProjectApplicationService service;
 
     @BeforeEach
     void setUp() {
         service = new ProjectApplicationService(records, responsibleUnits, executingUnits, tasks,
             notifications, documents, codes, authorization, audit,
-            Clock.fixed(Instant.parse("2026-08-18T23:30:00Z"), ZoneId.of("America/Lima")), catalogReferences, documentTypes);
+            Clock.fixed(Instant.parse("2026-08-18T23:30:00Z"), ZoneId.of("America/Lima")), catalogReferences, documentTypes,
+            statuses);
         lenient().when(responsibleUnits.findByRecordIdOrderByDisplayOrder(any())).thenReturn(List.of());
     }
 
@@ -72,11 +77,15 @@ class PortfolioProjectStatusServiceTest {
         PortfolioRecordEntity project = project(2L, 10L);
         when(records.findByCodeIgnoreCase("P-001-2026")).thenReturn(Optional.of(project));
         when(authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, 10L)).thenReturn(actor());
+        when(statuses.findByCode(PortfolioStatus.PRODUCT_APPROVED))
+            .thenReturn(Optional.of(status(PortfolioStatus.PRODUCT_APPROVED, PortfolioStatusApplicability.PROJECT)));
+        when(statuses.findByCode(PortfolioStatus.FINISHED))
+            .thenReturn(Optional.of(status(PortfolioStatus.FINISHED, PortfolioStatusApplicability.PROJECT)));
 
         service.transitionProjectStatus("P-001-2026",
-            new ProjectStatusTransitionRequest(0L, PortfolioStatus.PRODUCT_APPROVED, "producto"));
+            new ProjectStatusTransitionRequest(0L, "PRODUCT_APPROVED", "producto"));
         service.transitionProjectStatus("P-001-2026",
-            new ProjectStatusTransitionRequest(0L, PortfolioStatus.FINISHED, "cierre"));
+            new ProjectStatusTransitionRequest(0L, "FINISHED", "cierre"));
 
         assertThat(project.getStatus()).isEqualTo(PortfolioStatus.FINISHED);
         assertThat(project.getClosingDate()).isEqualTo(LocalDate.of(2026, 8, 18));
@@ -89,9 +98,11 @@ class PortfolioProjectStatusServiceTest {
         PortfolioRecordEntity project = project(2L, 10L);
         when(records.findByCodeIgnoreCase("P-001-2026")).thenReturn(Optional.of(project));
         when(authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, 10L)).thenReturn(actor());
+        when(statuses.findByCode(PortfolioStatus.NOT_APPLICABLE))
+            .thenReturn(Optional.of(status(PortfolioStatus.NOT_APPLICABLE, PortfolioStatusApplicability.NONE)));
 
         assertThatThrownBy(() -> service.transitionProjectStatus("P-001-2026",
-            new ProjectStatusTransitionRequest(0L, PortfolioStatus.NOT_APPLICABLE, null)))
+            new ProjectStatusTransitionRequest(0L, "NOT_APPLICABLE", null)))
             .isInstanceOf(BusinessRuleException.class);
         verifyNoInteractions(audit);
     }
@@ -104,6 +115,10 @@ class PortfolioProjectStatusServiceTest {
         PortfolioRecordEntity project = PortfolioRecordTestBuilder.transientReferences().preexistingProject("P-001-2026", unit, "Proyecto");
         ReflectionTestUtils.setField(project, "id", id);
         return project;
+    }
+
+    private PortfolioStatusCatalogEntity status(PortfolioStatus code, PortfolioStatusApplicability applicability) {
+        return new PortfolioStatusCatalogEntity(code, code.label(), code.ordinal() + 1, true, applicability);
     }
 
     private LocalAccessContext actor() {

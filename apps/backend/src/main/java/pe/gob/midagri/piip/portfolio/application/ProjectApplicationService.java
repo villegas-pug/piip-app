@@ -25,10 +25,12 @@ import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
 import pe.gob.midagri.piip.portfolio.application.PortfolioUpdateCommands.*;
 import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
 import pe.gob.midagri.piip.shared.application.error.NotFoundException;
+import pe.gob.midagri.piip.shared.application.error.ProblemCode;
 import pe.gob.midagri.piip.shared.application.error.StaleVersionException;
 import pe.gob.midagri.piip.work.application.PortfolioWorkService;
 import pe.gob.midagri.piip.work.domain.TaskStatus;
@@ -98,6 +100,19 @@ public class ProjectApplicationService {
             catalogReferences, documentTypes, clock);
     }
 
+    /** Constructor de compatibilidad que valida estados del catálogo a través del repositorio inyectado. */
+    public ProjectApplicationService(PortfolioRecordRepository records, ResponsibleUnitRepository responsibleUnits,
+            ExecutingUnitRepository executingUnits, WorkTaskRepository tasks, NotificationRepository notifications,
+            DocumentRepository documents, CodeGeneratorService codes, LocalAuthorizationService authorization,
+            AuditService audit, Clock clock, CatalogReferenceService catalogReferences, DocumentTypeRepository documentTypes,
+            PortfolioStatusRepository statuses) {
+        this(records, executingUnits, tasks, codes, authorization, audit, catalogReferences,
+            new ResponsibleUnitService(responsibleUnits, null), new PortfolioDocumentService(records, documents, documentTypes),
+            new PortfolioWorkService(tasks, notifications, audit),
+            new PortfolioApplicationSupport(authorization, clock, new PortfolioStatusValidationService(statuses)),
+            new PortfolioReadModelAssembler(responsibleUnits));
+    }
+
     @Transactional
     public PortfolioRecordResponse createDerived(DerivedProjectRequest request) {
         PortfolioRecordEntity initiative = records.findByCodeIgnoreCaseForUpdate(request.initiativeCode())
@@ -107,6 +122,7 @@ public class ProjectApplicationService {
             throw new BusinessRuleException("La iniciativa debe estar aprobada");
         if (records.existsByOriginRecordId(initiative.getId()))
             throw new BusinessRuleException("La iniciativa ya tiene un proyecto derivado");
+        support.requireAssignableTarget(PortfolioStatus.PROJECT_IN_PROGRESS, RecordType.PROJECT);
         String code = codes.next(RecordType.PROJECT, request.startDate().getYear());
         PortfolioRecordEntity project = records.save(PortfolioRecordEntity.derivedProject(code, initiative, request.name(),
             catalogReferences.resolveActive(request.solutionTypeId(), CatalogCode.SOLUTION_TYPE, "solutionTypeId"),
@@ -122,7 +138,8 @@ public class ProjectApplicationService {
         });
         // FR-018: el alta registra la lista ordenada confirmada con unidad, nombre, sigla y Nro por elemento.
         audit.event("PROYECTO_DERIVADO_REGISTRADO", "REGISTRO_PORTAFOLIO", code,
-            PortfolioUpdateAuditDetail.registrationDetail(Map.of("iniciativaOrigen", initiative.getCode()),
+            PortfolioUpdateAuditDetail.registrationDetail(Map.of("iniciativaOrigen", initiative.getCode(),
+                "statusCode", project.getStatus().name()),
                 responsibleUnitService.list(project)), actor.subject());
         return assembler.toResponse(project);
     }
@@ -130,6 +147,7 @@ public class ProjectApplicationService {
     @Transactional
     public PortfolioRecordResponse createPreexisting(PreexistingProjectRequest request) {
         LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, request.executingUnitId());
+        support.requireAssignableTarget(PortfolioStatus.PROJECT_IN_PROGRESS, RecordType.PROJECT);
         ExecutingUnitEntity unit = executingUnits.findById(request.executingUnitId())
             .orElseThrow(() -> new NotFoundException("Unidad Ejecutora inexistente"));
         String code = codes.next(RecordType.PROJECT, request.startDate().getYear());
@@ -143,7 +161,8 @@ public class ProjectApplicationService {
         portfolioDocumentService.initializeSlots(project.getId());
         // FR-018: el alta registra la lista ordenada confirmada con unidad, nombre, sigla y Nro por elemento.
         audit.event("PROYECTO_PREEXISTENTE_REGISTRADO", "REGISTRO_PORTAFOLIO", code,
-            PortfolioUpdateAuditDetail.registrationDetail(Map.of("origen", "NA"),
+            PortfolioUpdateAuditDetail.registrationDetail(Map.of("origen", "NA",
+                "statusCode", project.getStatus().name()),
                 responsibleUnitService.list(project)), actor.subject());
         return assembler.toResponse(project);
     }
@@ -198,11 +217,12 @@ public class ProjectApplicationService {
             .orElseThrow(() -> new NotFoundException("Proyecto inexistente"));
         LocalAccessContext actor = authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, project.getExecutingUnit().getId());
         if (project.getVersion() != request.version()) throw new StaleVersionException();
+        PortfolioStatus target = support.validateTransitionTarget(request.targetStatus(), RecordType.PROJECT);
         PortfolioStatus previous = project.getStatus();
         try {
-            project.transitionProjectTo(request.targetStatus(), support.clock().instant(), LocalDate.now(support.clock()));
+            project.transitionProjectTo(target, support.clock().instant(), LocalDate.now(support.clock()));
         } catch (IllegalStateException exception) {
-            throw new BusinessRuleException(exception.getMessage());
+            throw new BusinessRuleException(ProblemCode.PORTFOLIO_STATUS_TRANSITION_NOT_ALLOWED, exception.getMessage());
         }
         audit.event("ESTADO_PROYECTO_CAMBIADO", "REGISTRO_PORTAFOLIO", project.getCode(),
             support.transitionAuditDetail(previous, project.getStatus(), project, request.observation()), actor.subject());

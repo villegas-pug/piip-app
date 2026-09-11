@@ -55,7 +55,7 @@
               >
                 <span class="radio-indicator"><span></span></span>
                 <span class="initiative-main">
-                  <span class="initiative-heading"><strong>{{ initiative.code }}</strong><span class="status approved">Iniciativa aprobada</span></span>
+                  <span class="initiative-heading"><strong>{{ initiative.code }}</strong><span class="status approved">{{ approvedStatusName() }}</span></span>
                   <span class="initiative-name">{{ initiative.name }}</span>
                   <span class="initiative-meta"><span><mat-icon>domain</mat-icon>{{ initiative.unit }}</span><span><mat-icon>person</mat-icon>{{ initiative.responsible }}</span><span><mat-icon>update</mat-icon>{{ initiative.updatedAt }}</span></span>
                 </span>

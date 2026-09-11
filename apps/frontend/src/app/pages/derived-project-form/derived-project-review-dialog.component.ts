@@ -14,6 +14,7 @@ export interface DerivedProjectReviewDialogData {
   source: string;
   digitalComponent: string;
   responsible: string;
+  initialStatusName: string;
   organizationalUnits?: readonly OrganizationalUnit[];
   organizationalUnit?: string;
   description: string;

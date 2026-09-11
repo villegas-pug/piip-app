@@ -9,7 +9,7 @@
   <form [formGroup]="form" (ngSubmit)="openReview()">
     <header class="panel form-hero">
       <div><p>PORTAFOLIO INSTITUCIONAL DE INNOVACIÓN PÚBLICA</p><h2>Registro de Iniciativa</h2><span>Registro guiado de una iniciativa PIIP. Completa la información disponible y revisa los datos antes de registrar.</span></div>
-      <aside><small>Código</small><strong>{{ pendingCode }}</strong><span class="status">Presentado</span></aside>
+      <aside><small>Código</small><strong>{{ pendingCode }}</strong><span class="status">{{ initialStatusName() }}</span></aside>
     </header>
 
     <article class="panel form-section" id="general">

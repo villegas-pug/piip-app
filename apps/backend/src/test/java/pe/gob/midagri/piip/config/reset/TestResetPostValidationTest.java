@@ -2,6 +2,7 @@ package pe.gob.midagri.piip.config.reset;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import pe.gob.midagri.piip.organization.persistence.ExecutingUnitEntity;
 import pe.gob.midagri.piip.organization.persistence.InstitutionEntity;
 import pe.gob.midagri.piip.organization.persistence.OrganizationalUnitEntity;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatusApplicability;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusCatalogEntity;
 
 /**
  * Pruebas de la postvalidación sintética del reset (FR-027/FR-029/FR-030): el conjunto válido pasa,
@@ -106,6 +110,88 @@ class TestResetPostValidationTest {
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Falló la etapa test-reset POST_VALIDATION")
             .hasRootCauseMessage("La Unidad Ejecutora sintética UE-001 no dispone de dos Unidades Orgánicas activas");
+    }
+
+    @Test
+    void catalogoDeEstadosValidoPasaLaPostvalidacion() {
+        assertThatCode(() -> TestResetCoordinator.validatePortfolioStatuses(estadosValidos()))
+            .doesNotThrowAnyException();
+    }
+
+    @Test
+    void catalogoDeEstadosIncompletoFallaDeFormaSegura() {
+        List<PortfolioStatusCatalogEntity> estados = new ArrayList<>(estadosValidos());
+        estados.remove(0);
+        assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
+            () -> TestResetCoordinator.validatePortfolioStatuses(estados)))
+            .isInstanceOf(IllegalStateException.class)
+            .hasRootCauseMessage("El catálogo de estados del portafolio debe contener exactamente los once códigos oficiales sin extras");
+    }
+
+    @Test
+    void catalogoDeEstadosConExtraFallaDeFormaSegura() {
+        List<PortfolioStatusCatalogEntity> estados = new ArrayList<>(estadosValidos());
+        // Una fila duplicada (imposible por PK natural, pero el validador la detecta como extra).
+        estados.add(estados.get(0));
+        assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
+            () -> TestResetCoordinator.validatePortfolioStatuses(estados)))
+            .isInstanceOf(IllegalStateException.class)
+            .hasRootCauseMessage("El catálogo de estados del portafolio debe contener exactamente los once códigos oficiales sin extras");
+    }
+
+    @Test
+    void catalogoDeEstadosConAtributoIncorrectoFallaDeFormaSegura() {
+        List<PortfolioStatusCatalogEntity> estados = estadosValidos();
+        // Denominación incorrecta.
+        estados.set(0, new PortfolioStatusCatalogEntity(PortfolioStatus.PRESENTED, "Nombre incorrecto", 1, true,
+            PortfolioStatusApplicability.INITIATIVE));
+        assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
+            () -> TestResetCoordinator.validatePortfolioStatuses(estados)))
+            .isInstanceOf(IllegalStateException.class)
+            .hasRootCauseMessage("El estado PRESENTED tiene una denominación incorrecta");
+
+        // Orden de presentación incorrecto.
+        List<PortfolioStatusCatalogEntity> ordenIncorrecto = estadosValidos();
+        ordenIncorrecto.set(1, new PortfolioStatusCatalogEntity(PortfolioStatus.INITIATIVE_APPROVED, "Iniciativa aprobada", 99, true,
+            PortfolioStatusApplicability.INITIATIVE));
+        assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
+            () -> TestResetCoordinator.validatePortfolioStatuses(ordenIncorrecto)))
+            .isInstanceOf(IllegalStateException.class)
+            .hasRootCauseMessage("El estado INITIATIVE_APPROVED tiene un orden de presentación incorrecto");
+
+        // Aplicabilidad incorrecta.
+        List<PortfolioStatusCatalogEntity> aplicabilidadIncorrecta = estadosValidos();
+        aplicabilidadIncorrecta.set(9, new PortfolioStatusCatalogEntity(PortfolioStatus.NOT_APPLICABLE, "No Aplicable", 10, true,
+            PortfolioStatusApplicability.PROJECT));
+        assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
+            () -> TestResetCoordinator.validatePortfolioStatuses(aplicabilidadIncorrecta)))
+            .isInstanceOf(IllegalStateException.class)
+            .hasRootCauseMessage("El estado NOT_APPLICABLE tiene una aplicabilidad incorrecta");
+
+        // Actividad incorrecta (inactivo).
+        List<PortfolioStatusCatalogEntity> inactivo = estadosValidos();
+        inactivo.set(0, new PortfolioStatusCatalogEntity(PortfolioStatus.PRESENTED, "Presentado", 1, false,
+            PortfolioStatusApplicability.INITIATIVE));
+        assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
+            () -> TestResetCoordinator.validatePortfolioStatuses(inactivo)))
+            .isInstanceOf(IllegalStateException.class)
+            .hasRootCauseMessage("El estado PRESENTED debe estar activo");
+    }
+
+    private static List<PortfolioStatusCatalogEntity> estadosValidos() {
+        List<PortfolioStatusCatalogEntity> result = new ArrayList<>();
+        for (PortfolioStatus code : PortfolioStatus.values()) {
+            result.add(new PortfolioStatusCatalogEntity(code, code.label(), code.ordinal() + 1, true, aplicabilidadDe(code)));
+        }
+        return result;
+    }
+
+    private static PortfolioStatusApplicability aplicabilidadDe(PortfolioStatus code) {
+        return switch (code) {
+            case PRESENTED, INITIATIVE_APPROVED, INITIATIVE_ARCHIVED, NOT_ADMISSIBLE -> PortfolioStatusApplicability.INITIATIVE;
+            case PROJECT_IN_PROGRESS, PRODUCT_APPROVED, PRODUCT_NOT_APPROVED, SUSPENDED, CANCELLED, FINISHED -> PortfolioStatusApplicability.PROJECT;
+            case NOT_APPLICABLE -> PortfolioStatusApplicability.NONE;
+        };
     }
 
     private static void postvalidar(Semilla semilla) {

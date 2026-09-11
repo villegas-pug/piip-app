@@ -6,7 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import type { CatalogBundle, InitiativeDetail, InitiativeUpdateInput, PiipPortfolioRecord, PiipRecordType, ProjectDetail, ProjectUpdateInput } from '../../core/piip.models';
+import type { CatalogBundle, InitiativeDetail, InitiativeUpdateInput, PiipPortfolioRecord, PiipRecordType, PortfolioStatusReference, ProjectDetail, ProjectUpdateInput } from '../../core/piip.models';
+import { statusDisplayName } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { canEditInitiative, canEditProject } from '../../core/portfolio-edit-permissions';
 import type { OrganizationalUnit } from '../../core/piip.models';
@@ -317,6 +318,8 @@ export class PortfolioRecordEditComponent implements AfterViewInit, OnDestroy, P
   formatExecutingUnit(value?: string): string {
     return value?.trim() ? value : 'Sin información registrada';
   }
+
+  statusName(status: PortfolioStatusReference | undefined): string { return statusDisplayName(status); }
 
   private initialize(record: PiipPortfolioRecord): void {
     const snapshot = this.snapshot(record);

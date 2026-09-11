@@ -22,6 +22,7 @@ describe('DerivedProjectReviewDialogComponent', () => {
     ],
     description: 'Descripción del proyecto derivado.',
     keyResults: '',
+    initialStatusName: 'Proyecto en ejecución',
     registerProject,
   };
 

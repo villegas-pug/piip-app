@@ -32,6 +32,14 @@ describe('PreexistingProjectFormComponent', () => {
     }));
   });
 
+  it('bloquea el registro si PROJECT_IN_PROGRESS no está activo en el bundle', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(PreexistingProjectFormComponent);
+    repository.catalogs.set({ phase: 'ready', value: { ...repository.catalogs().value, portfolioStatuses: repository.catalogs().value.portfolioStatuses.filter((item) => item.code !== 'PROJECT_IN_PROGRESS') }, error: null, requestId: 2 });
+    await fixture.componentInstance.registerProject();
+    expect(fixture.componentInstance.submitting()).toBe(false);
+  });
+
   it('renders restricted access for the external consultation profile', () => {
     const fixture = TestBed.createComponent(PreexistingProjectFormComponent);
     fixture.componentInstance.repository.toggleRole();

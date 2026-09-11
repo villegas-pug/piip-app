@@ -13,9 +13,9 @@
     <div class="status-transition-summary">
       <span>Estado actual</span>
       <div class="status-transition-value">
-        <span class="status-tag" [attr.data-tone]="statusVisual(data.currentStatus).tone"><mat-icon aria-hidden="true">{{ statusVisual(data.currentStatus).icon }}</mat-icon><span>{{ data.currentStatus }}</span></span>
+        <span class="status-tag" [attr.data-tone]="statusVisual(data.currentStatus).tone"><mat-icon aria-hidden="true">{{ statusVisual(data.currentStatus).icon }}</mat-icon><span>{{ statusName(data.currentStatus) }}</span></span>
         <mat-icon class="transition-arrow" aria-hidden="true">arrow_forward</mat-icon>
-        @if (selectedTarget(); as target) {<span class="status-tag" [attr.data-tone]="statusVisual(target).tone"><mat-icon aria-hidden="true">{{ statusVisual(target).icon }}</mat-icon><span>{{ target }}</span></span>} @else {<span class="status-selection-label">Selecciona el nuevo estado</span>}
+        @if (selectedTarget(); as target) {<span class="status-tag" [attr.data-tone]="statusVisual(target).tone"><mat-icon aria-hidden="true">{{ statusVisual(target).icon }}</mat-icon><span>{{ statusName(target) }}</span></span>} @else {<span class="status-selection-label">Selecciona el nuevo estado</span>}
       </div>
     </div>
 
@@ -25,7 +25,7 @@
         @for (target of data.options; track target) {
           <button class="state-option" type="button" [class.is-selected]="selectedTarget() === target" [attr.data-tone]="statusVisual(target).tone" [attr.aria-pressed]="selectedTarget() === target" (click)="selectTarget(target)">
             <mat-icon aria-hidden="true">{{ statusVisual(target).icon }}</mat-icon>
-            <span>{{ target }}</span>
+            <span>{{ statusName(target) }}</span>
             @if (selectedTarget() === target) {<mat-icon class="selection-icon" aria-hidden="true">check</mat-icon>}
           </button>
         }
@@ -41,7 +41,7 @@
       @if (error(); as message) {<p class="dialog-error" role="alert"><mat-icon aria-hidden="true">error_outline</mat-icon>{{ message }}</p>}
       <footer>
         <button class="secondary-button" type="button" [disabled]="submitting()" (click)="close()">Cancelar</button>
-        <button class="primary-button" type="submit" [disabled]="!selectedTarget() || submitting()"><mat-icon aria-hidden="true">{{ submitting() ? 'progress_activity' : 'check' }}</mat-icon>{{ submitting() ? 'Guardando...' : (selectedTarget() ? 'Cambiar a ' + selectedTarget() : 'Confirmar cambio') }}</button>
+        <button class="primary-button" type="submit" [disabled]="!selectedTarget() || submitting()"><mat-icon aria-hidden="true">{{ submitting() ? 'progress_activity' : 'check' }}</mat-icon>{{ submitting() ? 'Guardando...' : (selectedTarget() ? 'Cambiar a ' + statusName(selectedTarget()!) : 'Confirmar cambio') }}</button>
       </footer>
     </form>
   </div>

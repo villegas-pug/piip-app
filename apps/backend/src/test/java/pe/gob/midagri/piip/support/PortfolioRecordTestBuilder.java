@@ -1,11 +1,17 @@
 package pe.gob.midagri.piip.support;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import pe.gob.midagri.piip.catalogs.domain.CatalogCode;
 import pe.gob.midagri.piip.catalogs.persistence.*;
 import pe.gob.midagri.piip.organization.persistence.ExecutingUnitEntity;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatusApplicability;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusCatalogEntity;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 
 /** Construye fixtures con el mismo modelo de referencias persistentes usado por producción. */
 public final class PortfolioRecordTestBuilder {
@@ -46,4 +52,22 @@ public final class PortfolioRecordTestBuilder {
     }
     public CatalogItemEntity solution() { return solution; }
     public CatalogItemEntity source() { return source; }
+
+    /** Siembra los once estados del catálogo (idempotente) para respaldar la FK por código natural de REGISTRO_PORTAFOLIO.ESTADO. */
+    public static List<PortfolioStatusCatalogEntity> seedPortfolioStatuses(PortfolioStatusRepository statuses) {
+        List<PortfolioStatusCatalogEntity> result = new ArrayList<>();
+        for (PortfolioStatus code : PortfolioStatus.values()) {
+            result.add(statuses.findByCode(code).orElseGet(() -> statuses.saveAndFlush(
+                new PortfolioStatusCatalogEntity(code, code.label(), code.ordinal() + 1, true, applicabilityOf(code)))));
+        }
+        return result;
+    }
+
+    private static PortfolioStatusApplicability applicabilityOf(PortfolioStatus code) {
+        return switch (code) {
+            case PRESENTED, INITIATIVE_APPROVED, INITIATIVE_ARCHIVED, NOT_ADMISSIBLE -> PortfolioStatusApplicability.INITIATIVE;
+            case PROJECT_IN_PROGRESS, PRODUCT_APPROVED, PRODUCT_NOT_APPROVED, SUSPENDED, CANCELLED, FINISHED -> PortfolioStatusApplicability.PROJECT;
+            case NOT_APPLICABLE -> PortfolioStatusApplicability.NONE;
+        };
+    }
 }

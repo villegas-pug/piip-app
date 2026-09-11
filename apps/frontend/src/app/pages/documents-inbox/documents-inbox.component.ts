@@ -3,9 +3,9 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import { PIIP_CATALOGS } from '../../core/piip.catalogs';
+import { statusDisplayName } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { DocumentDossierSummary, PiipStatus } from '../../core/piip.models';
+import { DocumentDossierSummary, PiipStatus, PortfolioStatusReference } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 
@@ -17,17 +17,17 @@ interface StatusVisual {
 }
 
 const STATUS_VISUALS: Readonly<Record<string, StatusVisual>> = {
-  Presentado: { icon: 'schedule', tone: 'pending' },
-  'Iniciativa aprobada': { icon: 'check_circle', tone: 'success' },
-  'Producto aprobado': { icon: 'check_circle', tone: 'success' },
-  Finalizado: { icon: 'check_circle', tone: 'success' },
-  'Proyecto en ejecución': { icon: 'play_circle', tone: 'progress' },
-  'Iniciativa archivada': { icon: 'archive', tone: 'neutral' },
-  'No Aplicable': { icon: 'remove_circle_outline', tone: 'neutral' },
-  Suspendido: { icon: 'pause_circle', tone: 'warning' },
-  'Producto no aprobado': { icon: 'cancel', tone: 'danger' },
-  'No Admisible': { icon: 'cancel', tone: 'danger' },
-  Cancelado: { icon: 'cancel', tone: 'danger' },
+  PRESENTED: { icon: 'schedule', tone: 'pending' },
+  INITIATIVE_APPROVED: { icon: 'check_circle', tone: 'success' },
+  PRODUCT_APPROVED: { icon: 'check_circle', tone: 'success' },
+  FINISHED: { icon: 'check_circle', tone: 'success' },
+  PROJECT_IN_PROGRESS: { icon: 'play_circle', tone: 'progress' },
+  INITIATIVE_ARCHIVED: { icon: 'archive', tone: 'neutral' },
+  NOT_APPLICABLE: { icon: 'remove_circle_outline', tone: 'neutral' },
+  SUSPENDED: { icon: 'pause_circle', tone: 'warning' },
+  PRODUCT_NOT_APPROVED: { icon: 'cancel', tone: 'danger' },
+  NOT_ADMISSIBLE: { icon: 'cancel', tone: 'danger' },
+  CANCELLED: { icon: 'cancel', tone: 'danger' },
 };
 
 const FALLBACK_STATUS_VISUAL: StatusVisual = { icon: 'circle', tone: 'neutral' };
@@ -43,8 +43,10 @@ export class DocumentsInboxComponent {
   private readonly formBuilder = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   readonly repository = inject(PIIP_REPOSITORY);
-  readonly catalogs = PIIP_CATALOGS;
   readonly recordTypes = computed(() => this.repository.catalogs().value.recordTypes);
+  readonly statusOptions = computed(() =>
+    this.catalogState().value.portfolioStatuses.filter((option) => option.active && option.applicability !== 'NONE'),
+  );
   readonly units = this.repository.organizationalUnits;
   readonly catalogState = this.repository.catalogs;
   readonly unitsState = this.repository.organizationalUnitsState;
@@ -59,7 +61,7 @@ export class DocumentsInboxComponent {
     return this.summaries().filter((dossier) =>
       (!search || `${dossier.code} ${dossier.name}`.toLocaleLowerCase().includes(search)) &&
       (value.recordType === 'Todos' || dossier.recordType === value.recordType) &&
-      (value.status === 'Todos' || dossier.status === value.status) &&
+      (value.status === 'Todos' || dossier.status.code === value.status) &&
       (value.unit === 'Todas' || dossier.organizationalUnits?.some((unit) => unit.id === Number(value.unit))),
     );
   });
@@ -82,5 +84,7 @@ export class DocumentsInboxComponent {
     return ['/', segment, dossier.code, 'documentos'];
   }
 
-  statusVisual(status: PiipStatus): StatusVisual { return STATUS_VISUALS[status] ?? FALLBACK_STATUS_VISUAL; }
+  statusVisual(status: PiipStatus | string): StatusVisual { return STATUS_VISUALS[status] ?? FALLBACK_STATUS_VISUAL; }
+
+  statusName(status: PortfolioStatusReference | undefined): string { return statusDisplayName(status); }
 }

@@ -25,10 +25,11 @@ import {
   UserRole,
   WorkItem,
   HomePortfolioQuery, HomePortfolioResult, HomePortfolioItem, HomePortfolioStatusCount, NotificationItem, PiipStatus,
-  CatalogBundle, OrganizationalUnit, ResourceState,
+  PortfolioStatusReference, PortfolioStatusOption, CatalogBundle, OrganizationalUnit, ResourceState,
   AssignmentMutationInput, AssignmentMutationResult, UserAdministrationSnapshot,
   UserAdministrationUser, UserAssignmentCandidate, UserAssignmentScope,
 } from './piip.models';
+import { INITIATIVE_STATUS_TRANSITIONS, PROJECT_STATUS_TRANSITIONS, type InitiativeStatus, type ProjectStatus } from './piip.catalogs';
 import { PiipRepository } from './piip.repository';
 
 function emptyHomePortfolio(): HomePortfolioResult {
@@ -91,7 +92,7 @@ export class PiipMockRepository extends PiipRepository {
     { id: 3, type: 'Iniciativa archivada', message: 'Una iniciativa fue archivada.', read: true, createdAt: new Date(Date.now() - 7200000).toISOString() },
     { id: 4, type: 'Recordatorio', message: 'Tienes un aviso pendiente de revisión.', read: false, createdAt: new Date(Date.now() - 10800000).toISOString() },
   ]);
-  readonly dashboardSummary = signal({ initiatives: 3, projects: 8, alerts: 2, pendingTasks: 2, notifications: 1, portfolioByStatus: {} });
+  readonly dashboardSummary = signal({ initiatives: 3, projects: 8, alerts: 2, pendingTasks: 2, notifications: 1, portfolioStatusCounts: [] });
   readonly homePortfolio = signal<HomePortfolioResult>(emptyHomePortfolio());
   readonly homePortfolioLoading = signal(false);
   readonly homePortfolioError = signal<string | null>(null);
@@ -106,7 +107,7 @@ export class PiipMockRepository extends PiipRepository {
       startDate: '2026-05-20', responsible: 'María López', peiObjective: 'Objetivo PEI declarado en el registro',
       poiActivity: 'Actividad POI declarada en el registro', responsibleUnits: 'DGIA',
       description: 'Necesidad de mejorar el acceso al riego tecnificado.', keyResults: '', note: '',
-      status: 'Presentado', finalProductType: 'NA', digitalComponent: 'No', closingDate: '',
+      status: mockStatus('PRESENTED'), finalProductType: 'NA', digitalComponent: 'No', closingDate: '',
       technicalOpinionReport: 'Informe_Opinion_I-024-2026.pdf', formalApprovalDecision: '',
       finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '',
       executingUnitId: 1,
@@ -118,7 +119,7 @@ export class PiipMockRepository extends PiipRepository {
       responsible: 'Carlos Rojas', peiObjective: 'Fortalecer la gestión institucional de la innovación agraria',
       poiActivity: 'Desarrollo de capacidades institucionales', responsibleUnits: 'DIPNA',
       description: 'Fortalecimiento de capacidades para gestionar iniciativas de innovación agraria.',
-      keyResults: '', note: '', status: 'Iniciativa aprobada', finalProductType: 'NA', digitalComponent: 'No',
+      keyResults: '', note: '', status: mockStatus('INITIATIVE_APPROVED'), finalProductType: 'NA', digitalComponent: 'No',
       closingDate: '', technicalOpinionReport: 'Informe_Opinion_I-019-2026.pdf',
       formalApprovalDecision: 'Decision_I-019-2026.pdf', finalProductApprovalDocument: '',
       projectManagementDocumentation: '', finalClosureReport: '',
@@ -131,7 +132,7 @@ export class PiipMockRepository extends PiipRepository {
       startDate: '2026-05-02', responsible: 'Lucía Fernández',
       peiObjective: 'Objetivo PEI declarado en el registro', poiActivity: 'Actividad POI declarada en el registro',
       responsibleUnits: 'DGA', description: 'Necesidad de equipamiento para la estación experimental agraria.',
-      keyResults: '', note: 'Iniciativa archivada con comentarios.', status: 'Iniciativa archivada',
+      keyResults: '', note: 'Iniciativa archivada con comentarios.', status: mockStatus('INITIATIVE_ARCHIVED'),
       finalProductType: 'NA', digitalComponent: 'No', closingDate: '', technicalOpinionReport: '',
       formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '',
       finalClosureReport: '',
@@ -143,7 +144,7 @@ export class PiipMockRepository extends PiipRepository {
       startDate: '2026-02-12', responsible: 'Carmen Rojas', peiObjective: 'Objetivo PEI declarado en el registro',
       poiActivity: 'Actividad POI declarada en el registro', responsibleUnits: 'DCLIMA',
       description: 'Proyecto preexistente registrado sin iniciativa formal de origen.', keyResults: '',
-      note: 'Proyecto preexistente de demostración.', status: 'Proyecto en ejecución', finalProductType: 'NA',
+      note: 'Proyecto preexistente de demostración.', status: mockStatus('PROJECT_IN_PROGRESS'), finalProductType: 'NA',
       digitalComponent: 'Si', closingDate: '', technicalOpinionReport: 'No Aplica', formalApprovalDecision: 'No Aplica',
       finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '',
       executingUnitId: 1,
@@ -163,7 +164,7 @@ export class PiipMockRepository extends PiipRepository {
       responsible: 'María López',
       role: 'Analista de Inversiones',
       unit: 'DGIA',
-      status: 'Presentado',
+      status: mockStatus('PRESENTED'),
       updatedAt: '20/05/2026 10:15',
       executingUnitId: 1,
     },
@@ -174,7 +175,7 @@ export class PiipMockRepository extends PiipRepository {
       responsible: 'Carlos Rojas',
       role: 'Especialista en Innovación',
       unit: 'DIPNA',
-      status: 'Iniciativa aprobada',
+      status: mockStatus('INITIATIVE_APPROVED'),
       updatedAt: '18/05/2026 16:45',
       executingUnitId: 1,
     },
@@ -185,21 +186,21 @@ export class PiipMockRepository extends PiipRepository {
       responsible: 'Lucía Fernández',
       role: 'Analista de Adquisiciones',
       unit: 'DGA',
-      status: 'Iniciativa archivada',
+      status: mockStatus('INITIATIVE_ARCHIVED'),
       updatedAt: '15/05/2026 09:30',
       executingUnitId: 1,
     },
   ] satisfies InitiativeRecord[]).map(enrichMockInitiative));
 
   readonly projects = signal<ProjectRecord[]>(([
-    { code: 'P-003-2026', name: 'Plataforma de Innovación Agraria Sostenible', originCode: 'I-012-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'DIPNA', responsible: 'María Quintana', status: 'Proyecto en ejecución', digitalComponent: 'Si' },
-    { code: 'P-004-2026', name: 'Sistema de Información de Riego', originCode: 'I-010-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'DGA', responsible: 'Luis Calderón', status: 'Producto aprobado', digitalComponent: 'Si' },
-    { code: 'P-005-2026', name: 'Red de Estaciones Agrometeorológicas', originCode: 'NA', originMode: 'PREEXISTING', unit: 'DCLIMA', responsible: 'Carmen Rojas', status: 'Proyecto en ejecución', digitalComponent: 'Si' },
-    { code: 'P-006-2026', name: 'Capacitación Digital para Productores', originCode: 'I-008-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'DIPNA', responsible: 'José Vílchez', status: 'Suspendido', digitalComponent: 'No' },
-    { code: 'P-007-2026', name: 'Trazabilidad de Productos Agrarios', originCode: 'I-003-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'DGESEP', responsible: 'Ana Lucía Prado', status: 'Producto aprobado', digitalComponent: 'Si' },
-    { code: 'P-008-2026', name: 'Gestión de Suelos Degradados', originCode: 'NA', originMode: 'PREEXISTING', unit: 'DGIA', responsible: 'Miguel Torres', status: 'Proyecto en ejecución', digitalComponent: 'No' },
-    { code: 'P-009-2026', name: 'Sanidad Vegetal con Monitoreo Digital', originCode: 'I-011-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'SENASA', responsible: 'Elena Paredes', status: 'Producto aprobado', digitalComponent: 'Si' },
-    { code: 'P-010-2026', name: 'Módulo de Seguros Agrarios', originCode: 'NA', originMode: 'PREEXISTING', unit: 'DGA', responsible: 'Ricardo Salazar', status: 'Suspendido', digitalComponent: 'No' },
+    { code: 'P-003-2026', name: 'Plataforma de Innovación Agraria Sostenible', originCode: 'I-012-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'DIPNA', responsible: 'María Quintana', status: mockStatus('PROJECT_IN_PROGRESS'), digitalComponent: 'Si' },
+    { code: 'P-004-2026', name: 'Sistema de Información de Riego', originCode: 'I-010-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'DGA', responsible: 'Luis Calderón', status: mockStatus('PRODUCT_APPROVED'), digitalComponent: 'Si' },
+    { code: 'P-005-2026', name: 'Red de Estaciones Agrometeorológicas', originCode: 'NA', originMode: 'PREEXISTING', unit: 'DCLIMA', responsible: 'Carmen Rojas', status: mockStatus('PROJECT_IN_PROGRESS'), digitalComponent: 'Si' },
+    { code: 'P-006-2026', name: 'Capacitación Digital para Productores', originCode: 'I-008-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'DIPNA', responsible: 'José Vílchez', status: mockStatus('SUSPENDED'), digitalComponent: 'No' },
+    { code: 'P-007-2026', name: 'Trazabilidad de Productos Agrarios', originCode: 'I-003-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'DGESEP', responsible: 'Ana Lucía Prado', status: mockStatus('PRODUCT_APPROVED'), digitalComponent: 'Si' },
+    { code: 'P-008-2026', name: 'Gestión de Suelos Degradados', originCode: 'NA', originMode: 'PREEXISTING', unit: 'DGIA', responsible: 'Miguel Torres', status: mockStatus('PROJECT_IN_PROGRESS'), digitalComponent: 'No' },
+    { code: 'P-009-2026', name: 'Sanidad Vegetal con Monitoreo Digital', originCode: 'I-011-2026', originMode: 'DERIVED_FROM_INITIATIVE', unit: 'SENASA', responsible: 'Elena Paredes', status: mockStatus('PRODUCT_APPROVED'), digitalComponent: 'Si' },
+    { code: 'P-010-2026', name: 'Módulo de Seguros Agrarios', originCode: 'NA', originMode: 'PREEXISTING', unit: 'DGA', responsible: 'Ricardo Salazar', status: mockStatus('SUSPENDED'), digitalComponent: 'No' },
   ] satisfies ProjectRecord[]).map(enrichMockProject));
 
   readonly documentDossiers = signal<DocumentDossier[]>(([
@@ -208,7 +209,7 @@ export class PiipMockRepository extends PiipRepository {
       code: 'I-024-2026',
       name: 'Mejoramiento del servicio de riego tecnificado en el valle de Ica',
       unit: 'DGIA',
-      status: 'Presentado',
+      status: mockStatus('PRESENTED'),
       lastActivity: '23/05/2026 10:28',
       executingUnitId: 1,
       stages: [
@@ -245,7 +246,7 @@ export class PiipMockRepository extends PiipRepository {
       code: 'I-019-2026',
       name: 'Fortalecimiento de capacidades para la gestión de la innovación agraria',
       unit: 'DIPNA',
-      status: 'Iniciativa aprobada',
+      status: mockStatus('INITIATIVE_APPROVED'),
       lastActivity: '18/05/2026 16:45',
       executingUnitId: 1,
       stages: [
@@ -264,7 +265,7 @@ export class PiipMockRepository extends PiipRepository {
       code: 'P-005-2026',
       name: 'Red de Estaciones Agrometeorológicas',
       unit: 'DCLIMA',
-      status: 'Proyecto en ejecución',
+      status: mockStatus('PROJECT_IN_PROGRESS'),
       lastActivity: '24/05/2026 11:10',
       executingUnitId: 1,
       stages: [
@@ -387,11 +388,17 @@ export class PiipMockRepository extends PiipRepository {
       const records = this.portfolioRecords()
         .filter((record) => record.executingUnitId === query.executingUnitId)
         .filter((record) => query.type === 'Todos' || record.recordType === query.type)
-        .filter((record) => query.status === 'Todos' || record.status === query.status)
+        .filter((record) => query.status === 'Todos' || record.status.code === query.status)
         .filter((record) => !query.q || `${record.code} ${record.name}`.toLocaleLowerCase().includes(query.q.toLocaleLowerCase()))
         .sort((a, b) => mockUpdatedAt(b, this.initiatives(), this.documentDossiers()).localeCompare(mockUpdatedAt(a, this.initiatives(), this.documentDossiers())) || b.code.localeCompare(a.code));
-      const statusCounts = new Map<PiipStatus, number>();
-      records.forEach((record) => statusCounts.set(record.status, (statusCounts.get(record.status) ?? 0) + 1));
+      const statusCounts = new Map<string, number>();
+      const statusReferences = new Map<string, PortfolioStatusReference>();
+      records.forEach((record) => {
+        const code = record.status.code;
+        if (!code) return;
+        statusCounts.set(code, (statusCounts.get(code) ?? 0) + 1);
+        statusReferences.set(code, record.status);
+      });
       const totalPages = Math.ceil(records.length / query.size);
       const page = totalPages > 0 && query.page >= totalPages ? 0 : query.page;
       const content = records.slice(page * query.size, (page + 1) * query.size).map((record): HomePortfolioItem => ({
@@ -410,7 +417,7 @@ export class PiipMockRepository extends PiipRepository {
         totalElements: records.length,
         totalPages,
         executingUnitTotalElements: this.portfolioRecords().filter((record) => record.executingUnitId === query.executingUnitId).length,
-        statusCounts: [...statusCounts.entries()].map(([status, count]): HomePortfolioStatusCount => ({ status, count })),
+        statusCounts: [...statusCounts.entries()].map(([code, count]): HomePortfolioStatusCount => ({ status: statusReferences.get(code) ?? mockStatus(code as PiipStatus), count })),
       });
     } catch (error) {
       this.homePortfolioError.set(error instanceof Error ? error.message : 'No fue posible cargar el portafolio.');
@@ -471,7 +478,7 @@ export class PiipMockRepository extends PiipRepository {
 
   getInitiativesEligibleForProject(): InitiativeRecord[] {
     return this.initiatives().filter(
-      (initiative) => initiative.status === 'Iniciativa aprobada' && !this.getProjectByOrigin(initiative.code),
+      (initiative) => initiative.status.code === 'INITIATIVE_APPROVED' && !this.getProjectByOrigin(initiative.code),
     );
   }
 
@@ -500,7 +507,7 @@ export class PiipMockRepository extends PiipRepository {
     this.assertAdministrator('El perfil Consulta externa no puede aprobar iniciativas.');
     const detail = this.getInitiativeDetail(input.initiativeCode);
     if (!detail) throw new Error('La iniciativa indicada no existe.');
-    if (detail.initiative.status !== 'Presentado') {
+    if (detail.initiative.status.code !== 'PRESENTED') {
       throw new Error('Solo una iniciativa en estado Presentado puede aprobarse.');
     }
 
@@ -508,17 +515,17 @@ export class PiipMockRepository extends PiipRepository {
     const updatedAt = formatDateTime(now);
     this.initiatives.update((initiatives) => initiatives.map((initiative) =>
       initiative.code === input.initiativeCode
-        ? { ...initiative, status: 'Iniciativa aprobada', updatedAt }
+        ? { ...initiative, status: mockStatus('INITIATIVE_APPROVED'), updatedAt }
         : initiative,
     ));
     this.portfolioRecords.update((records) => records.map((record) =>
       record.recordType === 'Iniciativa' && record.code === input.initiativeCode
-        ? { ...record, status: 'Iniciativa aprobada' }
+        ? { ...record, status: mockStatus('INITIATIVE_APPROVED') }
         : record,
     ));
     this.documentDossiers.update((dossiers) => dossiers.map((dossier) =>
       dossier.recordType === 'Iniciativa' && dossier.code === input.initiativeCode
-        ? { ...dossier, status: 'Iniciativa aprobada', lastActivity: updatedAt }
+        ? { ...dossier, status: mockStatus('INITIATIVE_APPROVED'), lastActivity: updatedAt }
         : dossier,
     ));
     this.auditEvents.update((events) => [
@@ -548,14 +555,14 @@ export class PiipMockRepository extends PiipRepository {
       solutionType: solutionType as PiipPortfolioRecord['solutionType'], source, startDate: input.startDate,
       responsible: input.responsible, peiObjective: this.optionalCatalogName('peiObjectives', input.peiObjectiveId), poiActivity: this.optionalCatalogName('poiActivities', input.poiActivityId),
        responsibleUnits: unit, responsibleUnitReferences, description: input.description, keyResults: '', note: input.note,
-      status: 'Presentado', finalProductType: 'NA', digitalComponent: input.digitalComponent, closingDate: '',
+      status: mockStatus('PRESENTED'), finalProductType: 'NA', digitalComponent: input.digitalComponent, closingDate: '',
       technicalOpinionReport: '', formalApprovalDecision: '', finalProductApprovalDocument: '',
       projectManagementDocumentation: '', finalClosureReport: '',
     };
     const structuredRecord = enrichMockRecord(record);
     this.portfolioRecords.update((records) => [structuredRecord, ...records]);
     this.initiatives.update((items) => [enrichMockInitiative({ code: input.code, name: input.name, source,
-      responsible: input.responsible, role: '', unit, status: 'Presentado',
+      responsible: input.responsible, role: '', unit, status: mockStatus('PRESENTED'),
       updatedAt: formatDateTime(new Date()) }), ...items]);
     return structuredRecord;
   }
@@ -565,13 +572,15 @@ export class PiipMockRepository extends PiipRepository {
     const detail = this.getInitiativeDetail(input.initiativeCode);
     if (!detail) throw new Error('La iniciativa indicada no existe.');
     if (detail.derivedProject) throw new Error('La iniciativa tiene un proyecto vinculado y está bloqueada.');
-    const allowed: Record<string, string[]> = { Presentado: ['Iniciativa archivada', 'No Admisible'], 'Iniciativa aprobada': ['Iniciativa archivada'] };
-    if (!allowed[detail.initiative.status]?.includes(input.targetStatus)) throw new Error('La transición de iniciativa no está permitida.');
+    const allowed = INITIATIVE_STATUS_TRANSITIONS[detail.initiative.status.code as InitiativeStatus] ?? [];
+    if (!allowed.includes(input.targetStatus)) throw new Error('La transición de iniciativa no está permitida.');
     const now = formatDateTime(new Date());
-    this.initiatives.update((items) => items.map((item) => item.code === input.initiativeCode ? { ...item, status: input.targetStatus, updatedAt: now } : item));
-    this.portfolioRecords.update((items) => items.map((item) => item.code === input.initiativeCode ? { ...item, status: input.targetStatus } : item));
-    this.documentDossiers.update((items) => items.map((item) => item.code === input.initiativeCode ? { ...item, status: input.targetStatus, lastActivity: now } : item));
-    this.auditEvents.update((items) => [{ recordCode: input.initiativeCode, timestamp: formatAuditTimestamp(new Date()), event: 'ESTADO_INICIATIVA_CAMBIADO', user: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', observation: JSON.stringify({ estadoAnterior: detail.initiative.status, estadoNuevo: input.targetStatus, observacion: input.observation.trim() }), icon: 'swap_horiz' }, ...items]);
+    const previous = detail.initiative.status;
+    const target = mockStatus(input.targetStatus);
+    this.initiatives.update((items) => items.map((item) => item.code === input.initiativeCode ? { ...item, status: target, updatedAt: now } : item));
+    this.portfolioRecords.update((items) => items.map((item) => item.code === input.initiativeCode ? { ...item, status: target } : item));
+    this.documentDossiers.update((items) => items.map((item) => item.code === input.initiativeCode ? { ...item, status: target, lastActivity: now } : item));
+    this.auditEvents.update((items) => [{ recordCode: input.initiativeCode, timestamp: formatAuditTimestamp(new Date()), event: 'ESTADO_INICIATIVA_CAMBIADO', user: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', observation: JSON.stringify({ estadoAnterior: previous.name, estadoNuevo: target.name, previousStatusCode: previous.code, newStatusCode: target.code, observacion: input.observation.trim() }), previousStatus: previous, newStatus: target, icon: 'swap_horiz' }, ...items]);
     return this.portfolioRecords().find((record) => record.code === input.initiativeCode)!;
   }
 
@@ -579,13 +588,15 @@ export class PiipMockRepository extends PiipRepository {
     this.assertAdministrator('El perfil Consulta externa no puede cambiar estados.');
     const detail = this.getProjectDetail(input.projectCode);
     if (!detail) throw new Error('El proyecto indicado no existe.');
-    const allowed: Record<string, string[]> = { 'Proyecto en ejecución': ['Producto aprobado', 'Producto no aprobado', 'Suspendido', 'Cancelado'], Suspendido: ['Proyecto en ejecución', 'Cancelado'], 'Producto no aprobado': ['Proyecto en ejecución', 'Cancelado'], 'Producto aprobado': ['Finalizado'] };
-    if (!allowed[detail.project.status]?.includes(input.targetStatus)) throw new Error('La transición de proyecto no está permitida.');
+    const allowed = PROJECT_STATUS_TRANSITIONS[detail.project.status.code as ProjectStatus] ?? [];
+    if (!allowed.includes(input.targetStatus)) throw new Error('La transición de proyecto no está permitida.');
     const now = formatDateTime(new Date());
-    this.projects.update((items) => items.map((item) => item.code === input.projectCode ? { ...item, status: input.targetStatus } : item));
-    this.portfolioRecords.update((items) => items.map((item) => item.code === input.projectCode ? { ...item, status: input.targetStatus, closingDate: input.targetStatus === 'Finalizado' ? now : item.closingDate } : item));
-    this.documentDossiers.update((items) => items.map((item) => item.code === input.projectCode ? { ...item, status: input.targetStatus, lastActivity: now } : item));
-    this.auditEvents.update((items) => [{ recordCode: input.projectCode, timestamp: formatAuditTimestamp(new Date()), event: 'ESTADO_PROYECTO_CAMBIADO', user: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', observation: JSON.stringify({ estadoAnterior: detail.project.status, estadoNuevo: input.targetStatus, observacion: input.observation.trim() }), icon: 'swap_horiz' }, ...items]);
+    const previous = detail.project.status;
+    const target = mockStatus(input.targetStatus);
+    this.projects.update((items) => items.map((item) => item.code === input.projectCode ? { ...item, status: target } : item));
+    this.portfolioRecords.update((items) => items.map((item) => item.code === input.projectCode ? { ...item, status: target, closingDate: input.targetStatus === 'FINISHED' ? now : item.closingDate } : item));
+    this.documentDossiers.update((items) => items.map((item) => item.code === input.projectCode ? { ...item, status: target, lastActivity: now } : item));
+    this.auditEvents.update((items) => [{ recordCode: input.projectCode, timestamp: formatAuditTimestamp(new Date()), event: 'ESTADO_PROYECTO_CAMBIADO', user: 'Administrador PIIP', email: 'admin.piip@midagri.gob.pe', observation: JSON.stringify({ estadoAnterior: previous.name, estadoNuevo: target.name, previousStatusCode: previous.code, newStatusCode: target.code, observacion: input.observation.trim() }), previousStatus: previous, newStatus: target, icon: 'swap_horiz' }, ...items]);
     return this.portfolioRecords().find((record) => record.code === input.projectCode)!;
   }
 
@@ -593,7 +604,7 @@ export class PiipMockRepository extends PiipRepository {
     this.assertAdministrator('El perfil Consulta externa no puede registrar proyectos.');
     const detail = this.getInitiativeDetail(input.initiativeCode);
     if (!detail) throw new Error('La iniciativa de origen no existe.');
-    if (detail.initiative.status !== 'Iniciativa aprobada') {
+    if (detail.initiative.status.code !== 'INITIATIVE_APPROVED') {
       throw new Error('El proyecto requiere una iniciativa en estado Iniciativa aprobada.');
     }
     if (this.getProjectByOrigin(input.initiativeCode)) {
@@ -613,14 +624,14 @@ export class PiipMockRepository extends PiipRepository {
       solutionType: this.catalogName('solutionTypes', input.solutionTypeId) as PiipPortfolioRecord['solutionType'], source: this.catalogName('sources', input.sourceId), startDate: input.startDate,
       responsible: input.responsible, peiObjective: this.optionalCatalogName('peiObjectives', input.peiObjectiveId), poiActivity: this.optionalCatalogName('poiActivities', input.poiActivityId),
        responsibleUnits: unit, responsibleUnitReferences, description: input.description, keyResults: input.keyResults,
-      note: input.note, status: 'Proyecto en ejecución', finalProductType: 'NA',
+      note: input.note, status: mockStatus('PROJECT_IN_PROGRESS'), finalProductType: 'NA',
       digitalComponent: input.digitalComponent, closingDate: '', technicalOpinionReport: '',
       formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '',
       finalClosureReport: '',
     };
     const project: ProjectRecord = {
       code: input.code, name: input.name, originCode, originMode: 'DERIVED_FROM_INITIATIVE',
-      unit, responsible: input.responsible, status: 'Proyecto en ejecución',
+      unit, responsible: input.responsible, status: mockStatus('PROJECT_IN_PROGRESS'),
       digitalComponent: input.digitalComponent,
     };
 
@@ -647,7 +658,7 @@ export class PiipMockRepository extends PiipRepository {
     const detail = this.getInitiativeDetail(code);
     if (!detail) throw mockRepositoryError(404, 'La iniciativa indicada no existe.');
     if (!this.canAdministerExecutingUnit(detail.portfolioRecord.executingUnitId)) throw mockRepositoryError(403, 'No tienes autorización sobre la Unidad Ejecutora del registro.');
-    if (detail.initiative.status !== 'Presentado' || detail.derivedProject) throw mockRepositoryError(422, 'La iniciativa no se encuentra en un estado editable.');
+    if (detail.initiative.status.code !== 'PRESENTED' || detail.derivedProject) throw mockRepositoryError(422, 'La iniciativa no se encuentra en un estado editable.');
     return this.applyMockUpdate(code, input.version, {
       name: input.name,
       solutionTypeId: input.solutionTypeId,
@@ -667,7 +678,7 @@ export class PiipMockRepository extends PiipRepository {
     const detail = this.getProjectDetail(code);
     if (!detail) throw mockRepositoryError(404, 'El proyecto indicado no existe.');
     if (!this.canAdministerExecutingUnit(detail.portfolioRecord.executingUnitId)) throw mockRepositoryError(403, 'No tienes autorización sobre la Unidad Ejecutora del registro.');
-    if (detail.project.status !== 'Proyecto en ejecución') throw mockRepositoryError(422, 'El proyecto no se encuentra en un estado editable.');
+    if (detail.project.status.code !== 'PROJECT_IN_PROGRESS') throw mockRepositoryError(422, 'El proyecto no se encuentra en un estado editable.');
     return this.applyMockUpdate(code, input.version, {
       name: input.name,
       solutionTypeId: input.solutionTypeId,
@@ -758,7 +769,7 @@ export class PiipMockRepository extends PiipRepository {
       description: input.description,
       keyResults: input.keyResults,
       note: input.note,
-      status: 'Proyecto en ejecución',
+      status: mockStatus('PROJECT_IN_PROGRESS'),
       finalProductType: 'NA',
       digitalComponent: input.digitalComponent,
       closingDate: '',
@@ -779,7 +790,7 @@ export class PiipMockRepository extends PiipRepository {
         originMode: 'PREEXISTING',
         unit,
         responsible: input.responsible,
-        status: 'Proyecto en ejecución',
+        status: mockStatus('PROJECT_IN_PROGRESS'),
         digitalComponent: input.digitalComponent,
       }),
       ...projects,
@@ -992,7 +1003,7 @@ function createPreexistingDocumentDossier(input: PreexistingProjectInput, unit: 
     code: input.code,
     name: input.name,
     unit,
-    status: 'Proyecto en ejecución',
+    status: mockStatus('PROJECT_IN_PROGRESS'),
     lastActivity: new Intl.DateTimeFormat('es-PE', { dateStyle: 'short', timeStyle: 'short' }).format(new Date()),
     stages: [
       { title: '1. Registro inicial', records: [{ name: 'Ficha de Iniciativa de Innovación Pública', required: false, filename: null, version: null, uploadedAt: null, state: 'No aplica' }] },
@@ -1010,7 +1021,7 @@ function createPreexistingDocumentDossier(input: PreexistingProjectInput, unit: 
 function createDerivedProjectDocumentDossier(input: DerivedProjectInput, unit: string): DocumentDossier {
   return {
     recordType: 'Proyecto', code: input.code, name: input.name, unit,
-    status: 'Proyecto en ejecución', lastActivity: formatDateTime(new Date()),
+    status: mockStatus('PROJECT_IN_PROGRESS'), lastActivity: formatDateTime(new Date()),
     stages: [
       { title: 'Documentos del proyecto', records: [
         { name: 'Documento formal de aprobación de producto final', required: false, filename: null, version: null, uploadedAt: null, state: 'Pendiente' },
@@ -1048,7 +1059,30 @@ function mockCatalogBundle(): CatalogBundle {
       option(44, 'PROJECT_MANAGEMENT_DOCUMENTATION', 'Documentación de la gestión del proyecto', 5),
       option(45, 'FINAL_CLOSURE_REPORT', 'Informe final de cierre', 6),
     ],
+    portfolioStatuses: mockStatusCatalog(),
   };
+}
+
+function mockStatusCatalog(): PortfolioStatusOption[] {
+  const status = (code: PiipStatus, name: string, displayOrder: number, applicability: string): PortfolioStatusOption => ({ code, name, displayOrder, active: true, applicability });
+  return [
+    status('PRESENTED', 'Presentado', 1, 'INITIATIVE'),
+    status('INITIATIVE_APPROVED', 'Iniciativa aprobada', 2, 'INITIATIVE'),
+    status('INITIATIVE_ARCHIVED', 'Iniciativa archivada', 3, 'INITIATIVE'),
+    status('PROJECT_IN_PROGRESS', 'Proyecto en ejecución', 4, 'PROJECT'),
+    status('PRODUCT_APPROVED', 'Producto aprobado', 5, 'PROJECT'),
+    status('PRODUCT_NOT_APPROVED', 'Producto no aprobado', 6, 'PROJECT'),
+    status('SUSPENDED', 'Suspendido', 7, 'PROJECT'),
+    status('CANCELLED', 'Cancelado', 8, 'PROJECT'),
+    status('FINISHED', 'Finalizado', 9, 'PROJECT'),
+    status('NOT_APPLICABLE', 'No Aplicable', 10, 'NONE'),
+    status('NOT_ADMISSIBLE', 'No Admisible', 11, 'INITIATIVE'),
+  ];
+}
+
+function mockStatus(code: PiipStatus): PortfolioStatusReference {
+  const option = mockStatusCatalog().find((item) => item.code === code);
+  return { code, name: option?.name ?? code, active: option?.active ?? false };
 }
 
 function enrichMockRecord(record: PiipPortfolioRecord): PiipPortfolioRecord {

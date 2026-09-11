@@ -3,6 +3,10 @@
 
 export interface ProjectStatusTransitionRequest {
   observation?: string;
+
+  /**
+   * Código técnico del estado destino según el catálogo de estados del portafolio
+   */
   targetStatus: 'PRESENTED' | 'INITIATIVE_APPROVED' | 'INITIATIVE_ARCHIVED' | 'PROJECT_IN_PROGRESS' | 'PRODUCT_APPROVED' | 'PRODUCT_NOT_APPROVED' | 'SUSPENDED' | 'CANCELLED' | 'FINISHED' | 'NOT_APPLICABLE' | 'NOT_ADMISSIBLE';
   version: number;
 }

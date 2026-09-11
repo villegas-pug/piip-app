@@ -4,9 +4,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { INITIATIVE_STATUSES, INITIATIVE_STATUS_TRANSITIONS, type InitiativeStatus } from '../../core/piip.catalogs';
+import { INITIATIVE_STATUS_TRANSITIONS, statusDisplayName, type InitiativeStatus } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import type { DocumentRecord, InitiativeDetail, PiipStatus } from '../../core/piip.models';
+import type { DocumentRecord, InitiativeDetail, PiipStatus, PortfolioStatusReference } from '../../core/piip.models';
 import { canEditInitiative } from '../../core/portfolio-edit-permissions';
 import { presentAuditEvent, type PresentedAuditEvent } from '../audit/audit-event.presenter';
 import { initiativeStatusVisual, type InitiativeStatusVisual } from '../initiatives/initiative-status-visual';
@@ -19,9 +19,11 @@ const TECHNICAL_REPORT = 'Informe de opinión técnica de evaluación de iniciat
 const FORMAL_DECISION = 'Documento formal de decisión de aprobación';
 
 interface ActivityStatusChange {
-  readonly previous: InitiativeStatus;
-  readonly current: InitiativeStatus;
+  readonly previous: PortfolioStatusReference;
+  readonly current: PortfolioStatusReference;
 }
+
+type InitiativeTransitionTarget = Exclude<InitiativeStatus, 'INITIATIVE_APPROVED'>;
 
 @Component({
   selector: 'app-initiative-detail',
@@ -41,13 +43,27 @@ export class InitiativeDetailComponent {
   private approvalRequestHandled = false;
 
   readonly code = computed(() => this.paramMap().get('code') ?? '');
+  readonly catalogState = this.repository.catalogs;
   readonly detail = computed(() => this.repository.getInitiativeDetail(this.code()));
   readonly canAdministerRecord = computed(() => this.repository.canAdministerExecutingUnit(this.detail()?.initiative.executingUnitId));
   readonly canEditRecord = computed(() => canEditInitiative(this.detail(), this.canAdministerRecord()));
+  /** El origen histórico puede estar inactivo y, aun así, salir por la matriz vigente. */
+  readonly statusActionsReady = computed(() => {
+    const status = this.detail()?.initiative.status;
+    return this.catalogState().phase === 'ready' && Boolean(status?.code) && status?.active !== undefined;
+  });
   readonly initiativeTransitionOptions = computed(() => {
-    const current = this.detail()?.initiative.status as InitiativeStatus | undefined;
-    if (!current || this.detail()?.derivedProject) return [] as readonly InitiativeStatus[];
-    return INITIATIVE_STATUS_TRANSITIONS[current] ?? [];
+    const statusCode = this.detail()?.initiative.status.code as InitiativeStatus | undefined;
+    if (this.catalogState().phase !== 'ready' || !statusCode || this.detail()?.derivedProject) return [] as readonly InitiativeStatus[];
+    const matrix = INITIATIVE_STATUS_TRANSITIONS[statusCode] ?? [];
+    const statuses = this.catalogState().value.portfolioStatuses;
+    return statuses
+      .filter((option) => option.code !== 'INITIATIVE_APPROVED'
+        && matrix.includes(option.code as InitiativeStatus)
+        && option.active
+        && option.applicability === 'INITIATIVE')
+      .sort((first, second) => first.displayOrder - second.displayOrder || first.code.localeCompare(second.code))
+      .map((option) => option.code as InitiativeTransitionTarget);
   });
   readonly dossierDocuments = computed(() => this.detail()?.dossier?.stages.flatMap((stage) => stage.records) ?? []);
   readonly approvalDocuments = computed(() => [
@@ -82,7 +98,7 @@ export class InitiativeDetailComponent {
 
   openApproval(): void {
     const detail = this.detail();
-    if (!detail || !this.canAdministerRecord() || detail.initiative.status !== 'Presentado' || detail.derivedProject) return;
+    if (!detail || !this.statusActionsReady() || !this.canAdministerRecord() || detail.initiative.status.code !== 'PRESENTED' || detail.derivedProject) return;
 
     this.dialog.open(InitiativeApprovalDialogComponent, {
       width: '600px',
@@ -96,7 +112,7 @@ export class InitiativeDetailComponent {
       data: {
         initiativeCode: detail.initiative.code,
         initiativeName: detail.initiative.name,
-        currentStatus: detail.initiative.status,
+        currentStatus: detail.initiative.status.code as PiipStatus,
         approvalDocuments: this.approvalDocuments(),
       },
     }).afterClosed().subscribe((result: InitiativeApprovalDialogResult | undefined) => {
@@ -111,7 +127,7 @@ export class InitiativeDetailComponent {
 
   openStatusDialog(): void {
     const detail = this.detail();
-    if (!detail || !this.canAdministerRecord() || detail.derivedProject || !this.initiativeTransitionOptions().length) return;
+    if (!detail || !this.statusActionsReady() || !this.canAdministerRecord() || detail.derivedProject || !this.initiativeTransitionOptions().length) return;
 
     this.dialog.open(InitiativeStatusTransitionDialogComponent, {
       width: '560px',
@@ -124,7 +140,7 @@ export class InitiativeDetailComponent {
       backdropClass: 'initiative-review-dialog-backdrop',
       data: {
         initiativeCode: detail.initiative.code,
-        currentStatus: detail.initiative.status as InitiativeStatus,
+        currentStatus: detail.initiative.status.code as InitiativeStatus,
         options: this.initiativeTransitionOptions(),
       },
     }).afterClosed().subscribe((result: InitiativeStatusTransitionDialogResult | undefined) => {
@@ -164,24 +180,23 @@ export class InitiativeDetailComponent {
     return null;
   }
 
-  activityInitialStatus(event: PresentedAuditEvent): InitiativeStatus | null {
+  activityInitialStatus(event: PresentedAuditEvent): PortfolioStatusReference | null {
     if (event.source.event !== 'INICIATIVA_REGISTRADA') return null;
-    const status = event.detailFields.find((field) => field.label === 'Estado')?.value;
-    return this.isInitiativeStatus(status) ? status : null;
+    return event.status ?? null;
   }
 
   activityStatusChange(event: PresentedAuditEvent): ActivityStatusChange | null {
     if (event.source.event !== 'ESTADO_INICIATIVA_CAMBIADO') return null;
-    const previous = event.detailFields.find((field) => field.label === 'Estado anterior')?.value;
-    const current = event.detailFields.find((field) => field.label === 'Estado nuevo')?.value;
-    if (!this.isInitiativeStatus(previous) || !this.isInitiativeStatus(current)) return null;
-    return { previous, current };
+    if (!event.previousStatus || !event.newStatus) return null;
+    return { previous: event.previousStatus, current: event.newStatus };
   }
 
   activityStatusChangeObservation(event: PresentedAuditEvent): string | null {
     const observation = event.detailFields.find((field) => field.label === 'Observación')?.value;
     return observation && observation !== 'No registrado' ? observation : null;
   }
+
+  statusName(status: PortfolioStatusReference | undefined): string { return statusDisplayName(status); }
 
   formatDate(value: string): string {
     const [year, month, day] = value.split('-');
@@ -190,9 +205,5 @@ export class InitiativeDetailComponent {
 
   private findDocument(name: string): DocumentRecord | undefined {
     return this.detail()?.dossier?.stages.flatMap((stage) => stage.records).find((document) => document.name === name);
-  }
-
-  private isInitiativeStatus(value: string | undefined): value is InitiativeStatus {
-    return value !== undefined && INITIATIVE_STATUSES.includes(value as InitiativeStatus);
   }
 }

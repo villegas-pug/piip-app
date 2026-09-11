@@ -7,10 +7,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.test.util.ReflectionTestUtils;
 import pe.gob.midagri.piip.audit.application.AuditService;
+import pe.gob.midagri.piip.catalogs.api.CatalogDtos.PortfolioStatusCatalogResponse;
+import pe.gob.midagri.piip.catalogs.application.CatalogQueryService;
 import pe.gob.midagri.piip.catalogs.application.CatalogReferenceService;
+import pe.gob.midagri.piip.catalogs.persistence.CatalogItemRepository;
 import pe.gob.midagri.piip.documents.persistence.*;
 import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
 import pe.gob.midagri.piip.organization.persistence.*;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatusApplicability;
 import pe.gob.midagri.piip.portfolio.persistence.*;
 import pe.gob.midagri.piip.portfolio.application.*;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
@@ -37,6 +42,9 @@ class PortfolioCatalogQueryTest {
         ReflectionTestUtils.setField(record.getSolutionType(), "id", 11L);
         ReflectionTestUtils.setField(record.getSolutionType(), "active", false);
         ReflectionTestUtils.setField(record.getSourceOrigin(), "id", 12L);
+        // Estado histórico inactivo: metadata vigente resuelta por código, legible con active=false.
+        ReflectionTestUtils.setField(record, "statusCatalog",
+            new PortfolioStatusCatalogEntity(PortfolioStatus.PRESENTED, "Presentado", 1, false, PortfolioStatusApplicability.INITIATIVE));
         when(records.findByCodeIgnoreCase("I-01")).thenReturn(Optional.of(record));
         when(responsible.findByRecordIdOrderByDisplayOrder(7L)).thenReturn(List.of());
 
@@ -49,5 +57,21 @@ class PortfolioCatalogQueryTest {
         assertThat(response.solutionType().code()).isEqualTo("TO_BE_DEFINED");
         assertThat(response.solutionType().active()).isFalse();
         assertThat(response.source().id()).isEqualTo(12L);
+        assertThat(response.status().code()).isEqualTo("PRESENTED");
+        assertThat(response.status().name()).isEqualTo("Presentado");
+        assertThat(response.status().active()).isFalse();
+    }
+
+    @Test void bundleCentralExcluyeElEstadoInactivo() {
+        PortfolioStatusRepository statuses = mock(PortfolioStatusRepository.class);
+        when(statuses.findAllByActiveTrueOrderByDisplayOrderAscCodeAsc()).thenReturn(List.of(
+            new PortfolioStatusCatalogEntity(PortfolioStatus.PRESENTED, "Presentado", 1, true, PortfolioStatusApplicability.INITIATIVE)));
+        CatalogQueryService service = new CatalogQueryService(mock(CatalogItemRepository.class),
+            mock(DocumentTypeRepository.class), mock(LocalAuthorizationService.class), statuses);
+
+        var bundle = service.bundle().portfolioStatuses();
+
+        assertThat(bundle).extracting(PortfolioStatusCatalogResponse::code).containsExactly("PRESENTED");
+        assertThat(bundle).extracting(PortfolioStatusCatalogResponse::code).doesNotContain("SUSPENDED");
     }
 }

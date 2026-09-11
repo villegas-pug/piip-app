@@ -45,7 +45,7 @@ La ruta **Inicio** muestra el portafolio consultable de la Unidad Ejecutora acti
 
 Al abrir Inicio, la pantalla solicita una página global de iniciativas y proyectos con la UE activa. Cada fila muestra código, nombre, tipo, estado actual, Unidad Ejecutora y **Ver detalle**. La acción de detalle deriva de manera real del tipo: una iniciativa abre su módulo de iniciativas y un proyecto abre su módulo de proyectos.
 
-La consulta permite buscar por código o nombre y filtrar por `Todos`, `Iniciativa`, `Proyecto` y estados canónicos. Cada página presenta hasta cinco registros. Cuando se combinan iniciativas y proyectos, la secuencia es única y se ordena por fecha de actualización descendente; un desempate técnico por identificador mantiene estable la paginación.
+La consulta permite buscar por código o nombre y filtrar por `Todos`, `Iniciativa`, `Proyecto` y estados canónicos activos del catálogo central. Cada página presenta hasta cinco registros. El filtro conserva el código técnico aunque cambie la denominación; cuando se combinan iniciativas y proyectos, la secuencia es única y se ordena por fecha de actualización descendente; un desempate técnico por identificador mantiene estable la paginación.
 
 Los indicadores y la distribución por estado proceden del mismo conjunto filtrado que el listado. Solo se muestran estados con conteo positivo y la suma de sus conteos coincide con el total filtrado. Si se cambia el tipo y el estado seleccionado deja de ser válido, el filtro vuelve a **Estado: Todos** y la página se reinicia.
 
@@ -77,7 +77,7 @@ Desde el registro de iniciativa, un `Administrador PIIP` de la UE activa complet
 
 Los datos se organizan alrededor de los 23 campos canónicos: identificación, fechas y responsables, contenido, estado/producto y posiciones documentales. Los seis catálogos controlados incluyen tipo de registro, tipo de solución, fuente u origen, estado, tipo de producto final aprobado y componente digital. `NA` (por ejemplo, ausencia de iniciativa predecesora) y `No aplica` (situación documental o valor de catálogo) no significan lo mismo.
 
-Antes de habilitar el registro, PIIP obtiene del backend las opciones vigentes de Tipo de solución, Fuente u origen, Objetivo PEI, Actividad POI y Tipo documental. Tipo de registro también procede del backend como catálogo técnico; la opción **Todos** pertenece únicamente a los filtros de la interfaz. Objetivo PEI y Actividad POI son selecciones independientes y opcionales: elegir una no filtra, exige ni modifica la otra.
+Antes de habilitar el registro, PIIP obtiene del backend las opciones vigentes de Tipo de solución, Fuente u origen, Objetivo PEI, Actividad POI, Tipo documental y estados del portafolio. Tipo de registro también procede del backend como catálogo técnico; la opción **Todos** pertenece únicamente a los filtros de la interfaz. El formulario resuelve el nombre del estado inicial por su código y bloquea la confirmación si el catálogo no está disponible, el estado no está activo o no aplica al tipo de registro. Objetivo PEI y Actividad POI son selecciones independientes y opcionales: elegir una no filtra, exige ni modifica la otra.
 
 La persona selecciona las opciones por su nombre, pero PIIP conserva y envía sus identidades. Las **Unidades Orgánicas Involucradas** se consultan después de conocer la Unidad Ejecutora y solo incluyen opciones activas de esa UE con sigla registrada. El registro exige una lista ordenada de una o más unidades, sin máximo funcional ni repeticiones: cada fila muestra Nro, Descripción y Abreviatura de solo lectura; se agregan al final, se puede retirar cualquier fila salvo la última y el Nro se renumera automáticamente en la secuencia 1..N. Si la carga continúa, queda vacía o falla, la pantalla lo diferencia y no reemplaza la respuesta con listas locales. Un campo requerido sin opciones válidas bloquea la confirmación y ofrece reintentar la consulta.
 
@@ -121,9 +121,9 @@ Un cambio efectivo devuelve la representación completa con nueva fecha de modif
 
 ### 4. Cambiar estados desde los detalles
 
-Las transiciones se inician y confirman desde el detalle contextual, no desde los listados. La iniciativa y el proyecto usan rutas, requests y opciones separadas para impedir mezclar sus estados. `No Aplicable` queda fuera de los destinos de transición de esta versión.
+Las transiciones se inician y confirman desde el detalle contextual, no desde los listados. La iniciativa y el proyecto usan rutas, requests y opciones separadas para impedir mezclar sus estados. Sus destinos son la intersección de la matriz vigente, la actividad y la aplicabilidad del catálogo; la metadata del catálogo nunca habilita una transición. `No Aplicable` queda fuera de los destinos de transición de esta versión.
 
-La observación de la persona usuaria acompaña la operación y la auditoría registra registro afectado, estado anterior, estado nuevo, actor, rol, Unidad Ejecutora, fecha, observación y resultado. La versión existente del registro se reutiliza para detectar conflictos; no se crea un segundo versionado.
+La observación de la persona usuaria acompaña la operación y la auditoría registra registro afectado, códigos de estado anterior y nuevo, sus denominaciones vigentes cuando estén disponibles, actor, rol, Unidad Ejecutora, fecha, observación y resultado. Los eventos anteriores que solo contienen texto se preservan como histórico. La versión existente del registro se reutiliza para detectar conflictos; no se crea un segundo versionado.
 
 Al pasar un proyecto a `Finalizado`, `closingDate` se establece con la fecha local de `America/Lima`. Las demás transiciones no crean, borran ni reemplazan esa fecha. Los documentos pendientes se muestran como información y no bloquean las transiciones de esta primera versión.
 

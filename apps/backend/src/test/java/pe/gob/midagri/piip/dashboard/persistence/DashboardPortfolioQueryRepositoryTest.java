@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.time.LocalDate;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -20,6 +21,7 @@ import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.catalogs.persistence.*;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 
@@ -34,7 +36,13 @@ class DashboardPortfolioQueryRepositoryTest {
     @Autowired EntityManager entityManager;
     @Autowired CatalogRepository catalogs;
     @Autowired CatalogItemRepository catalogItems;
+    @Autowired PortfolioStatusRepository statuses;
     private PortfolioRecordTestBuilder fixtures;
+
+    @BeforeEach
+    void seedStatusCatalog() {
+        PortfolioRecordTestBuilder.seedPortfolioStatuses(statuses);
+    }
 
     @Test
     void filtersOneUnitAndReconcilesPositiveStatusCounts() {

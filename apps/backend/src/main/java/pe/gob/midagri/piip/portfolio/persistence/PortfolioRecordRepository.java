@@ -10,25 +10,25 @@ import java.util.*;
 
 public interface PortfolioRecordRepository extends JpaRepository<PortfolioRecordEntity, Long>, JpaSpecificationExecutor<PortfolioRecordEntity> {
     @Override
-    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity"})
+    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity", "statusCatalog"})
     Page<PortfolioRecordEntity> findAll(Specification<PortfolioRecordEntity> specification, Pageable pageable);
-    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity"})
+    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity", "statusCatalog"})
     Optional<PortfolioRecordEntity> findByCodeIgnoreCase(String code);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity"})
+    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity", "statusCatalog"})
     @Query("select record from PortfolioRecordEntity record where lower(record.code) = lower(:code)")
     Optional<PortfolioRecordEntity> findByCodeIgnoreCaseForUpdate(@Param("code") String code);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity"})
+    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity", "statusCatalog"})
     @Query("select record from PortfolioRecordEntity record where lower(record.code) = lower(:code) and record.recordType = :recordType")
     Optional<PortfolioRecordEntity> findByCodeIgnoreCaseAndRecordTypeForUpdate(@Param("code") String code,
             @Param("recordType") RecordType recordType);
-    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity"})
+    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity", "statusCatalog"})
     List<PortfolioRecordEntity> findByRecordTypeOrderByUpdatedAtDesc(RecordType type);
     boolean existsByOriginRecordId(Long originId);
-    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity"})
+    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity", "statusCatalog"})
     List<PortfolioRecordEntity> findByRecordTypeAndStatusOrderByUpdatedAtDesc(RecordType type, PortfolioStatus status);
-    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity"})
+    @EntityGraph(attributePaths = {"executingUnit", "originRecord", "solutionType", "sourceOrigin", "peiObjective", "poiActivity", "statusCatalog"})
     List<PortfolioRecordEntity> findByExecutingUnit_IdOrderByUpdatedAtDesc(Long executingUnitId);
     List<PortfolioRecordEntity> findByExecutingUnit_Id(Long executingUnitId);
 }

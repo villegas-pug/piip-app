@@ -1,6 +1,7 @@
 package pe.gob.midagri.piip.audit.application;
 
 import java.time.Instant;
+import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.PortfolioStatusReferenceResponse;
 
 public final class AuditReadModels {
     private AuditReadModels() {}
@@ -9,5 +10,7 @@ public final class AuditReadModels {
             String recordCode, String correlationId, long durationMs, String safeReason, Instant occurredAt) {}
 
     public record EventView(String event, String entityCode, String detail, String actor,
-            String actorName, String actorEmail, Instant occurredAt) {}
+            String actorName, String actorEmail, Instant occurredAt,
+            PortfolioStatusReferenceResponse status, PortfolioStatusReferenceResponse previousStatus,
+            PortfolioStatusReferenceResponse newStatus) {}
 }

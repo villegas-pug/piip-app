@@ -144,6 +144,15 @@ describe('DerivedProjectFormComponent', () => {
     expect(fixture.componentInstance.submitting()).toBe(false);
   });
 
+  it('bloquea revisión y registro si PROJECT_IN_PROGRESS no está disponible', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(DerivedProjectFormComponent);
+    repository.catalogs.set({ phase: 'ready', value: { ...repository.catalogs().value, portfolioStatuses: repository.catalogs().value.portfolioStatuses.filter((item) => item.code !== 'PROJECT_IN_PROGRESS') }, error: null, requestId: 2 });
+    fixture.componentInstance.openReview();
+    await expect(fixture.componentInstance.registerProject()).resolves.toBe(false);
+    expect(open).not.toHaveBeenCalled();
+  });
+
   it('precarga en orden las unidades de la iniciativa y permite reportar una fila backend', async () => {
     const repository = TestBed.inject(PiipMockRepository);
     const origin = repository.portfolioRecords().find((item) => item.code === 'I-019-2026')!;

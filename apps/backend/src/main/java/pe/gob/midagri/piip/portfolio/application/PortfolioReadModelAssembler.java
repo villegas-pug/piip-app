@@ -6,9 +6,11 @@ import pe.gob.midagri.piip.catalogs.api.CatalogDtos.TechnicalCatalogItemResponse
 import pe.gob.midagri.piip.catalogs.persistence.CatalogItemEntity;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.OrganizationalUnitResponse;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.PortfolioRecordResponse;
+import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.PortfolioStatusReferenceResponse;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ResponsibleUnitResponse;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusCatalogEntity;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
 import pe.gob.midagri.piip.shared.api.PageResponse;
 
@@ -38,7 +40,7 @@ public class PortfolioReadModelAssembler {
             record.getCode(), record.getOriginCode(), record.getName(), catalog(record.getSolutionType()),
             catalog(record.getSourceOrigin()), record.getStartDate(), record.getResponsible(), catalog(record.getPeiObjective()),
             catalog(record.getPoiActivity()), units, record.getDescription(), record.getKeyResults(), record.getNote(),
-            record.getStatus().label(), record.getFinalProductType().label(), record.getDigitalComponent().label(),
+            status(record), record.getFinalProductType().label(), record.getDigitalComponent().label(),
             record.getClosingDate(), null, null, null, null, null, record.getExecutingUnit().getId(),
             record.getExecutingUnit().getName(), record.getUpdatedAt(), record.getVersion());
     }
@@ -46,5 +48,13 @@ public class PortfolioReadModelAssembler {
     private PersistentCatalogItemResponse catalog(CatalogItemEntity value) {
         return value == null ? null : new PersistentCatalogItemResponse(value.getId(), value.getCode(), value.getName(),
             value.getDisplayOrder(), value.isActive());
+    }
+
+    private PortfolioStatusReferenceResponse status(PortfolioRecordEntity record) {
+        PortfolioStatusCatalogEntity catalog = record.getStatusCatalog();
+        if (catalog == null) {
+            return new PortfolioStatusReferenceResponse(record.getStatus().name(), record.getStatus().label(), true);
+        }
+        return new PortfolioStatusReferenceResponse(catalog.getCode().name(), catalog.getName(), catalog.isActive());
     }
 }

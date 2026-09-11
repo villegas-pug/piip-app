@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import pe.gob.midagri.piip.portfolio.domain.*;
 import pe.gob.midagri.piip.catalogs.api.CatalogDtos.*;
 import java.time.*;
@@ -36,14 +37,21 @@ public final class PortfolioDtos {
 
     public record ApprovalRequest(@NotNull Long version, @Size(max = 1000) String observation) {}
 
+    /** Códigos técnicos del catálogo de estados documentados en el contrato; la identidad funcional vive en el catálogo persistente. */
     public record InitiativeStatusTransitionRequest(
         @NotNull Long version,
-        @NotNull PortfolioStatus targetStatus,
+        @NotBlank @Schema(description = "Código técnico del estado destino según el catálogo de estados del portafolio",
+            allowableValues = {"PRESENTED", "INITIATIVE_APPROVED", "INITIATIVE_ARCHIVED", "PROJECT_IN_PROGRESS",
+                "PRODUCT_APPROVED", "PRODUCT_NOT_APPROVED", "SUSPENDED", "CANCELLED", "FINISHED",
+                "NOT_APPLICABLE", "NOT_ADMISSIBLE"}) String targetStatus,
         @Size(max = 1000) String observation) {}
 
     public record ProjectStatusTransitionRequest(
         @NotNull Long version,
-        @NotNull PortfolioStatus targetStatus,
+        @NotBlank @Schema(description = "Código técnico del estado destino según el catálogo de estados del portafolio",
+            allowableValues = {"PRESENTED", "INITIATIVE_APPROVED", "INITIATIVE_ARCHIVED", "PROJECT_IN_PROGRESS",
+                "PRODUCT_APPROVED", "PRODUCT_NOT_APPROVED", "SUSPENDED", "CANCELLED", "FINISHED",
+                "NOT_APPLICABLE", "NOT_ADMISSIBLE"}) String targetStatus,
         @Size(max = 1000) String observation) {}
 
     public record DerivedProjectRequest(
@@ -195,11 +203,14 @@ public final class PortfolioDtos {
         }
     }
 
+    /** Referencia estructurada del estado de un registro: código estable, denominación vigente y actividad. */
+    public record PortfolioStatusReferenceResponse(String code, String name, Boolean active) {}
+
     public record PortfolioRecordResponse(
         TechnicalCatalogItemResponse recordType, String code, String originCode, String name,
         PersistentCatalogItemResponse solutionType, PersistentCatalogItemResponse source,
         LocalDate startDate, String responsible, PersistentCatalogItemResponse peiObjective, PersistentCatalogItemResponse poiActivity,
-        List<ResponsibleUnitResponse> responsibleUnits, String description, String keyResults, String note, String status,
+        List<ResponsibleUnitResponse> responsibleUnits, String description, String keyResults, String note, PortfolioStatusReferenceResponse status,
         String finalProductType, String digitalComponent, LocalDate closingDate,
         String technicalOpinionReport, String formalApprovalDecision, String finalProductApprovalDocument,
         String projectManagementDocumentation, String finalClosureReport,

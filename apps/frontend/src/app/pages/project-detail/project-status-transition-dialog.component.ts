@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import type { ProjectStatus } from '../../core/piip.catalogs';
+import { resolveStatusName, type ProjectStatus } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import type { PiipStatus } from '../../core/piip.models';
 import { projectStatusVisual, type ProjectStatusVisual } from '../projects/project-status-visual';
@@ -30,6 +30,8 @@ export class ProjectStatusTransitionDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<ProjectStatusTransitionDialogComponent, ProjectStatusTransitionDialogResult>);
   private readonly repository = inject(PIIP_REPOSITORY);
   readonly data = inject<ProjectStatusTransitionDialogData>(MAT_DIALOG_DATA);
+  readonly catalogStatuses = computed(() => this.repository.catalogs().value.portfolioStatuses);
+  readonly catalogReady = computed(() => this.repository.catalogs().phase === 'ready');
   readonly selectedTarget = signal<ProjectStatus | null>(null);
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
@@ -40,8 +42,10 @@ export class ProjectStatusTransitionDialogComponent {
     return projectStatusVisual(status);
   }
 
+  statusName(code: string): string { return resolveStatusName(this.catalogStatuses(), code); }
+
   selectTarget(target: ProjectStatus): void {
-    if (!this.submitting() && this.data.options.includes(target)) {
+    if (this.catalogReady() && !this.submitting() && this.isSelectableTarget(target)) {
       this.selectedTarget.set(target);
       this.error.set(null);
     }
@@ -53,7 +57,7 @@ export class ProjectStatusTransitionDialogComponent {
 
   async confirm(): Promise<void> {
     const targetStatus = this.selectedTarget();
-    if (!targetStatus || this.submitting()) return;
+    if (!this.catalogReady() || !targetStatus || this.submitting() || !this.isSelectableTarget(targetStatus)) return;
 
     this.submitting.set(true);
     this.error.set(null);
@@ -71,5 +75,10 @@ export class ProjectStatusTransitionDialogComponent {
       this.dialogRef.disableClose = false;
       this.submitting.set(false);
     }
+  }
+
+  private isSelectableTarget(target: ProjectStatus): boolean {
+    return this.data.options.includes(target)
+      && this.catalogStatuses().some((status) => status.code === target && status.active && status.applicability === 'PROJECT');
   }
 }

@@ -44,12 +44,12 @@ describe('InitiativesComponent pagination', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const template = repository.initiatives()[0];
     const expected = [
-      ['Presentado', 'schedule', 'pending'],
-      ['Iniciativa aprobada', 'check_circle', 'success'],
-      ['Iniciativa archivada', 'archive', 'neutral'],
-      ['No Admisible', 'cancel', 'danger'],
+      ['PRESENTED', 'Presentado', 'schedule', 'pending'],
+      ['INITIATIVE_APPROVED', 'Iniciativa aprobada', 'check_circle', 'success'],
+      ['INITIATIVE_ARCHIVED', 'Iniciativa archivada', 'archive', 'neutral'],
+      ['NOT_ADMISSIBLE', 'No Admisible', 'cancel', 'danger'],
     ] as const;
-    repository.initiatives.set(expected.map(([status], index) => ({ ...template, code: `I-STATUS-${index}-2026`, status })));
+    repository.initiatives.set(expected.map(([code, name], index) => ({ ...template, code: `I-STATUS-${index}-2026`, status: { code, name, active: true } })));
 
     const fixture = TestBed.createComponent(InitiativesComponent);
     fixture.detectChanges();
@@ -57,7 +57,7 @@ describe('InitiativesComponent pagination', () => {
     const statusTags = Array.from(host.querySelectorAll<HTMLElement>('.status-tag'));
 
     expect(statusTags).toHaveLength(expected.length);
-    expected.forEach(([status, icon, tone], index) => {
+    expected.forEach(([, status, icon, tone], index) => {
       const tag = statusTags[index]!;
       expect(tag.getAttribute('data-tone')).toBe(tone);
       expect(tag.textContent).toContain(status);
@@ -65,6 +65,13 @@ describe('InitiativesComponent pagination', () => {
       expect(tag.querySelector('mat-icon')?.textContent?.trim()).toBe(icon);
     });
     expect(host.textContent).not.toContain('Proyecto en ejecución');
+  });
+
+  it('filtra por código y no ofrece NOT_APPLICABLE', () => {
+    const fixture = TestBed.createComponent(InitiativesComponent);
+    fixture.componentInstance.filters.patchValue({ status: 'PRESENTED' });
+    expect(fixture.componentInstance.filteredInitiatives().every((item) => item.status.code === 'PRESENTED')).toBe(true);
+    expect(fixture.componentInstance.initiativeStatuses().map((item) => item.code)).not.toContain('NOT_APPLICABLE');
   });
 
   it('filtra por referencias resueltas de fuente y Unidad Orgánica conservando los filtros vigentes', () => {

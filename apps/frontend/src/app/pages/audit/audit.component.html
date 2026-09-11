@@ -24,7 +24,7 @@
               <span class="audit-record" data-label="Expediente">{{ event.source.recordCode ?? '—' }}</span>
               <strong class="event-name" data-label="Evento">{{ event.eventLabel }}</strong>
               <span class="audit-user" data-label="Usuario">{{ event.source.user }}@if (event.source.email) {<small>{{ event.source.email }}</small>}</span>
-               <span class="audit-observation" data-label="Observación">{{ event.observation }}</span>
+                <span class="audit-observation" data-label="Observación">{{ event.observation }}@if (event.previousStatus && event.newStatus) {<small>{{ event.previousStatus.code }} · {{ event.previousStatus.name }} → {{ event.newStatus.code }} · {{ event.newStatus.name }}</small>} @else if (event.status) {<small>{{ event.status.code }} · {{ event.status.name }}</small>}</span>
               <span class="audit-document" data-label="Documento">@if (event.documentName) {<span class="document-link"><mat-icon>description</mat-icon>{{ event.documentName }}</span>} @else {—}</span>
               <button class="secondary-button" type="button" (click)="showDetail(event)">Ver detalle <mat-icon>chevron_right</mat-icon></button>
             </div>

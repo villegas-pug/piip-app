@@ -8,10 +8,10 @@ export interface InitiativeStatusVisual {
 }
 
 const INITIATIVE_STATUS_VISUALS: Readonly<Partial<Record<PiipStatus, InitiativeStatusVisual>>> = {
-  Presentado: { icon: 'schedule', tone: 'pending' },
-  'Iniciativa aprobada': { icon: 'check_circle', tone: 'success' },
-  'Iniciativa archivada': { icon: 'archive', tone: 'neutral' },
-  'No Admisible': { icon: 'cancel', tone: 'danger' },
+  PRESENTED: { icon: 'schedule', tone: 'pending' },
+  INITIATIVE_APPROVED: { icon: 'check_circle', tone: 'success' },
+  INITIATIVE_ARCHIVED: { icon: 'archive', tone: 'neutral' },
+  NOT_ADMISSIBLE: { icon: 'cancel', tone: 'danger' },
 };
 
 const FALLBACK_INITIATIVE_STATUS_VISUAL: InitiativeStatusVisual = { icon: 'circle', tone: 'neutral' };

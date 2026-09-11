@@ -15,12 +15,14 @@ Usar [.env.example](../../.env.example) como matriz de variables. Los valores de
 ## Base de datos
 
 1. Para un esquema descartable de desarrollo o pruebas, configurar externamente `ORACLE_PASSWORD`; `test-reset` hereda URL, usuario, contraseña y driver desde `application.yml`. La identidad inicial aprobada está definida directamente en `db/test/catalog-data.sql`.
-2. Ejecutar manualmente el proceso no web con los perfiles exactos `test,test-reset`; Hibernate recreará las 19 tablas y Spring ejecutará el seed sintético DML-only.
+2. Ejecutar manualmente el proceso no web con los perfiles exactos `test,test-reset`; Hibernate recreará las 21 tablas y Spring ejecutará el seed sintético DML-only, incluidos los once estados del portafolio validados por código natural.
 3. Para un esquema institucional, comparar `apps/backend/target/piip-oracle.sql` con `database/generated/piip-oracle.sql`, generado por Hibernate desde las entidades JPA y versionado como entrega al DBA.
 4. Entregar el artefacto al DBA para revisión y aplicación en un esquema vacío institucional.
 5. Iniciar la aplicación sin perfil explícito para usar `dev`, o con `prod` activado externamente; ambos deben usar `ddl-auto=validate`.
 
 No usar el perfil `test-reset`, `create`, `create-drop` ni el seed sintético en el esquema institucional o en producción. Hibernate JPA es la fuente canónica; el único SQL externo permitido es el DML del perfil destructivo de pruebas.
+
+La provisión institucional de `ESTADO_PORTAFOLIO` y de su FK por código natural queda pendiente de una feature posterior aprobada. Hasta entonces, `dev` y `prod` mantienen `ddl-auto=validate`, no cargan el seed externo y esta entrega no declara preparación productiva completa.
 
 ## Keycloak
 

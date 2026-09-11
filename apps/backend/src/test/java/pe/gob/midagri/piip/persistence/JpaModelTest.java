@@ -22,22 +22,34 @@ class JpaModelTest {
     @Autowired PortfolioRecordRepository records;
     @Autowired CatalogRepository catalogs;
     @Autowired CatalogItemRepository catalogItems;
+    @Autowired PortfolioStatusRepository portfolioStatuses;
     @Autowired EntityManager entityManager;
 
     @Test
     void persistsTheCanonicalPortfolioAggregate() {
         InstitutionEntity institution = institutions.save(new InstitutionEntity("MIDAGRI", "Ministerio de Desarrollo Agrario y Riego"));
         ExecutingUnitEntity unit = executingUnits.save(new ExecutingUnitEntity(institution, "UE-DEMO", "Unidad demostrativa"));
+        status(PortfolioStatus.PRESENTED, "Presentado", 1, PortfolioStatusApplicability.INITIATIVE);
         PortfolioRecordEntity record = records.save(PortfolioRecordEntity.initiative("I-001-2026", unit, "Iniciativa", item(CatalogCode.SOLUTION_TYPE, "TO_BE_DEFINED"),
             item(CatalogCode.SOURCE_ORIGIN, "INITIATIVE_SHEET"), LocalDate.of(2026, 7, 1), "Responsable", null, null, "Descripción", "Nota", DigitalComponent.NO, "subject"));
 
-        assertThat(records.findByCodeIgnoreCase(record.getCode())).get().extracting(PortfolioRecordEntity::getStatus).isEqualTo(PortfolioStatus.PRESENTED);
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(records.findByCodeIgnoreCase(record.getCode())).get().satisfies(persisted -> {
+            assertThat(persisted.getStatus()).isEqualTo(PortfolioStatus.PRESENTED);
+            assertThat(persisted.getStatusCatalog()).isNotNull();
+            assertThat(persisted.getStatusCatalog().getCode()).isEqualTo(PortfolioStatus.PRESENTED);
+            assertThat(persisted.getStatusCatalog().getName()).isEqualTo("Presentado");
+            assertThat(persisted.getStatusCatalog().isActive()).isTrue();
+        });
     }
 
     @Test
     void resolvesTheInitiativeCodeFromALazyProjectOrigin() {
         InstitutionEntity institution = institutions.save(new InstitutionEntity("MIDAGRI-ORIGIN", "Institución de prueba"));
         ExecutingUnitEntity unit = executingUnits.save(new ExecutingUnitEntity(institution, "UE-ORIGIN", "Unidad de prueba"));
+        status(PortfolioStatus.PRESENTED, "Presentado", 1, PortfolioStatusApplicability.INITIATIVE);
+        status(PortfolioStatus.PROJECT_IN_PROGRESS, "Proyecto en ejecución", 4, PortfolioStatusApplicability.PROJECT);
         PortfolioRecordEntity initiative = records.save(PortfolioRecordEntity.initiative("I-002-2026", unit, "Iniciativa origen",
             item(CatalogCode.SOLUTION_TYPE, "TO_BE_DEFINED-2"), item(CatalogCode.SOURCE_ORIGIN, "INITIATIVE_SHEET-2"), LocalDate.of(2026, 7, 1), "Responsable", null, null,
             "Descripción", "Nota", DigitalComponent.YES, "subject"));
@@ -52,10 +64,18 @@ class JpaModelTest {
             .findFirst().orElseThrow();
 
         assertThat(project.getOriginCode()).isEqualTo("I-002-2026");
+        assertThat(project.getStatusCatalog()).isNotNull();
+        assertThat(project.getStatusCatalog().getCode()).isEqualTo(PortfolioStatus.PROJECT_IN_PROGRESS);
     }
 
     private CatalogItemEntity item(CatalogCode code, String itemCode) {
         CatalogEntity catalog = catalogs.findByCode(code).orElseGet(() -> catalogs.save(new CatalogEntity(code, code.name(), code.ordinal(), true)));
         return catalogItems.save(new CatalogItemEntity(catalog, itemCode, itemCode, 10, true));
+    }
+
+    /** El catálogo de estados respalda la FK por código natural de REGISTRO_PORTAFOLIO.ESTADO. */
+    private PortfolioStatusCatalogEntity status(PortfolioStatus code, String name, int displayOrder, PortfolioStatusApplicability applicability) {
+        return portfolioStatuses.findByCode(code)
+            .orElseGet(() -> portfolioStatuses.saveAndFlush(new PortfolioStatusCatalogEntity(code, name, displayOrder, true, applicability)));
     }
 }

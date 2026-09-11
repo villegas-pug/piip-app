@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -37,6 +37,11 @@ export class PreexistingProjectFormComponent {
   readonly catalogState = this.repository.catalogs;
   readonly unitsState = this.repository.organizationalUnitsState;
   readonly units = this.repository.organizationalUnits;
+  readonly initialStatusOption = computed(() =>
+    this.catalogState().value.portfolioStatuses.find((option) => option.code === 'PROJECT_IN_PROGRESS' && option.active && option.applicability === 'PROJECT'),
+  );
+  readonly initialStatusReady = computed(() => this.catalogState().phase === 'ready' && Boolean(this.initialStatusOption()));
+  readonly initialStatusName = computed(() => this.initialStatusOption()?.name ?? 'Estado inicial no disponible');
   readonly provisionalCode = `P-${String(this.repository.projects().length + 3).padStart(3, '0')}-2026`;
   readonly reviewOpen = signal(false);
   readonly submitting = signal(false);
@@ -56,7 +61,7 @@ export class PreexistingProjectFormComponent {
     code: [{ value: this.provisionalCode, disabled: true }],
     originCode: [{ value: 'NA', disabled: true }],
     solutionType: [{ value: 'Definido por el backend', disabled: true }],
-    status: [{ value: 'Proyecto en ejecución', disabled: true }],
+    status: [{ value: this.initialStatusName(), disabled: true }],
     startDate: ['', Validators.required],
     name: ['', [Validators.required, Validators.maxLength(180)]],
     source: [{ value: '', disabled: this.catalogState().phase !== 'ready' }, Validators.required],
@@ -76,6 +81,11 @@ export class PreexistingProjectFormComponent {
   });
 
   constructor() {
+    effect(() => {
+      const name = this.initialStatusName();
+      if (this.form.controls.status.value !== name) this.form.controls.status.setValue(name, { emitEvent: false });
+    });
+
     effect(() => {
       const catalogsReady = this.catalogState().phase === 'ready';
       const unitsReady = this.unitsState().phase === 'ready';
@@ -198,7 +208,7 @@ export class PreexistingProjectFormComponent {
     const catalogs = this.catalogState();
     const units = this.unitsState();
     return catalogs.phase === 'ready' && catalogs.value.sources.length > 0
-       && units.phase === 'ready' && units.value.length > 0 && this.hasValidUnits();
+       && units.phase === 'ready' && units.value.length > 0 && this.hasValidUnits() && this.initialStatusReady();
   }
 
   selectableUnits(): readonly OrganizationalUnit[] { return this.units().filter((unit) => unit.active && unit.acronym.trim()); }

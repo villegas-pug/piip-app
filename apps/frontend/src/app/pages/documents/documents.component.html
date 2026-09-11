@@ -100,7 +100,7 @@
         <aside class="panel requirements-panel">
           <span class="record-kicker">{{ dossier.recordType }}</span>
           <h3>Disponibilidad documental</h3>
-          <strong class="official-state"><span class="status" [class]="statusClass(dossier.status)">{{ dossier.status }}</span></strong>
+          <strong class="official-state"><span class="status" [class]="statusClass(dossier.status.code ?? '')">{{ statusName(dossier.status) }}</span></strong>
           <p>Archivos disponibles según la etapa visible del expediente.</p>
           <div class="progress"><span><i [style.width.%]="progress()"></i></span><b>{{ summary.loadedCount }} / {{ summary.loadedCount + summary.pendingCount }}</b></div>
           <div class="availability-counts"><p><strong>{{ summary.loadedCount }}</strong><span>Cargados</span></p><p><strong>{{ summary.pendingCount }}</strong><span>Pendientes</span></p><p><strong>{{ summary.notApplicableCount }}</strong><span>No aplica</span></p></div>

@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { CatalogBundle, OrganizationalUnit, ResourceState } from './piip.models';
 
 const EMPTY_BUNDLE: CatalogBundle = {
-  recordTypes: [], solutionTypes: [], sources: [], peiObjectives: [], poiActivities: [], documentTypes: [],
+  recordTypes: [], solutionTypes: [], sources: [], peiObjectives: [], poiActivities: [], documentTypes: [], portfolioStatuses: [],
 };
 
 @Injectable({ providedIn: 'root' })

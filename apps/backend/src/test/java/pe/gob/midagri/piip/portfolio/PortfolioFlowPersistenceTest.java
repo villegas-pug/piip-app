@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -20,8 +21,11 @@ import pe.gob.midagri.piip.organization.persistence.InstitutionEntity;
 import pe.gob.midagri.piip.organization.persistence.InstitutionRepository;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatusApplicability;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusCatalogEntity;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.catalogs.persistence.*;
 import pe.gob.midagri.piip.catalogs.application.CatalogReferenceService;
 import pe.gob.midagri.piip.catalogs.domain.CatalogCode;
@@ -46,6 +50,12 @@ class PortfolioFlowPersistenceTest {
     @Autowired PortfolioRecordRepository records;
     @Autowired CatalogRepository catalogs;
     @Autowired CatalogItemRepository catalogItems;
+    @Autowired PortfolioStatusRepository statuses;
+
+    @BeforeEach
+    void seedStatusCatalog() {
+        PortfolioRecordTestBuilder.seedPortfolioStatuses(statuses);
+    }
 
     @Test
     void preservesTheExistingRegistrationApprovalAndDerivationStates() {
@@ -107,10 +117,13 @@ class PortfolioFlowPersistenceTest {
         when(references.resolveActive(11L, CatalogCode.SOLUTION_TYPE, "solutionTypeId")).thenReturn(fixtures.solution());
         when(references.resolveActive(12L, CatalogCode.SOURCE_ORIGIN, "sourceId"))
             .thenThrow(new InvalidReferenceException("Referencia inválida", "sourceId", 12L, "INACTIVE"));
+        PortfolioStatusRepository statusRepository = mock(PortfolioStatusRepository.class);
+        when(statusRepository.findByCode(PortfolioStatus.PRESENTED)).thenReturn(Optional.of(
+            new PortfolioStatusCatalogEntity(PortfolioStatus.PRESENTED, "Presentado", 1, true, PortfolioStatusApplicability.INITIATIVE)));
         InitiativeApplicationService service = new InitiativeApplicationService(mockedRecords, mock(ResponsibleUnitRepository.class), mockedExecutingUnits,
             mock(OrganizationalUnitRepository.class), mock(UserRepository.class), mock(WorkTaskRepository.class),
             mock(NotificationRepository.class), mock(DocumentRepository.class), codes, authorization, mock(AuditService.class),
-            references, mock(DocumentTypeRepository.class));
+            references, mock(DocumentTypeRepository.class), statusRepository);
         InitiativeCreateRequest request = new InitiativeCreateRequest(5L, "Iniciativa", 11L, 12L,
             LocalDate.of(2026, 8, 20), "Responsable", null, null, "Descripción", null, DigitalComponent.NO,
             List.of(new ResponsibleUnitInput(8L)));

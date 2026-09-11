@@ -22,14 +22,18 @@ import pe.gob.midagri.piip.organization.persistence.ExecutingUnitEntity;
 import pe.gob.midagri.piip.organization.persistence.InstitutionEntity;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatusApplicability;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusCatalogEntity;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 
 @ExtendWith(MockitoExtension.class)
 class DashboardPortfolioServiceTest {
     @Mock DashboardPortfolioQueryRepository queries;
     @Mock LocalAuthorizationService authorization;
+    @Mock PortfolioStatusRepository statuses;
 
     @Test
     void mapsOnlyPositiveCanonicalStatusCountsAndKeepsUnitScope() {
@@ -37,26 +41,30 @@ class DashboardPortfolioServiceTest {
         QueryResult result = new QueryResult(List.of(record), 0, 5, 1, 1, 1,
             Map.of(PortfolioStatus.PRESENTED, 1L, PortfolioStatus.INITIATIVE_APPROVED, 0L));
         when(queries.find(10L, "codigo", RecordType.INITIATIVE, PortfolioStatus.PRESENTED, 0, 5)).thenReturn(result);
+        when(statuses.findAllByOrderByDisplayOrderAscCodeAsc()).thenReturn(List.of(
+            catalog(PortfolioStatus.PRESENTED), catalog(PortfolioStatus.INITIATIVE_APPROVED)));
 
-        DashboardPortfolioService service = new DashboardPortfolioService(queries, authorization);
+        DashboardPortfolioService service = new DashboardPortfolioService(queries, authorization, statuses);
         var response = service.portfolio(10L, " codigo ", RecordType.INITIATIVE, PortfolioStatus.PRESENTED, 0, 5);
         verify(authorization).requireReadableUnit(10L);
         assertThat(response.totalElements()).isEqualTo(1L);
         assertThat(response.executingUnitTotalElements()).isEqualTo(1L);
         assertThat(response.content()).singleElement().satisfies(item -> {
             assertThat(item.recordType()).isEqualTo("Iniciativa");
-            assertThat(item.status()).isEqualTo("Presentado");
+            assertThat(item.status().code()).isEqualTo("PRESENTED");
+            assertThat(item.status().name()).isEqualTo("Presentado");
             assertThat(item.executingUnitId()).isEqualTo(10L);
         });
-        assertThat(response.statusCounts()).extracting(item -> item.status()).containsExactly("Presentado");
+        assertThat(response.statusCounts()).extracting(item -> item.status().code()).containsExactly("PRESENTED");
     }
 
     @Test
     void authorizesTheExactUnitBeforeQueryingAndRepresentsARealEmptyPortfolio() {
         when(queries.find(20L, null, null, null, 0, 1))
             .thenReturn(new QueryResult(List.of(), 0, 1, 0, 0, 0, Map.of()));
+        when(statuses.findAllByOrderByDisplayOrderAscCodeAsc()).thenReturn(List.of());
 
-        DashboardPortfolioService service = new DashboardPortfolioService(queries, authorization);
+        DashboardPortfolioService service = new DashboardPortfolioService(queries, authorization, statuses);
         var response = service.portfolio(20L, "  ", null, null, -1, 0);
 
         verify(authorization).requireReadableUnit(20L);
@@ -72,7 +80,7 @@ class DashboardPortfolioServiceTest {
         when(authorization.requireReadableUnit(99L))
             .thenThrow(new AccessDeniedException("fuera del ámbito autorizado"));
 
-        DashboardPortfolioService service = new DashboardPortfolioService(queries, authorization);
+        DashboardPortfolioService service = new DashboardPortfolioService(queries, authorization, statuses);
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->
             service.portfolio(99L, null, null, null, 0, 5))
@@ -89,5 +97,9 @@ class DashboardPortfolioServiceTest {
         ReflectionTestUtils.setField(record, "status", status);
         ReflectionTestUtils.setField(record, "updatedAt", Instant.parse("2026-08-18T15:00:00Z"));
         return record;
+    }
+
+    private PortfolioStatusCatalogEntity catalog(PortfolioStatus code) {
+        return new PortfolioStatusCatalogEntity(code, code.label(), code.ordinal() + 1, true, PortfolioStatusApplicability.INITIATIVE);
     }
 }

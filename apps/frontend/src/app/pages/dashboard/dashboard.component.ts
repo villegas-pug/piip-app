@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, OnDestroy, computed, effect, inject
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { HomePortfolioQuery, PiipRecordType, PiipStatus } from '../../core/piip.models';
-import { INITIATIVE_STATUSES, PIIP_CATALOGS, PROJECT_STATUSES } from '../../core/piip.catalogs';
+import { HomePortfolioQuery, PiipRecordType, PiipStatus, PortfolioStatusOption, PortfolioStatusReference } from '../../core/piip.models';
+import { statusDisplayName } from '../../core/piip.catalogs';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 
 type StatusTone = 'pending' | 'success' | 'progress' | 'neutral' | 'warning' | 'danger';
@@ -14,17 +14,17 @@ interface StatusVisual {
 }
 
 const STATUS_VISUALS: Readonly<Record<string, StatusVisual>> = {
-  Presentado: { icon: 'schedule', tone: 'pending' },
-  'Iniciativa aprobada': { icon: 'check_circle', tone: 'success' },
-  'Producto aprobado': { icon: 'check_circle', tone: 'success' },
-  Finalizado: { icon: 'check_circle', tone: 'success' },
-  'Proyecto en ejecución': { icon: 'play_circle', tone: 'progress' },
-  'Iniciativa archivada': { icon: 'archive', tone: 'neutral' },
-  'No Aplicable': { icon: 'remove_circle_outline', tone: 'neutral' },
-  Suspendido: { icon: 'pause_circle', tone: 'warning' },
-  'Producto no aprobado': { icon: 'cancel', tone: 'danger' },
-  'No Admisible': { icon: 'cancel', tone: 'danger' },
-  Cancelado: { icon: 'cancel', tone: 'danger' },
+  PRESENTED: { icon: 'schedule', tone: 'pending' },
+  INITIATIVE_APPROVED: { icon: 'check_circle', tone: 'success' },
+  PRODUCT_APPROVED: { icon: 'check_circle', tone: 'success' },
+  FINISHED: { icon: 'check_circle', tone: 'success' },
+  PROJECT_IN_PROGRESS: { icon: 'play_circle', tone: 'progress' },
+  INITIATIVE_ARCHIVED: { icon: 'archive', tone: 'neutral' },
+  NOT_APPLICABLE: { icon: 'remove_circle_outline', tone: 'neutral' },
+  SUSPENDED: { icon: 'pause_circle', tone: 'warning' },
+  PRODUCT_NOT_APPROVED: { icon: 'cancel', tone: 'danger' },
+  NOT_ADMISSIBLE: { icon: 'cancel', tone: 'danger' },
+  CANCELLED: { icon: 'cancel', tone: 'danger' },
 };
 
 const FALLBACK_STATUS_VISUAL: StatusVisual = { icon: 'circle', tone: 'neutral' };
@@ -46,12 +46,7 @@ export class DashboardComponent implements OnDestroy {
   readonly activeUnit = computed(() => this.repository.executingUnits().find((unit) => unit.id === this.repository.selectedExecutingUnitId()));
   readonly catalogState = this.repository.catalogs;
   readonly recordTypes = computed(() => this.catalogState().value.recordTypes);
-  readonly statusOptions = computed<readonly PiipStatus[]>(() => {
-    const type = this.query().type;
-    if (type === 'Iniciativa') return INITIATIVE_STATUSES;
-    if (type === 'Proyecto') return PROJECT_STATUSES;
-    return PIIP_CATALOGS.statuses;
-  });
+  readonly statusOptions = computed<readonly PortfolioStatusOption[]>(() => this.statusOptionsFor(this.query().type));
   readonly allNotifications = computed(() => [...this.repository.notifications()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   readonly unreadNotifications = computed(() => this.allNotifications().filter((item) => !item.read));
   readonly visibleNotifications = computed(() => {
@@ -85,15 +80,17 @@ export class DashboardComponent implements OnDestroy {
   changeType(value: string): void {
     const type = value as PiipRecordType | 'Todos';
     const currentStatus = this.query().status;
-    const valid = currentStatus === 'Todos' || (type === 'Todos'
-      ? PIIP_CATALOGS.statuses.includes(currentStatus)
-      : type === 'Iniciativa' ? INITIATIVE_STATUSES.includes(currentStatus as typeof INITIATIVE_STATUSES[number])
-        : PROJECT_STATUSES.includes(currentStatus as typeof PROJECT_STATUSES[number]));
+    const validCodes = this.statusOptionsFor(type).map((option) => option.code);
+    const valid = currentStatus === 'Todos' || validCodes.includes(currentStatus);
     this.query.update((current) => ({ ...current, type, status: valid ? current.status : 'Todos', page: 0 }));
     void this.loadPortfolio();
   }
 
-  changeStatus(value: string): void { this.query.update((current) => ({ ...current, status: value as PiipStatus | 'Todos', page: 0 })); void this.loadPortfolio(); }
+  changeStatus(value: string): void {
+    if (this.catalogState().phase !== 'ready') return;
+    this.query.update((current) => ({ ...current, status: value as PiipStatus | 'Todos', page: 0 }));
+    void this.loadPortfolio();
+  }
   changePage(page: number): void { this.query.update((current) => ({ ...current, page })); void this.loadPortfolio(); }
   resetFilters(): void { this.query.update((current) => ({ ...current, q: '', type: 'Todos', status: 'Todos', page: 0 })); void this.loadPortfolio(); }
   toggleStatusDistribution(): void { this.statusDistributionExpanded.update((expanded) => !expanded); }
@@ -117,9 +114,17 @@ export class DashboardComponent implements OnDestroy {
     return Number.isNaN(date.getTime()) ? value : this.notificationDateFormatter.format(date);
   }
   statusVisual(status: string): StatusVisual { return STATUS_VISUALS[status] ?? FALLBACK_STATUS_VISUAL; }
-  statusCount(status: PiipStatus): number { return this.statusCounts().find((item) => item.status === status)?.count ?? 0; }
+  statusName(status: PortfolioStatusReference | undefined): string { return statusDisplayName(status); }
+  statusCount(status: PiipStatus): number { return this.statusCounts().find((item) => item.status.code === status)?.count ?? 0; }
   barWidth(value: number): number { return value ? Math.max(8, Math.round((value / this.maximumStatusCount()) * 100)) : 0; }
   detailRoute(item: { recordType: PiipRecordType; code: string }): string[] { return [item.recordType === 'Iniciativa' ? '/iniciativas' : '/proyectos', item.code]; }
+
+  private statusOptionsFor(type: PiipRecordType | 'Todos'): readonly PortfolioStatusOption[] {
+    const statuses = this.catalogState().value.portfolioStatuses.filter((option) => option.active);
+    if (type === 'Iniciativa') return statuses.filter((option) => option.applicability === 'INITIATIVE');
+    if (type === 'Proyecto') return statuses.filter((option) => option.applicability === 'PROJECT');
+    return statuses.filter((option) => option.applicability !== 'NONE');
+  }
 
   private async loadPortfolio(): Promise<void> {
     const executingUnitId = this.repository.selectedExecutingUnitId();

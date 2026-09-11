@@ -37,7 +37,9 @@ public class OpenApiConfig {
             .addProperty("problemCode", new StringSchema()._enum(List.of(
                 "INVALID_REQUEST", "FORBIDDEN_SCOPE", "RESOURCE_NOT_FOUND", "STALE_VERSION",
                 "ACTIVE_ASSIGNMENT_DUPLICATE", "SELF_ADMIN_SUSPENSION", "LAST_ACTIVE_ADMIN",
-                "INCOMPATIBLE_ASSIGNMENT_STATE", "INVALID_ACTIVE_REFERENCE", "BUSINESS_RULE_VIOLATION")));
+                "INCOMPATIBLE_ASSIGNMENT_STATE", "INVALID_ACTIVE_REFERENCE", "BUSINESS_RULE_VIOLATION",
+                "PORTFOLIO_STATUS_NOT_FOUND", "PORTFOLIO_STATUS_INACTIVE",
+                "PORTFOLIO_STATUS_NOT_APPLICABLE", "PORTFOLIO_STATUS_TRANSITION_NOT_ALLOWED")));
         problemDetail.required(List.of("type", "title", "status", "detail", "problemCode"));
         return problemDetail;
     }

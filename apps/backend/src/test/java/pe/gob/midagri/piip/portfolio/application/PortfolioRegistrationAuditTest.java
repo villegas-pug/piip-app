@@ -40,9 +40,13 @@ import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.InitiativeCreateRequest;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.PreexistingProjectRequest;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ResponsibleUnitInput;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatusApplicability;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusCatalogEntity;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitEntity;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
 import pe.gob.midagri.piip.shared.application.error.InvalidReferenceException;
@@ -70,8 +74,9 @@ class PortfolioRegistrationAuditTest {
         context.initiatives().createInitiative(request);
 
         Map<String, ?> detail = capturarDetalle(context, "INICIATIVA_REGISTRADA", "I-AUD-01");
-        assertThat(detail).containsOnlyKeys("estado", "responsibleUnits");
+        assertThat(detail).containsOnlyKeys("estado", "statusCode", "responsibleUnits");
         assertThat(detail.get("estado")).isEqualTo("Presentado");
+        assertThat(detail.get("statusCode")).isEqualTo("PRESENTED");
         asertarListaOrdenadaConfirmada(detail.get("responsibleUnits"));
         assertThat(detail).doesNotContainKeys("request", "body", "token", "motivo");
     }
@@ -93,8 +98,9 @@ class PortfolioRegistrationAuditTest {
         context.projects().createDerived(request);
 
         Map<String, ?> detail = capturarDetalle(context, "PROYECTO_DERIVADO_REGISTRADO", "P-AUD-01");
-        assertThat(detail).containsOnlyKeys("iniciativaOrigen", "responsibleUnits");
+        assertThat(detail).containsOnlyKeys("iniciativaOrigen", "statusCode", "responsibleUnits");
         assertThat(detail.get("iniciativaOrigen")).isEqualTo("I-ORIG-AUD");
+        assertThat(detail.get("statusCode")).isEqualTo("PROJECT_IN_PROGRESS");
         asertarListaOrdenadaConfirmada(detail.get("responsibleUnits"));
         assertThat(detail).doesNotContainKeys("request", "body", "token", "motivo");
     }
@@ -112,8 +118,9 @@ class PortfolioRegistrationAuditTest {
         context.projects().createPreexisting(request);
 
         Map<String, ?> detail = capturarDetalle(context, "PROYECTO_PREEXISTENTE_REGISTRADO", "P-AUD-01");
-        assertThat(detail).containsOnlyKeys("origen", "responsibleUnits");
+        assertThat(detail).containsOnlyKeys("origen", "statusCode", "responsibleUnits");
         assertThat(detail.get("origen")).isEqualTo("NA");
+        assertThat(detail.get("statusCode")).isEqualTo("PROJECT_IN_PROGRESS");
         asertarListaOrdenadaConfirmada(detail.get("responsibleUnits"));
         assertThat(detail).doesNotContainKeys("request", "body", "token", "motivo");
     }
@@ -213,16 +220,21 @@ class PortfolioRegistrationAuditTest {
         });
         when(records.findById(100L)).thenAnswer(invocation -> Optional.of(savedRecord[0]));
 
+        PortfolioStatusRepository statuses = mock(PortfolioStatusRepository.class);
+        when(statuses.findByCode(PortfolioStatus.PRESENTED)).thenReturn(Optional.of(
+            new PortfolioStatusCatalogEntity(PortfolioStatus.PRESENTED, "Presentado", 1, true, PortfolioStatusApplicability.INITIATIVE)));
+        when(statuses.findByCode(PortfolioStatus.PROJECT_IN_PROGRESS)).thenReturn(Optional.of(
+            new PortfolioStatusCatalogEntity(PortfolioStatus.PROJECT_IN_PROGRESS, "Proyecto en ejecución", 4, true, PortfolioStatusApplicability.PROJECT)));
         InitiativeApplicationService initiatives = new InitiativeApplicationService(records, responsibleUnits,
             executingUnits, organizationalUnits, users, tasks, notifications, documents, codes, authorization, audit,
-            catalogReferences, documentTypes);
+            catalogReferences, documentTypes, statuses);
         // El constructor principal permite inyectar el ResponsibleUnitService con el maestro organizacional:
         // los constructores de compatibilidad de Project lo dejan en null y el alta de proyectos resuelve unidades.
         ProjectApplicationService projects = new ProjectApplicationService(records, executingUnits, tasks, codes,
             authorization, audit, catalogReferences, new ResponsibleUnitService(responsibleUnits, organizationalUnits),
             new PortfolioDocumentService(records, documents, documentTypes),
             new PortfolioWorkService(tasks, notifications, audit),
-            new PortfolioApplicationSupport(authorization, Clock.systemUTC()),
+            new PortfolioApplicationSupport(authorization, Clock.systemUTC(), new PortfolioStatusValidationService(statuses)),
             new PortfolioReadModelAssembler(responsibleUnits));
         return new RegistrationContext(initiatives, projects, records, responsibleUnits, organizationalUnits,
             executingUnit, audit, catalogReferences);

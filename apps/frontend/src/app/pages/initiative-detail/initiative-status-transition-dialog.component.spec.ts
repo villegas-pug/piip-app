@@ -21,8 +21,8 @@ describe('InitiativeStatusTransitionDialogComponent', () => {
           provide: MAT_DIALOG_DATA,
           useValue: {
             initiativeCode: 'I-024-2026',
-            currentStatus: 'Presentado',
-            options: ['Iniciativa archivada', 'No Admisible'],
+            currentStatus: 'PRESENTED',
+            options: ['INITIATIVE_ARCHIVED', 'NOT_ADMISSIBLE'],
           },
         },
       ],
@@ -33,11 +33,11 @@ describe('InitiativeStatusTransitionDialogComponent', () => {
     const fixture = TestBed.createComponent(InitiativeStatusTransitionDialogComponent);
     const component = fixture.componentInstance;
 
-    component.selectTarget('Iniciativa archivada');
-    expect(component.selectedTarget()).toBe('Iniciativa archivada');
+    component.selectTarget('INITIATIVE_ARCHIVED');
+    expect(component.selectedTarget()).toBe('INITIATIVE_ARCHIVED');
 
     component.selectTarget('Producto aprobado' as never);
-    expect(component.selectedTarget()).toBe('Iniciativa archivada');
+    expect(component.selectedTarget()).toBe('INITIATIVE_ARCHIVED');
   });
 
   it('confirma la transición con la observación y cierra con resultado', async () => {
@@ -45,17 +45,17 @@ describe('InitiativeStatusTransitionDialogComponent', () => {
     const transition = vi.spyOn(repository, 'transitionInitiativeStatus');
     const fixture = TestBed.createComponent(InitiativeStatusTransitionDialogComponent);
     const component = fixture.componentInstance;
-    component.selectTarget('No Admisible');
+    component.selectTarget('NOT_ADMISSIBLE');
     component.transitionForm.patchValue({ observation: 'No cumple criterios' });
 
     await component.confirm();
 
     expect(transition).toHaveBeenCalledWith({
       initiativeCode: 'I-024-2026',
-      targetStatus: 'No Admisible',
+      targetStatus: 'NOT_ADMISSIBLE',
       observation: 'No cumple criterios',
     });
-    expect(close).toHaveBeenCalledWith({ targetStatus: 'No Admisible' });
+    expect(close).toHaveBeenCalledWith({ targetStatus: 'NOT_ADMISSIBLE' });
     expect(dialogRef.disableClose).toBe(false);
   });
 
@@ -63,7 +63,7 @@ describe('InitiativeStatusTransitionDialogComponent', () => {
     const repository = TestBed.inject(PiipMockRepository);
     vi.spyOn(repository, 'transitionInitiativeStatus').mockRejectedValue(new Error('Transición rechazada'));
     const fixture = TestBed.createComponent(InitiativeStatusTransitionDialogComponent);
-    fixture.componentInstance.selectTarget('Iniciativa archivada');
+    fixture.componentInstance.selectTarget('INITIATIVE_ARCHIVED');
 
     await fixture.componentInstance.confirm();
     fixture.detectChanges();

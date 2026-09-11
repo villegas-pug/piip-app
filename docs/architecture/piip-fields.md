@@ -12,7 +12,7 @@
 
 ## Seis catálogos
 
-Los valores se mantienen exactamente en los enums backend y en `PIIP_CATALOGS`: tipo de registro, tipo de solución, fuente u origen, estado, producto final aprobado y componente digital.
+Los valores de tipo de registro, tipo de solución, fuente u origen, producto final aprobado y componente digital conservan sus fuentes controladas. Los estados del portafolio proceden exclusivamente del catálogo persistente `ESTADO_PORTAFOLIO`: su código técnico estable es la identidad funcional y su denominación, orden, actividad y aplicabilidad se consultan centralmente. Las etiquetas no identifican estados ni habilitan transiciones.
 
 `Unidad Ejecutora` es contexto técnico. `Unidades Orgánicas Involucradas` sigue siendo uno de los 23 campos y se normaliza sin convertirlo en catálogo Excel. Es una lista ordenada de una o más Unidades Orgánicas de la misma Unidad Ejecutora, sin máximo funcional ni repeticiones; Nro deriva de la posición de incorporación y Descripción y Abreviatura provienen del maestro institucional.
 

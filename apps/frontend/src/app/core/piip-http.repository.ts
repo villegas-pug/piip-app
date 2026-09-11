@@ -7,7 +7,8 @@ import {
   InitiativeInput, InitiativeRecord, InitiativeStatusTransitionInput, InitiativeUpdateInput, NotificationItem, OrganizationalUnit,
   PiipPortfolioRecord, PiipRecordType, PreexistingProjectInput, ProjectDetail, ProjectRecord,
   ProjectStatusTransitionInput, ProjectUpdateInput, UserRole, UserRoleCode, WorkItem, HomePortfolioQuery, HomePortfolioResult,
-  HomePortfolioItem, HomePortfolioStatusCount, PiipStatus, CatalogBundle, PersistentCatalogOption,
+  HomePortfolioItem, HomePortfolioStatusCount, CatalogBundle, PersistentCatalogOption,
+  PortfolioStatusCount, PortfolioStatusOption, PortfolioStatusReference,
   AssignmentMutationInput, AssignmentMutationResult, AssignmentRole, UserAdministrationSnapshot,
   UserAdministrationUser, UserAssignmentCandidate, UserAssignmentScope,
   TechnicalCatalogOption,
@@ -18,7 +19,8 @@ import { PiipCatalogsStore } from './piip-catalogs.store';
 import { resolveApiUrl as runtimeApiUrl } from './piip-runtime-config';
 import {
   ApprovalRequest, DerivedProjectRequest, InitiativeCreateRequest, InitiativeStatusTransitionRequest,
-  DossierSummary, InitiativeUpdateRequest, PersistentCatalogItemResponse, PreexistingProjectRequest,
+  DossierSummary, InitiativeUpdateRequest, PersistentCatalogItemResponse, PortfolioStatusCatalogResponse,
+  PortfolioStatusReferenceResponse, PreexistingProjectRequest,
   DocumentResponse, FileResponse, ProjectStatusTransitionRequest, ProjectUpdateRequest, ResponsibleUnitResponse, TechnicalCatalogItemResponse, VersionResponse,
 } from '../api/generated/models';
 
@@ -37,7 +39,7 @@ interface ApiPortfolioRecord {
   description: string;
   keyResults: string | null;
   note: string | null;
-  status: PiipPortfolioRecord['status'];
+  status: PortfolioStatusReferenceResponse;
   finalProductType: PiipPortfolioRecord['finalProductType'];
   digitalComponent: PiipPortfolioRecord['digitalComponent'];
   closingDate: string | null;
@@ -443,7 +445,7 @@ export class PiipHttpRepository extends PiipRepository {
     if (version === undefined) throw new PiipApiError(409, 'No se encontró la versión vigente de la iniciativa. Recarga el expediente.');
     const request: InitiativeStatusTransitionRequest = {
       version,
-      targetStatus: portfolioStatusCode(input.targetStatus) as InitiativeStatusTransitionRequest['targetStatus'],
+      targetStatus: input.targetStatus,
       observation: input.observation,
     };
     const record = await this.request(this.portfolio.transitionInitiative({ code: input.initiativeCode, body: request })) as unknown as ApiPortfolioRecord;
@@ -458,7 +460,7 @@ export class PiipHttpRepository extends PiipRepository {
     if (version === undefined) throw new PiipApiError(409, 'No se encontró la versión vigente del proyecto. Recarga el expediente.');
     const request: ProjectStatusTransitionRequest = {
       version,
-      targetStatus: portfolioStatusCode(input.targetStatus) as ProjectStatusTransitionRequest['targetStatus'],
+      targetStatus: input.targetStatus,
       observation: input.observation,
     };
     const record = await this.request(this.portfolio.transitionProject({ code: input.projectCode, body: request })) as unknown as ApiPortfolioRecord;
@@ -632,7 +634,7 @@ export class PiipHttpRepository extends PiipRepository {
       executingUnitId: query.executingUnitId,
       q: query.q.trim() || undefined,
       type: query.type === 'Todos' ? undefined : query.type === 'Iniciativa' ? 'INITIATIVE' : 'PROJECT',
-      status: query.status === 'Todos' ? undefined : portfolioStatusCode(query.status) as NonNullable<Parameters<DashboardControllerService['portfolio']>[0]>['status'],
+      status: query.status === 'Todos' ? undefined : query.status,
       page: query.page,
       size: query.size,
     };
@@ -641,7 +643,7 @@ export class PiipHttpRepository extends PiipRepository {
       const result: HomePortfolioResult = {
         content: (response.content ?? []).flatMap((item): HomePortfolioItem[] => {
           const recordType = item.recordType === 'Iniciativa' || item.recordType === 'Proyecto' ? item.recordType : null;
-          const status = item.status as PiipStatus | undefined;
+          const status = mapPortfolioStatusReference(item.status);
           return recordType && status && item.code && item.name
             ? [{ recordType, code: item.code, name: item.name, status, executingUnitId: item.executingUnitId ?? query.executingUnitId, executingUnit: item.executingUnit ?? '', updatedAt: item.updatedAt ?? '' }]
             : [];
@@ -651,8 +653,10 @@ export class PiipHttpRepository extends PiipRepository {
         totalElements: response.totalElements ?? 0,
         totalPages: response.totalPages ?? 0,
         executingUnitTotalElements: response.executingUnitTotalElements ?? 0,
-        statusCounts: (response.statusCounts ?? []).flatMap((item): HomePortfolioStatusCount[] =>
-          item.status && item.count !== undefined ? [{ status: item.status as PiipStatus, count: item.count }] : []),
+        statusCounts: (response.statusCounts ?? []).flatMap((item): HomePortfolioStatusCount[] => {
+          const status = mapPortfolioStatusReference(item.status);
+          return status && item.count !== undefined ? [{ status, count: item.count }] : [];
+        }),
       };
       if (requestId === this.homePortfolioRequestId) this.homePortfolio.set(result);
     } catch (error) {
@@ -743,9 +747,10 @@ export class PiipHttpRepository extends PiipRepository {
     if (selectedExecutingUnitId !== null) params = params.set('executingUnitId', selectedExecutingUnitId);
     const items = await this.request(this.http.get<DossierSummary[]>(`${this.apiUrl}/documents`, { params }));
     this.documentDossierSummaries.set(items.flatMap((item): DocumentDossierSummary[] => {
-      if (!item.code || !item.name || !item.recordType || !item.status) return [];
+      const status = mapPortfolioStatusReference(item.status);
+      if (!item.code || !item.name || !item.recordType || !status) return [];
       if (selectedExecutingUnitId !== null && item.executingUnitId !== selectedExecutingUnitId) return [];
-      return [{ recordType: item.recordType as PiipRecordType, code: item.code, name: item.name, unit: item.unit ?? '', status: item.status as PiipStatus,
+      return [{ recordType: item.recordType as PiipRecordType, code: item.code, name: item.name, unit: item.unit ?? '', status,
         loadedCount: item.loadedCount ?? 0, pendingCount: item.pendingCount ?? 0, notApplicableCount: item.notApplicableCount ?? 0,
         lastActivity: item.lastActivity ? formatDate(item.lastActivity) : '', executingUnitId: item.executingUnitId,
         organizationalUnits: (item.organizationalUnits ?? []).flatMap(mapOrganizationalUnit) }];
@@ -800,6 +805,9 @@ export class PiipHttpRepository extends PiipRepository {
       actorSubject: item.actor,
       rawDetail: item.detail ?? '',
       icon: 'history',
+      status: mapPortfolioStatusReference(item.status),
+      previousStatus: mapPortfolioStatusReference(item.previousStatus),
+      newStatus: mapPortfolioStatusReference(item.newStatus),
     })));
     this.auditAccesses.set(scopedAccesses);
   }
@@ -845,7 +853,15 @@ export class PiipHttpRepository extends PiipRepository {
 
   private async loadDashboard(): Promise<void> {
     const summary = await this.request(this.dashboard.summary());
-    this.dashboardSummary.set({ ...emptyDashboard(), ...summary });
+    this.dashboardSummary.set({
+      ...emptyDashboard(),
+      initiatives: summary.initiatives ?? 0,
+      projects: summary.projects ?? 0,
+      alerts: summary.alerts ?? 0,
+      pendingTasks: summary.pendingTasks ?? 0,
+      notifications: summary.notifications ?? 0,
+      portfolioStatusCounts: (summary.portfolioStatusCounts ?? []).flatMap(mapPortfolioStatusCount),
+    });
   }
 
   private requireSelectedExecutingUnit(): number {
@@ -1040,15 +1056,6 @@ function upsertByCode<T extends { code: string }>(items: T[], value: T): T[] {
   return next;
 }
 
-function portfolioStatusCode(status: PiipPortfolioRecord['status']): string {
-  const codes: Record<string, string> = {
-    'Presentado': 'PRESENTED', 'Iniciativa aprobada': 'INITIATIVE_APPROVED', 'Iniciativa archivada': 'INITIATIVE_ARCHIVED',
-    'Proyecto en ejecución': 'PROJECT_IN_PROGRESS', 'Producto aprobado': 'PRODUCT_APPROVED', 'Producto no aprobado': 'PRODUCT_NOT_APPROVED',
-    Suspendido: 'SUSPENDED', Cancelado: 'CANCELLED', Finalizado: 'FINISHED', 'No Aplicable': 'NOT_APPLICABLE', 'No Admisible': 'NOT_ADMISSIBLE',
-  };
-  return codes[status] ?? status;
-}
-
 function toPortfolioRecord(value: ApiPortfolioRecord): PiipPortfolioRecord {
   const recordTypeReference = mapTechnicalOption(value.recordType);
   const solutionTypeReference = mapPersistentOption(value.solutionType);
@@ -1056,6 +1063,7 @@ function toPortfolioRecord(value: ApiPortfolioRecord): PiipPortfolioRecord {
   const peiObjectiveReference = value.peiObjective ? mapPersistentOption(value.peiObjective) : null;
   const poiActivityReference = value.poiActivity ? mapPersistentOption(value.poiActivity) : null;
   const responsibleUnitReferences = value.responsibleUnits.flatMap((item) => item.organizationalUnit ? mapOrganizationalUnit(item.organizationalUnit) : []);
+  const status = requireStatusReference(value.status);
   return {
     recordType: recordTypeReference.name,
     code: value.code,
@@ -1071,7 +1079,7 @@ function toPortfolioRecord(value: ApiPortfolioRecord): PiipPortfolioRecord {
     description: value.description,
     keyResults: value.keyResults ?? '',
     note: value.note ?? '',
-    status: value.status,
+    status,
     finalProductType: value.finalProductType,
     digitalComponent: value.digitalComponent,
     closingDate: value.closingDate ?? '',
@@ -1099,7 +1107,7 @@ function toInitiativeRecord(value: ApiPortfolioRecord): InitiativeRecord {
     responsible: value.responsible,
     role: '',
     unit: value.responsibleUnits.flatMap((item) => item.organizationalUnit?.name ?? []).join(', '),
-    status: value.status,
+    status: requireStatusReference(value.status),
     updatedAt: formatDate(value.updatedAt),
     executingUnitId: value.executingUnitId,
     sourceReference,
@@ -1116,7 +1124,7 @@ function toProjectRecord(value: ApiPortfolioRecord): ProjectRecord {
     originMode: value.originCode === 'NA' ? 'PREEXISTING' : 'DERIVED_FROM_INITIATIVE',
     unit: value.responsibleUnits.flatMap((item) => item.organizationalUnit?.name ?? []).join(', '),
     responsible: value.responsible,
-    status: value.status,
+    status: requireStatusReference(value.status),
     digitalComponent: value.digitalComponent,
     executingUnitId: value.executingUnitId,
     organizationalUnits,
@@ -1189,7 +1197,33 @@ function mapCatalogBundle(value: import('../api/generated/models').CatalogBundle
     peiObjectives: (value.peiObjectives ?? []).map(mapPersistentOption),
     poiActivities: (value.poiActivities ?? []).map(mapPersistentOption),
     documentTypes: (value.documentTypes ?? []).map(mapPersistentOption),
+    portfolioStatuses: (value.portfolioStatuses ?? []).map(mapPortfolioStatusOption),
   };
+}
+
+function mapPortfolioStatusOption(value: PortfolioStatusCatalogResponse): PortfolioStatusOption {
+  if (!value.code || !value.name || value.displayOrder === undefined || value.active === undefined || !value.applicability) {
+    throw new PiipApiError(502, 'El backend devolvió un estado de portafolio incompleto.');
+  }
+  return { code: value.code, name: value.name, displayOrder: value.displayOrder, active: value.active, applicability: value.applicability };
+}
+
+function mapPortfolioStatusReference(value: PortfolioStatusReferenceResponse | undefined): PortfolioStatusReference | undefined {
+  if (!value?.code) return undefined;
+  return { code: value.code, name: value.name ?? value.code, active: value.active === true };
+}
+
+function requireStatusReference(value: PortfolioStatusReferenceResponse | undefined): PortfolioStatusReference {
+  const reference = mapPortfolioStatusReference(value);
+  if (!reference || !value?.name) {
+    throw new PiipApiError(502, 'El backend devolvió un estado de portafolio incompleto.');
+  }
+  return reference;
+}
+
+function mapPortfolioStatusCount(value: import('../api/generated/models').PortfolioStatusCountResponse): PortfolioStatusCount[] {
+  const status = mapPortfolioStatusReference(value.status);
+  return status && value.count !== undefined ? [{ status, count: value.count }] : [];
 }
 
 function mapPersistentOption(value: PersistentCatalogItemResponse): PersistentCatalogOption {
@@ -1221,7 +1255,7 @@ function formatDateOnly(value: string): string {
 }
 
 function emptyDashboard(): DashboardSummary {
-  return { initiatives: 0, projects: 0, alerts: 0, pendingTasks: 0, notifications: 0, portfolioByStatus: {} };
+  return { initiatives: 0, projects: 0, alerts: 0, pendingTasks: 0, notifications: 0, portfolioStatusCounts: [] };
 }
 
 function emptyHomePortfolio(): HomePortfolioResult {

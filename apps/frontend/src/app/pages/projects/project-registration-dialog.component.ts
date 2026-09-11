@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { resolveStatusName } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 
 export type ProjectRegistrationDialogView = 'type-selection' | 'initiative-selection';
@@ -31,6 +32,10 @@ export class ProjectRegistrationDialogComponent {
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly selectedInitiativeCode = signal<string | null>(null);
   readonly eligibleInitiatives = computed(() => this.repository.getInitiativesEligibleForProject());
+  readonly catalogReady = computed(() => this.repository.catalogs().phase === 'ready');
+  readonly approvedStatusName = computed(() => this.catalogReady()
+    ? resolveStatusName(this.repository.catalogs().value.portfolioStatuses, 'INITIATIVE_APPROVED')
+    : 'Estado de iniciativa no disponible');
   private readonly searchValue = toSignal(this.searchControl.valueChanges, { initialValue: '' });
   readonly filteredInitiatives = computed(() => {
     const searchTerm = this.searchValue().toLocaleLowerCase().trim();
@@ -54,17 +59,19 @@ export class ProjectRegistrationDialogComponent {
   }
 
   selectInitiative(initiativeCode: string): void {
+    if (!this.catalogReady()) return;
     this.selectedInitiativeCode.set(initiativeCode);
   }
 
   choosePreexistingProject(): void {
+    if (!this.catalogReady()) return;
     this.dialogRef.close({ mode: 'PREEXISTING' });
   }
 
   continueWithInitiative(): void {
     const initiativeCode = this.selectedInitiativeCode();
     const isStillEligible = this.eligibleInitiatives().some((initiative) => initiative.code === initiativeCode);
-    if (!initiativeCode || !isStillEligible) return;
+    if (!this.catalogReady() || !initiativeCode || !isStillEligible) return;
 
     this.dialogRef.close({ mode: 'DERIVED_FROM_INITIATIVE', initiativeCode });
   }

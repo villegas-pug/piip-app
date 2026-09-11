@@ -7,8 +7,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { summarizeDocumentDossier } from '../../core/piip-mock.repository';
+import { statusDisplayName } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { DocumentFile, DocumentRecord, DocumentStage, DocumentVersion, PiipRecordType, PiipStatus } from '../../core/piip.models';
+import { DocumentFile, DocumentRecord, DocumentStage, DocumentVersion, PiipRecordType, PiipStatus, PortfolioStatusReference } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 import { DeleteDocumentFileDialogComponent } from './delete-document-file-dialog.component';
@@ -83,16 +84,18 @@ export class DocumentsComponent {
     return `${loaded} cargado${loaded === 1 ? '' : 's'} · ${pending} pendiente${pending === 1 ? '' : 's'}`;
   }
 
-  statusClass(status: PiipStatus): string {
-    if (status === 'Iniciativa aprobada') return 'approved';
-    if (status === 'Proyecto en ejecución') return 'running';
-    if (status === 'Producto aprobado') return 'product';
-    if (status === 'Suspendido') return 'suspended';
-    if (status === 'Finalizado') return 'finalized';
-    if (status === 'Cancelado' || status === 'Iniciativa archivada') return 'archived';
-    if (status === 'No Admisible' || status === 'No Aplicable' || status === 'Producto no aprobado') return 'rejected';
+  statusClass(status: PiipStatus | string): string {
+    if (status === 'INITIATIVE_APPROVED') return 'approved';
+    if (status === 'PROJECT_IN_PROGRESS') return 'running';
+    if (status === 'PRODUCT_APPROVED') return 'product';
+    if (status === 'SUSPENDED') return 'suspended';
+    if (status === 'FINISHED') return 'finalized';
+    if (status === 'CANCELLED' || status === 'INITIATIVE_ARCHIVED') return 'archived';
+    if (status === 'NOT_ADMISSIBLE' || status === 'NOT_APPLICABLE' || status === 'PRODUCT_NOT_APPROVED') return 'rejected';
     return '';
   }
+
+  statusName(status: PortfolioStatusReference | undefined): string { return statusDisplayName(status); }
 
   selectUploadType(event: Event): void {
     const value = Number((event.target as HTMLSelectElement).value);

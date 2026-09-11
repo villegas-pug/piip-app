@@ -18,7 +18,8 @@ class CatalogSeedPolicyTest {
         String sql = new ClassPathResource("db/test/catalog-data.sql").getContentAsString(StandardCharsets.UTF_8).toUpperCase(Locale.ROOT);
         assertThat(sql).contains("MERGE INTO CATALOGO", "MERGE INTO CATALOGO_ITEM", "MERGE INTO TIPO_DOCUMENTO");
         assertThat(sql).contains("MERGE INTO ROL", "MERGE INTO INSTITUCION", "MERGE INTO UNIDAD_EJECUTORA",
-            "MERGE INTO UNIDAD_ORGANICA", "MERGE INTO USUARIO", "MERGE INTO USUARIO_ROL_AMBITO");
+            "MERGE INTO UNIDAD_ORGANICA", "MERGE INTO USUARIO", "MERGE INTO USUARIO_ROL_AMBITO",
+            "MERGE INTO ESTADO_PORTAFOLIO");
         assertThat(sql).contains("ED3742BC-F2C2-4884-AE09-07E3F9AB98FC", "CRISTOPHER GUEVARA VILLEGAS", "RGUEVARAV@MIDAGRI.GOB.PE")
             .doesNotContain("__PIIP_BOOTSTRAP_SUBJECT__", "__PIIP_BOOTSTRAP_NAME__", "__PIIP_BOOTSTRAP_EMAIL__");
         assertThat(sql).containsPattern("ASIGNADO_POR\\s*=\\s*'BOOTSTRAP'").doesNotContain("TEST-SEED");
@@ -34,6 +35,17 @@ class CatalogSeedPolicyTest {
         String itemSection = section(sql, "-- Items de catalogo", "-- Tipos documentales");
         assertUnique(catalogSection, "MERGE\\s+INTO\\s+CATALOGO\\s+\\w+\\s+USING\\s*\\(\\s*SELECT\\s+'([^']+)'\\s+(?:AS\\s+)?codigo\\b", 4);
         assertUnique(itemSection, "CROSS\\s+JOIN\\s*\\(\\s*SELECT\\s+'([^']+)'\\s+(?:AS\\s+)?codigo\\b|UNION\\s+ALL\\s+SELECT\\s+'([^']+)'", 17);
+    }
+
+    @Test
+    void seedEstadosPortafolioUsaMergeInsertOnlyConOnceCodigosUnicos() throws IOException {
+        String sql = new ClassPathResource("db/test/catalog-data.sql").getContentAsString(StandardCharsets.UTF_8).toUpperCase(Locale.ROOT);
+        String estadosSection = sql.substring(sql.indexOf("-- ESTADOS DEL PORTAFOLIO"));
+        assertThat(estadosSection).contains("MERGE INTO ESTADO_PORTAFOLIO", "WHEN NOT MATCHED THEN");
+        // Insert-only: sin rama UPDATE correctora (D14/FR-022).
+        assertThat(estadosSection).doesNotContain("WHEN MATCHED THEN", "UPDATE SET");
+        assertUnique(estadosSection,
+            "SELECT\\s+'([^']+)'\\s+AS\\s+codigo\\b|UNION\\s+ALL\\s+SELECT\\s+'([^']+)'", 11);
     }
 
     private static String section(String sql, String startMarker, String endMarker) {

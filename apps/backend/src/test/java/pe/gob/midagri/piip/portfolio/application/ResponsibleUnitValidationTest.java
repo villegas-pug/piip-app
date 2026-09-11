@@ -18,6 +18,8 @@ import pe.gob.midagri.piip.identity.application.*;
 import pe.gob.midagri.piip.organization.persistence.*;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.*;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatusApplicability;
 import pe.gob.midagri.piip.portfolio.persistence.*;
 import pe.gob.midagri.piip.shared.application.error.InvalidReferenceException;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
@@ -47,10 +49,13 @@ class ResponsibleUnitValidationTest {
             .thenReturn(new LocalAccessContext(1L, "subject", Set.of()));
         CodeGeneratorService codes = mock(CodeGeneratorService.class);
         when(codes.next(any(), anyInt())).thenReturn("I-01");
+        PortfolioStatusRepository statuses = mock(PortfolioStatusRepository.class);
+        when(statuses.findByCode(PortfolioStatus.PRESENTED)).thenReturn(Optional.of(
+            new PortfolioStatusCatalogEntity(PortfolioStatus.PRESENTED, "Presentado", 1, true, PortfolioStatusApplicability.INITIATIVE)));
         InitiativeApplicationService service = new InitiativeApplicationService(records, responsible, executing, organizational,
             mock(pe.gob.midagri.piip.identity.persistence.UserRepository.class), mock(WorkTaskRepository.class),
             mock(NotificationRepository.class), mock(DocumentRepository.class), codes, authorization, mock(AuditService.class),
-            references, mock(DocumentTypeRepository.class));
+            references, mock(DocumentTypeRepository.class), statuses);
         InitiativeCreateRequest request = new InitiativeCreateRequest(5L, "Iniciativa", 11L, 12L,
             LocalDate.of(2026, 8, 20), "Responsable", null, null, "Descripción", null, DigitalComponent.NO,
             List.of(new ResponsibleUnitInput(8L)));

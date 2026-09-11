@@ -1,63 +1,52 @@
-import { PiipStatus } from './piip.models';
+import { PiipStatus, PortfolioStatusOption, PortfolioStatusReference } from './piip.models';
 
 export const PIIP_CATALOGS = {
-  statuses: [
-    'Presentado',
-    'Iniciativa aprobada',
-    'Iniciativa archivada',
-    'Proyecto en ejecución',
-    'Producto aprobado',
-    'Producto no aprobado',
-    'Suspendido',
-    'Cancelado',
-    'Finalizado',
-    'No Aplicable',
-    'No Admisible',
-  ] as PiipStatus[],
   finalProductTypes: ['Prototipo de solución conceptualizada', 'Solución funcional', 'NA'],
   digitalComponents: ['Si', 'No'],
 } as const;
 
-/** Estados que pertenecen al contexto de una iniciativa.
+/** Códigos de estado que pertenecen al contexto de una iniciativa. */
+export type InitiativeStatus = Extract<PiipStatus, 'PRESENTED' | 'INITIATIVE_APPROVED' | 'INITIATIVE_ARCHIVED' | 'NOT_ADMISSIBLE'>;
+
+/** Códigos de estado que pertenecen al contexto de un proyecto. */
+export type ProjectStatus = Extract<PiipStatus, 'PROJECT_IN_PROGRESS' | 'PRODUCT_APPROVED' | 'PRODUCT_NOT_APPROVED' | 'SUSPENDED' | 'CANCELLED' | 'FINISHED'>;
+
+/** Destinos admitidos por la matriz de iniciativa, agrupados por código de estado actual.
  *
- * El catálogo global se conserva para visualización y compatibilidad; estas
- * listas son las únicas que deben alimentar filtros y acciones contextuales.
+ * La aprobación conserva su operación existente y no se duplica en este selector.
  */
-export const INITIATIVE_STATUSES = [
-  'Presentado',
-  'Iniciativa aprobada',
-  'Iniciativa archivada',
-  'No Admisible',
-] as const satisfies readonly PiipStatus[];
-
-/** Estados que pertenecen al contexto de un proyecto. */
-export const PROJECT_STATUSES = [
-  'Proyecto en ejecución',
-  'Producto aprobado',
-  'Producto no aprobado',
-  'Suspendido',
-  'Cancelado',
-  'Finalizado',
-] as const satisfies readonly PiipStatus[];
-
-export type InitiativeStatus = typeof INITIATIVE_STATUSES[number];
-export type ProjectStatus = typeof PROJECT_STATUSES[number];
-
-/** Destinos admitidos por la matriz de iniciativa, agrupados por estado actual. */
-export const INITIATIVE_STATUS_TRANSITIONS: Readonly<Record<InitiativeStatus, readonly InitiativeStatus[]>> = {
-  // La aprobación conserva su operación existente y no se duplica en este selector.
-  Presentado: ['Iniciativa archivada', 'No Admisible'],
-  'Iniciativa aprobada': ['Iniciativa archivada'],
-  'Iniciativa archivada': [],
-  'No Admisible': [],
+export const INITIATIVE_STATUS_TRANSITIONS: Readonly<Partial<Record<InitiativeStatus, readonly InitiativeStatus[]>>> = {
+  PRESENTED: ['INITIATIVE_APPROVED', 'NOT_ADMISSIBLE', 'INITIATIVE_ARCHIVED'],
+  INITIATIVE_APPROVED: ['INITIATIVE_ARCHIVED'],
+  INITIATIVE_ARCHIVED: [],
+  NOT_ADMISSIBLE: [],
 };
 
-/** Destinos admitidos por la matriz de proyecto, agrupados por estado actual. */
-export const PROJECT_STATUS_TRANSITIONS: Readonly<Record<ProjectStatus, readonly ProjectStatus[]>> = {
-  'Proyecto en ejecución': ['Producto aprobado', 'Producto no aprobado', 'Suspendido', 'Cancelado'],
-  Suspendido: ['Proyecto en ejecución', 'Cancelado'],
-  'Producto no aprobado': ['Proyecto en ejecución', 'Cancelado'],
-  'Producto aprobado': ['Finalizado'],
-  Cancelado: [],
-  Finalizado: [],
+/** Destinos admitidos por la matriz de proyecto, agrupados por código de estado actual. */
+export const PROJECT_STATUS_TRANSITIONS: Readonly<Partial<Record<ProjectStatus, readonly ProjectStatus[]>>> = {
+  PROJECT_IN_PROGRESS: ['PRODUCT_APPROVED', 'PRODUCT_NOT_APPROVED', 'SUSPENDED', 'CANCELLED'],
+  SUSPENDED: ['PROJECT_IN_PROGRESS', 'CANCELLED'],
+  PRODUCT_NOT_APPROVED: ['PROJECT_IN_PROGRESS', 'CANCELLED'],
+  PRODUCT_APPROVED: ['FINISHED'],
+  CANCELLED: [],
+  FINISHED: [],
 };
+
+/** Opciones activas del catálogo filtradas por aplicabilidad al tipo de registro. */
+export function applicableStatusOptions(
+  statuses: readonly PortfolioStatusOption[],
+  applicability: 'INITIATIVE' | 'PROJECT',
+): readonly PortfolioStatusOption[] {
+  return statuses.filter((option) => option.active && option.applicability === applicability);
+}
+
+/** Denominación vigente de un estado a partir de su referencia (fallback al código). */
+export function statusDisplayName(status: PortfolioStatusReference | undefined): string {
+  return status?.name ?? status?.code ?? 'Sin información';
+}
+
+/** Resuelve la denominación de un código desde el catálogo; conserva el código como fallback neutral. */
+export function resolveStatusName(statuses: readonly PortfolioStatusOption[], code: string | undefined): string {
+  if (!code) return 'Sin información';
+  return statuses.find((option) => option.code === code)?.name ?? code;
+}

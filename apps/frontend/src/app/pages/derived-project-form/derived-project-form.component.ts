@@ -5,10 +5,10 @@ import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { PIIP_CATALOGS } from '../../core/piip.catalogs';
+import { PIIP_CATALOGS, resolveStatusName, statusDisplayName } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { responsibleUnitRowErrors } from '../../core/piip-http.repository';
-import { DerivedProjectInput, OrganizationalUnit } from '../../core/piip.models';
+import { DerivedProjectInput, OrganizationalUnit, PortfolioStatusReference } from '../../core/piip.models';
 import { OrganizationalUnitListComponent, OrganizationalUnitListValue } from '../../shared/organizational-unit-list/organizational-unit-list.component';
 import { DerivedProjectReviewDialogComponent, DerivedProjectReviewDialogData } from './derived-project-review-dialog.component';
 
@@ -32,6 +32,13 @@ export class DerivedProjectFormComponent {
   readonly catalogState = this.repository.catalogs;
   readonly unitsState = this.repository.organizationalUnitsState;
   readonly units = this.repository.organizationalUnits;
+  readonly statusCatalog = computed(() => this.catalogState().value.portfolioStatuses);
+  readonly initialStatusOption = computed(() => this.statusCatalog().find((option) => option.code === 'PROJECT_IN_PROGRESS' && option.active && option.applicability === 'PROJECT'));
+  readonly initialStatusReady = computed(() => this.catalogState().phase === 'ready' && Boolean(this.initialStatusOption()));
+  readonly initialStatusName = computed(() => this.initialStatusOption()?.name ?? 'Estado inicial no disponible');
+  readonly approvedStatusName = computed(() => this.catalogState().phase === 'ready'
+    ? resolveStatusName(this.statusCatalog(), 'INITIATIVE_APPROVED')
+    : 'Estado de iniciativa no disponible');
   readonly initiativeCode = this.route.snapshot.paramMap.get('initiativeCode') ?? '';
   readonly detail = computed(() => this.repository.getInitiativeDetail(this.initiativeCode));
   readonly inheritedInactive = computed(() => {
@@ -56,7 +63,7 @@ export class DerivedProjectFormComponent {
     recordType: [{ value: 'Proyecto', disabled: true }],
     code: [{ value: this.provisionalCode(), disabled: true }],
     originCode: [{ value: this.initiativeCode, disabled: true }],
-    status: [{ value: 'Proyecto en ejecución', disabled: true }],
+    status: [{ value: this.initialStatusName(), disabled: true }],
     startDate: ['', Validators.required],
     name: [this.detail()?.portfolioRecord.name ?? '', [Validators.required, Validators.maxLength(180)]],
     solutionType: [{ value: this.activeId(this.detail()?.portfolioRecord.solutionTypeReference), disabled: this.catalogState().phase !== 'ready' }, Validators.required],
@@ -72,6 +79,11 @@ export class DerivedProjectFormComponent {
   });
 
   constructor() {
+    effect(() => {
+      const name = this.initialStatusName();
+      if (this.form.controls.status.value !== name) this.form.controls.status.setValue(name, { emitEvent: false });
+    });
+
     effect(() => {
       const detail = this.detail();
       this.form.controls.code.setValue(this.provisionalCode(), { emitEvent: false });
@@ -190,6 +202,7 @@ export class DerivedProjectFormComponent {
       source: source.name.trim() || 'Sin información registrada',
       digitalComponent: value.digitalComponent,
       responsible: value.responsible.trim(),
+      initialStatusName: this.initialStatusName(),
        organizationalUnits,
       description: value.description.trim(),
       keyResults: value.keyResults.trim(),
@@ -252,8 +265,10 @@ export class DerivedProjectFormComponent {
     const catalogs = this.catalogState();
     const units = this.unitsState();
     return catalogs.phase === 'ready' && catalogs.value.solutionTypes.length > 0 && catalogs.value.sources.length > 0
-       && units.phase === 'ready' && units.value.length > 0 && this.hasValidUnits();
+       && units.phase === 'ready' && units.value.length > 0 && this.hasValidUnits() && this.initialStatusReady();
   }
+
+  statusName(status: PortfolioStatusReference | undefined): string { return statusDisplayName(status); }
 
   selectableUnits(): readonly OrganizationalUnit[] { return this.units().filter((unit) => unit.active && unit.acronym.trim()); }
   selectedUnits(): readonly OrganizationalUnit[] {

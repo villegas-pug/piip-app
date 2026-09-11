@@ -15,7 +15,7 @@ class TestResetCoordinatorTest {
     }
 
     @Test void soloTolera942EnDropAllowlistedActualDespuesDelPreflightIncluidoUsuario() {
-        assertThat(TestResetSchemaFilterProvider.ALLOWLIST).hasSize(20);
+        assertThat(TestResetSchemaFilterProvider.ALLOWLIST).hasSize(21);
         CommandAcceptanceException missing = new CommandAcceptanceException("drop", new SQLException("missing", "42000", 942));
         assertThat(TestResetCoordinator.isRecoverableMissingTable(true, TestResetStage.DROP, "DOCUMENTO", "DOCUMENTO", missing)).isTrue();
         assertThat(TestResetCoordinator.isRecoverableMissingTable(false, TestResetStage.DROP, "DOCUMENTO", "DOCUMENTO", missing)).isFalse();

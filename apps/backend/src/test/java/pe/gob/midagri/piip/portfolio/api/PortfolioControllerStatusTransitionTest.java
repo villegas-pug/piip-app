@@ -3,6 +3,7 @@ package pe.gob.midagri.piip.portfolio.api;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -17,10 +18,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import pe.gob.midagri.piip.portfolio.application.InitiativeApplicationService;
 import pe.gob.midagri.piip.portfolio.application.PortfolioQueryService;
 import pe.gob.midagri.piip.portfolio.application.ProjectApplicationService;
-import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.shared.api.ApiExceptionHandler;
 import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
 import pe.gob.midagri.piip.shared.application.error.NotFoundException;
+import pe.gob.midagri.piip.shared.application.error.ProblemCode;
 import pe.gob.midagri.piip.shared.application.error.StaleVersionException;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +43,14 @@ class PortfolioControllerStatusTransitionTest {
         mvc.perform(post("/projects/P-001-2026/status-transitions")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"version\":null,\"targetStatus\":null}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void missingTargetStatusStillReturnsBadRequest() throws Exception {
+        mvc.perform(post("/projects/P-001-2026/status-transitions")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"version\":0}"))
             .andExpect(status().isBadRequest());
     }
 
@@ -75,6 +84,15 @@ class PortfolioControllerStatusTransitionTest {
     void mapsDisallowedTransitionToUnprocessableEntity() throws Exception {
         when(projects.transition(any(), any())).thenThrow(new BusinessRuleException("Transición no permitida"));
         performValidProjectTransition().andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void mapsStatusCauseToUnprocessableEntityWithProblemCode() throws Exception {
+        when(projects.transition(any(), any()))
+            .thenThrow(new BusinessRuleException(ProblemCode.PORTFOLIO_STATUS_NOT_APPLICABLE, "El estado no es aplicable"));
+        performValidProjectTransition()
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.problemCode").value("PORTFOLIO_STATUS_NOT_APPLICABLE"));
     }
 
     private org.springframework.test.web.servlet.ResultActions performValidProjectTransition() throws Exception {

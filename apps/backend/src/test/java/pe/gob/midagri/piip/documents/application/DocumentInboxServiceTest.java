@@ -21,6 +21,7 @@ import pe.gob.midagri.piip.organization.persistence.ExecutingUnitEntity;
 import pe.gob.midagri.piip.organization.persistence.InstitutionEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 
@@ -30,12 +31,13 @@ class DocumentInboxServiceTest {
     @Mock DocumentRepository documents;
     @Mock LocalAuthorizationService authorization;
     @Mock ResponsibleUnitRepository responsibleUnits;
+    @Mock PortfolioStatusRepository statuses;
     private PortfolioRecordEntity record; private DocumentTypeEntity type;
     private DocumentInboxService service;
 
     @BeforeEach
     void setUp() {
-        service = new DocumentInboxService(records, documents, authorization, responsibleUnits);
+        service = new DocumentInboxService(records, documents, authorization, responsibleUnits, statuses);
         InstitutionEntity institution = new InstitutionEntity("I2", "Institución");
         ReflectionTestUtils.setField(institution, "id", 14L);
         ExecutingUnitEntity unit = new ExecutingUnitEntity(institution, "UE2", "Unidad");
@@ -58,6 +60,7 @@ class DocumentInboxServiceTest {
 
         DossierSummary summary = resumen(opinionSlot, otherSlot);
 
+        assertThat(summary.status().code()).isEqualTo("PRESENTED");
         assertThat(summary.loadedCount()).isEqualTo(1);
         assertThat(summary.pendingCount()).isEqualTo(1);
         assertThat(summary.notApplicableCount()).isZero();

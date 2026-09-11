@@ -1,14 +1,18 @@
 import { TestBed } from '@angular/core/testing';
-import { PIIP_CATALOGS } from './piip.catalogs';
+import { INITIATIVE_STATUS_TRANSITIONS, PIIP_CATALOGS, PROJECT_STATUS_TRANSITIONS } from './piip.catalogs';
 import { PiipMockRepository, resolveProjectOriginCode } from './piip-mock.repository';
 
 describe('PIIP functional source', () => {
-  it('conserva localmente solo los conceptos fuera de las siete fuentes centralizadas', () => {
-    expect(Object.keys(PIIP_CATALOGS)).toEqual(['statuses', 'finalProductTypes', 'digitalComponents']);
-    expect(PIIP_CATALOGS.statuses).toContain('No Aplicable');
-    expect(PIIP_CATALOGS.statuses).toContain('No Admisible');
+  it('conserva localmente solo los conceptos fuera de las fuentes centralizadas', () => {
+    expect(Object.keys(PIIP_CATALOGS)).toEqual(['finalProductTypes', 'digitalComponents']);
     expect(PIIP_CATALOGS.finalProductTypes).toContain('NA');
     expect(PIIP_CATALOGS.digitalComponents).toEqual(['Si', 'No']);
+  });
+
+  it('conserva las matrices por código separadas del catálogo', () => {
+    expect(INITIATIVE_STATUS_TRANSITIONS.PRESENTED).toEqual(['INITIATIVE_APPROVED', 'NOT_ADMISSIBLE', 'INITIATIVE_ARCHIVED']);
+    expect(PROJECT_STATUS_TRANSITIONS.PROJECT_IN_PROGRESS).toEqual(['PRODUCT_APPROVED', 'PRODUCT_NOT_APPROVED', 'SUSPENDED', 'CANCELLED']);
+    expect(PROJECT_STATUS_TRANSITIONS.PRODUCT_APPROVED).toEqual(['FINISHED']);
   });
 
   it('uses only confirmed document names in the mock repository', () => {
@@ -55,24 +59,24 @@ describe('PIIP functional source', () => {
 
     repository.approveInitiative({
       initiativeCode: 'I-024-2026',
-      targetStatus: 'Iniciativa aprobada',
+      targetStatus: 'INITIATIVE_APPROVED',
       observation: 'Aprobación funcional de prueba.',
     });
 
-    expect(repository.getInitiativeDetail('I-024-2026')?.initiative.status).toBe('Iniciativa aprobada');
-    expect(repository.getInitiativeDetail('I-024-2026')?.portfolioRecord.status).toBe('Iniciativa aprobada');
-    expect(repository.getDocumentDossier('Iniciativa', 'I-024-2026')?.status).toBe('Iniciativa aprobada');
+    expect(repository.getInitiativeDetail('I-024-2026')?.initiative.status.code).toBe('INITIATIVE_APPROVED');
+    expect(repository.getInitiativeDetail('I-024-2026')?.portfolioRecord.status.code).toBe('INITIATIVE_APPROVED');
+    expect(repository.getDocumentDossier('Iniciativa', 'I-024-2026')?.status.code).toBe('INITIATIVE_APPROVED');
     expect(repository.projects()).toHaveLength(projectCount);
     expect(repository.auditEvents()[0].event).toBe('Iniciativa aprobada');
   });
 
   it('rejects approval from the external role and from a non-presented initiative', () => {
     const repository = TestBed.inject(PiipMockRepository);
-    expect(() => repository.approveInitiative({ initiativeCode: 'I-019-2026', targetStatus: 'Iniciativa aprobada', observation: '' }))
+    expect(() => repository.approveInitiative({ initiativeCode: 'I-019-2026', targetStatus: 'INITIATIVE_APPROVED', observation: '' }))
       .toThrowError('Solo una iniciativa en estado Presentado puede aprobarse.');
 
     repository.toggleRole();
-    expect(() => repository.approveInitiative({ initiativeCode: 'I-024-2026', targetStatus: 'Iniciativa aprobada', observation: '' }))
+    expect(() => repository.approveInitiative({ initiativeCode: 'I-024-2026', targetStatus: 'INITIATIVE_APPROVED', observation: '' }))
       .toThrowError('El perfil Consulta externa no puede aprobar iniciativas.');
   });
 
@@ -101,7 +105,7 @@ describe('PIIP functional source', () => {
     const dossier = repository.getDocumentDossier('Proyecto', code);
     expect(project?.originCode).toBe('I-019-2026');
     expect(project?.originMode).toBe('DERIVED_FROM_INITIATIVE');
-    expect(portfolioRecord?.status).toBe('Proyecto en ejecución');
+    expect(portfolioRecord?.status.code).toBe('PROJECT_IN_PROGRESS');
     expect(portfolioRecord?.solutionType).toBe('Solución por definir');
     expect(portfolioRecord?.technicalOpinionReport).toBe('');
     expect(dossier?.stages.flatMap((stage) => stage.records)).toHaveLength(3);
@@ -191,7 +195,7 @@ describe('PIIP functional source', () => {
     const portfolioRecord = repository.portfolioRecords()[0];
     expect(project.originMode).toBe('PREEXISTING');
     expect(project.originCode).toBe('NA');
-    expect(project.status).toBe('Proyecto en ejecución');
+    expect(project.status.code).toBe('PROJECT_IN_PROGRESS');
     expect(portfolioRecord.solutionType).toBe('No aplica');
     expect(portfolioRecord.source).toBe('Otros');
     expect(repository.auditEvents()[0].event).toBe('Proyecto preexistente registrado');

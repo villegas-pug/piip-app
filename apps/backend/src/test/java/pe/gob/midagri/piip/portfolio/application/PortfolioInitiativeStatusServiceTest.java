@@ -33,8 +33,11 @@ import pe.gob.midagri.piip.organization.persistence.OrganizationalUnitRepository
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.InitiativeStatusTransitionRequest;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatusApplicability;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusCatalogEntity;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.portfolio.persistence.ResponsibleUnitRepository;
 import pe.gob.midagri.piip.shared.application.error.BusinessRuleException;
 import pe.gob.midagri.piip.work.persistence.NotificationRepository;
@@ -55,12 +58,13 @@ class PortfolioInitiativeStatusServiceTest {
     @Mock AuditService audit;
     @Mock CatalogReferenceService catalogReferences;
     @Mock DocumentTypeRepository documentTypes;
+    @Mock PortfolioStatusRepository statuses;
     private InitiativeApplicationService service;
 
     @BeforeEach
     void setUp() {
         service = new InitiativeApplicationService(records, responsibleUnits, executingUnits, users, tasks,
-            notifications, documents, codes, authorization, audit, catalogReferences, documentTypes);
+            notifications, documents, codes, authorization, audit, catalogReferences, documentTypes, statuses);
         lenient().when(responsibleUnits.findByRecordIdOrderByDisplayOrder(any())).thenReturn(List.of());
     }
 
@@ -70,12 +74,15 @@ class PortfolioInitiativeStatusServiceTest {
         when(records.findByCodeIgnoreCaseForUpdate("I-001-2026")).thenReturn(Optional.of(initiative));
         when(records.existsByOriginRecordId(1L)).thenReturn(false);
         when(authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, 10L)).thenReturn(actor());
+        when(statuses.findByCode(PortfolioStatus.INITIATIVE_ARCHIVED))
+            .thenReturn(Optional.of(status(PortfolioStatus.INITIATIVE_ARCHIVED, PortfolioStatusApplicability.INITIATIVE)));
 
         var response = service.transitionInitiativeStatus("I-001-2026",
-            new InitiativeStatusTransitionRequest(0L, PortfolioStatus.INITIATIVE_ARCHIVED, "observación"));
+            new InitiativeStatusTransitionRequest(0L, "INITIATIVE_ARCHIVED", "observación"));
 
         assertThat(initiative.getStatus()).isEqualTo(PortfolioStatus.INITIATIVE_ARCHIVED);
-        assertThat(response.status()).isEqualTo("Iniciativa archivada");
+        assertThat(response.status().code()).isEqualTo("INITIATIVE_ARCHIVED");
+        assertThat(response.status().name()).isEqualTo("Iniciativa archivada");
         verify(audit).event(eq("ESTADO_INICIATIVA_CAMBIADO"), eq("REGISTRO_PORTAFOLIO"), eq("I-001-2026"), anyMap(), eq("subject"));
         verifyNoInteractions(documents);
     }
@@ -88,7 +95,7 @@ class PortfolioInitiativeStatusServiceTest {
         when(authorization.requireUnit(RoleCode.ADMINISTRADOR_PIIP, 10L)).thenReturn(actor());
 
         assertThatThrownBy(() -> service.transitionInitiativeStatus("I-001-2026",
-            new InitiativeStatusTransitionRequest(0L, PortfolioStatus.INITIATIVE_ARCHIVED, null)))
+            new InitiativeStatusTransitionRequest(0L, "INITIATIVE_ARCHIVED", null)))
             .isInstanceOf(BusinessRuleException.class);
 
         verifyNoInteractions(audit);
@@ -102,7 +109,7 @@ class PortfolioInitiativeStatusServiceTest {
             .thenThrow(new AccessDeniedException("fuera de ámbito"));
 
         assertThatThrownBy(() -> service.transitionInitiativeStatus("I-001-2026",
-            new InitiativeStatusTransitionRequest(0L, PortfolioStatus.INITIATIVE_ARCHIVED, null)))
+            new InitiativeStatusTransitionRequest(0L, "INITIATIVE_ARCHIVED", null)))
             .isInstanceOf(AccessDeniedException.class);
         assertThat(initiative.getStatus()).isEqualTo(PortfolioStatus.PRESENTED);
         verifyNoInteractions(audit);
@@ -116,6 +123,10 @@ class PortfolioInitiativeStatusServiceTest {
         PortfolioRecordEntity initiative = PortfolioRecordTestBuilder.transientReferences().initiative("I-001-2026", unit, "Iniciativa");
         ReflectionTestUtils.setField(initiative, "id", id);
         return initiative;
+    }
+
+    private PortfolioStatusCatalogEntity status(PortfolioStatus code, PortfolioStatusApplicability applicability) {
+        return new PortfolioStatusCatalogEntity(code, code.label(), code.ordinal() + 1, true, applicability);
     }
 
     private LocalAccessContext actor() {

@@ -19,7 +19,7 @@ Antes de permitir cualquier escritura, el proceso exige simultáneamente:
 - huella JDBC allowlisted;
 - esquema Oracle `SISPIIP` allowlisted;
 - conexión directa al destino autorizado por la huella SHA-256 configurada;
-- coincidencia exacta entre la metadata JPA y la allowlist de 19 tablas;
+- coincidencia exacta entre la metadata JPA y la allowlist de 21 tablas;
 - seed validado como DML idempotente sin DDL, PL/SQL ni IDs numéricos hardcodeados.
 
 La autorización separada de confirmación fue sustituida por la activación exacta de perfiles en la Constitución 1.3.0. El seed contiene los datos personales aprobados del usuario inicial de este entorno descartable. Las credenciales, contraseñas, tokens y wallets se mantienen fuera del repositorio.
@@ -31,7 +31,7 @@ presente `test-reset`.
 
 ## Frontera destructiva
 
-El reset recrea exactamente estas 19 tablas:
+El reset recrea exactamente estas 21 tablas:
 
 1. `DOCUMENTO_CONTENIDO`
 2. `DOCUMENTO_VERSION`
@@ -42,16 +42,18 @@ El reset recrea exactamente estas 19 tablas:
 7. `EVENTO_AUDITORIA`
 8. `AUDITORIA_ACCESO`
 9. `REGISTRO_PORTAFOLIO`
-10. `CONTADOR_CODIGO`
-11. `CATALOGO_ITEM`
-12. `TIPO_DOCUMENTO`
-13. `USUARIO_ROL_AMBITO`
-14. `UNIDAD_ORGANICA`
-15. `USUARIO`
-16. `ROL`
-17. `UNIDAD_EJECUTORA`
-18. `INSTITUCION`
-19. `CATALOGO`
+10. `ESTADO_PORTAFOLIO`
+11. `CONTADOR_CODIGO`
+12. `CATALOGO_ITEM`
+13. `TIPO_DOCUMENTO`
+14. `ARCHIVO_DOCUMENTO`
+15. `USUARIO_ROL_AMBITO`
+16. `UNIDAD_ORGANICA`
+17. `USUARIO`
+18. `ROL`
+19. `UNIDAD_EJECUTORA`
+20. `INSTITUCION`
+21. `CATALOGO`
 
 El orden anterior es hijo-a-padre. El proceso recrea las mismas tablas en orden padre-a-hijo, empezando por `CATALOGO`, `INSTITUCION` y `ROL`. No existe una frontera de tablas protegidas durante este procedimiento.
 
@@ -61,8 +63,8 @@ La auditoría, las notificaciones y todas las tablas operativas del ambiente rei
 
 1. Validar perfiles, `ddl-auto`, conexión y esquema sin habilitar escrituras.
 2. Capturar la misma `Metadata` utilizada por Hibernate JPA.
-3. Comparar la metadata con la allowlist cerrada de 19 tablas y validar el seed.
-4. Eliminar las 19 tablas en orden hijo-a-padre.
+3. Comparar la metadata con la allowlist cerrada de 21 tablas y validar el seed.
+4. Eliminar las 21 tablas en orden hijo-a-padre.
 5. Recrearlas desde JPA en orden padre-a-hijo.
 6. Ejecutar `db/test/catalog-data.sql`.
 7. Comprobar conteos, claves naturales, relaciones y tablas vacías.
@@ -85,7 +87,7 @@ El mismo código es fatal en preflight, create, seed, postvalidación, cualquier
 
 El seed contiene únicamente DML Oracle idempotente. Localiza roles, institución, unidades ejecutoras, unidades orgánicas, usuario, ámbitos, cabeceras, ítems y tipos documentales mediante claves naturales. El usuario inicial está definido directamente en el SQL con los datos personales aprobados para este entorno descartable.
 
-El dataset resultante contiene dos roles (`ADMINISTRADOR_PIIP` y `CONSULTA_EXTERNA`), una institución `MIDAGRI`, dos UE (`UE-001` y `UE-002`), cuatro UO sintéticas (`UE-001-UO-01`, `UE-001-UO-02`, `UE-002-UO-01`, `UE-002-UO-02`), un usuario local y dos ámbitos administrativos activos, además de cuatro catálogos, 17 ítems y seis tipos documentales. El usuario debe existir previamente en Keycloak; el seed no crea usuarios, contraseñas ni tokens allí.
+El dataset resultante contiene dos roles (`ADMINISTRADOR_PIIP` y `CONSULTA_EXTERNA`), una institución `MIDAGRI`, dos UE (`UE-001` y `UE-002`), cuatro UO sintéticas (`UE-001-UO-01`, `UE-001-UO-02`, `UE-002-UO-01`, `UE-002-UO-02`), un usuario local y dos ámbitos administrativos activos, además de cuatro catálogos, 17 ítems, seis tipos documentales y los once estados del portafolio. Los estados se insertan por código natural, solo cuando no existen; la postvalidación exige exactamente los once códigos, denominaciones, órdenes 1..11, actividad y aplicabilidad esperadas y falla ante cualquier discrepancia o fila extra. El usuario debe existir previamente en Keycloak; el seed no crea usuarios, contraseñas ni tokens allí.
 
 Los Objetivos PEI, Actividades POI y Unidades Orgánicas agregadas por el seed son datos sintéticos exclusivos de pruebas. Esta condición se conserva en comentarios técnicos y en esta guía; no se agrega un campo `official`, `synthetic`, `testData` ni una marca visible en la interfaz.
 
@@ -99,6 +101,7 @@ La validación operativa requiere autorización separada para pruebas Gradle, ge
 - dos ejecuciones consecutivas sin duplicados;
 - recuperación después de un drop parcial;
 - auditoría y notificaciones vacías;
-- recreación exacta de las 19 tablas;
+- recreación exacta de las 21 tablas;
+- postvalidación fail-closed de los once estados del portafolio y su reejecución sin duplicados;
 - creación de la identidad y organización sintéticas esperadas;
 - arranque posterior con el perfil normal usando `ddl-auto=validate` y sin repetir el reset.

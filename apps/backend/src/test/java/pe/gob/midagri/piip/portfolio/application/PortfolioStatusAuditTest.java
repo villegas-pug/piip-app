@@ -47,6 +47,7 @@ import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.catalogs.persistence.*;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 
@@ -69,11 +70,13 @@ class PortfolioStatusAuditTest {
     @Autowired ObjectMapper objectMapper;
     @Autowired CatalogRepository catalogs;
     @Autowired CatalogItemRepository catalogItems;
+    @Autowired PortfolioStatusRepository statuses;
 
     private Actor actor;
 
     @BeforeEach
     void setUp() {
+        PortfolioRecordTestBuilder.seedPortfolioStatuses(statuses);
         actor = actor();
         authenticate(actor);
         audit.failAfterWrite(false);
@@ -90,12 +93,13 @@ class PortfolioStatusAuditTest {
         PortfolioRecordEntity initiative = initiative();
 
         initiatives.transitionInitiativeStatus(initiative.getCode(),
-            new InitiativeStatusTransitionRequest(0L, PortfolioStatus.INITIATIVE_ARCHIVED, "archivada por evaluación"));
+            new InitiativeStatusTransitionRequest(0L, "INITIATIVE_ARCHIVED", "archivada por evaluación"));
 
         AuditEventEntity event = eventFor(initiative.getCode(), "ESTADO_INICIATIVA_CAMBIADO");
         assertThat(event.getActorSubject()).isEqualTo(actor.subject);
         assertThat(event.getOccurredAt()).isNotNull();
-        assertDetail(event, "Presentado", "Iniciativa archivada", "archivada por evaluación", actor.unit);
+        assertDetail(event, "Presentado", "Iniciativa archivada", "PRESENTED", "INITIATIVE_ARCHIVED",
+            "archivada por evaluación", actor.unit);
     }
 
     @Test
@@ -103,12 +107,13 @@ class PortfolioStatusAuditTest {
         PortfolioRecordEntity project = project();
 
         projects.transitionProjectStatus(project.getCode(),
-            new ProjectStatusTransitionRequest(0L, PortfolioStatus.PRODUCT_APPROVED, "producto validado"));
+            new ProjectStatusTransitionRequest(0L, "PRODUCT_APPROVED", "producto validado"));
 
         AuditEventEntity event = eventFor(project.getCode(), "ESTADO_PROYECTO_CAMBIADO");
         assertThat(event.getActorSubject()).isEqualTo(actor.subject);
         assertThat(event.getOccurredAt()).isNotNull();
-        assertDetail(event, "Proyecto en ejecución", "Producto aprobado", "producto validado", actor.unit);
+        assertDetail(event, "Proyecto en ejecución", "Producto aprobado", "PROJECT_IN_PROGRESS", "PRODUCT_APPROVED",
+            "producto validado", actor.unit);
     }
 
     @Test
@@ -117,7 +122,7 @@ class PortfolioStatusAuditTest {
         audit.failAfterWrite(true);
 
         assertThatThrownBy(() -> initiatives.transitionInitiativeStatus(initiative.getCode(),
-            new InitiativeStatusTransitionRequest(0L, PortfolioStatus.INITIATIVE_ARCHIVED, "debe revertirse")))
+            new InitiativeStatusTransitionRequest(0L, "INITIATIVE_ARCHIVED", "debe revertirse")))
             .isInstanceOf(IllegalStateException.class);
 
         audit.failAfterWrite(false);
@@ -133,7 +138,7 @@ class PortfolioStatusAuditTest {
         audit.failAfterWrite(true);
 
         assertThatThrownBy(() -> projects.transitionProjectStatus(project.getCode(),
-            new ProjectStatusTransitionRequest(0L, PortfolioStatus.PRODUCT_APPROVED, "debe revertirse")))
+            new ProjectStatusTransitionRequest(0L, "PRODUCT_APPROVED", "debe revertirse")))
             .isInstanceOf(IllegalStateException.class);
 
         audit.failAfterWrite(false);
@@ -161,13 +166,16 @@ class PortfolioStatusAuditTest {
             .filter(event -> event.getEventType().equals(eventType)).findFirst().orElseThrow();
     }
 
-    private void assertDetail(AuditEventEntity event, String previous, String current, String observation,
-            ExecutingUnitEntity unit) throws Exception {
+    private void assertDetail(AuditEventEntity event, String previous, String current, String previousCode,
+            String currentCode, String observation, ExecutingUnitEntity unit) throws Exception {
         JsonNode detail = objectMapper.readTree(event.getDetailJson());
         assertThat(detail.fieldNames()).toIterable().containsExactlyInAnyOrder(
-            "estadoAnterior", "estadoNuevo", "rol", "unidadEjecutoraId", "unidadEjecutora", "observacion", "resultado");
+            "estadoAnterior", "estadoNuevo", "previousStatusCode", "newStatusCode", "rol", "unidadEjecutoraId",
+            "unidadEjecutora", "observacion", "resultado");
         assertThat(detail.get("estadoAnterior").asText()).isEqualTo(previous);
         assertThat(detail.get("estadoNuevo").asText()).isEqualTo(current);
+        assertThat(detail.get("previousStatusCode").asText()).isEqualTo(previousCode);
+        assertThat(detail.get("newStatusCode").asText()).isEqualTo(currentCode);
         assertThat(detail.get("rol").asText()).isEqualTo(RoleCode.ADMINISTRADOR_PIIP.name());
         assertThat(detail.get("unidadEjecutoraId").asLong()).isEqualTo(unit.getId());
         assertThat(detail.get("unidadEjecutora").asText()).isEqualTo(unit.getName());

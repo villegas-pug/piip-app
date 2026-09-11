@@ -1,4 +1,4 @@
-import { AuditEvent } from '../../core/piip.models';
+import { AuditEvent, PortfolioStatusReference } from '../../core/piip.models';
 import { presentDocumentTypeLabel } from '../documents/document-type-label.presenter';
 
 export interface AuditDetailField {
@@ -13,6 +13,9 @@ export interface PresentedAuditEvent {
   documentName?: string;
   technicalDetail: string;
   detailFields: AuditDetailField[];
+  status?: PortfolioStatusReference;
+  previousStatus?: PortfolioStatusReference;
+  newStatus?: PortfolioStatusReference;
 }
 
 const EVENT_LABELS: Record<string, string> = {
@@ -54,11 +57,14 @@ export function presentAuditEvent(event: AuditEvent): PresentedAuditEvent {
   return {
     source: event,
     eventLabel: EVENT_LABELS[event.event] ?? humanize(event.event),
-    observation: summarize(event.event, detail),
+    observation: summarize(event, detail),
     documentName: event.documentName ?? stringDetail(detail['nombreVigente']),
     technicalDetail: formatTechnicalDetail(rawDetail),
+    status: event.status,
+    previousStatus: event.previousStatus,
+    newStatus: event.newStatus,
     detailFields: Object.entries(detail)
-      .filter(([key]) => key !== 'tipoCodigo')
+      .filter(([key]) => key !== 'tipoCodigo' && key !== 'statusCode' && key !== 'previousStatusCode' && key !== 'newStatusCode')
       .map(([key, value]) => ({ label: detailLabel(event.event, key), value: presentValue(key, value) })),
   };
 }
@@ -75,23 +81,23 @@ function stringDetail(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
-function summarize(event: string, detail: AuditDetail): string {
+function summarize(event: AuditEvent, detail: AuditDetail): string {
   const documentType = presentDocumentTypeLabel(
     presentValue('tipoNombre', detail['tipoNombre'] ?? detail['tipo']),
     typeof detail['tipoCodigo'] === 'string' ? detail['tipoCodigo'] : undefined,
   );
   const version = detail['version'] ?? detail['versionId'] ?? detail['versionVigente'];
   const record = presentValue('registro', detail['registro']);
-  switch (event) {
+  switch (event.event) {
     case 'DOCUMENTO_CARGADO': return `Se cargó ${documentType}${version == null ? '' : `, versión ${version}`}.`;
     case 'DOCUMENTO_ARCHIVO_ELIMINADO': return `Se eliminó ${documentType}${detail['nombreVigente'] ? ` (${detail['nombreVigente']})` : ''}${version == null ? '' : `, versión ${version}`}.`;
     case 'DOCUMENTO_NO_APLICA': return `Se marcó como No aplica ${documentType}${detail['motivo'] ? `. Motivo: ${detail['motivo']}` : ''}.`;
     case 'DOCUMENTO_PUBLICADO': return `Se publicó el documento${version == null ? '' : `, versión ${version}`}.`;
     case 'DOCUMENTO_RETIRADO': return `Se retiró la publicación del documento${version == null ? '' : `, versión ${version}`}.`;
-    case 'INICIATIVA_REGISTRADA': return detail['estado'] ? `Estado inicial: ${detail['estado']}.` : 'Se registró la iniciativa.';
+    case 'INICIATIVA_REGISTRADA': return event.status?.name ? `Estado inicial: ${event.status.name}.` : (detail['estado'] ? `Estado inicial: ${presentValue('estado', detail['estado'])}.` : 'Se registró la iniciativa.');
     case 'INICIATIVA_APROBADA': return detail['observacion'] ? `Observación: ${detail['observacion']}` : 'La iniciativa fue aprobada.';
-    case 'ESTADO_INICIATIVA_CAMBIADO': return statusChangeSummary('La iniciativa', detail);
-    case 'ESTADO_PROYECTO_CAMBIADO': return statusChangeSummary('El proyecto', detail);
+    case 'ESTADO_INICIATIVA_CAMBIADO': return statusChangeSummary('La iniciativa', event, detail);
+    case 'ESTADO_PROYECTO_CAMBIADO': return statusChangeSummary('El proyecto', event, detail);
     case 'INICIATIVA_ACTUALIZADA': return updateSummary('La iniciativa', detail);
     case 'PROYECTO_ACTUALIZADO': return updateSummary('El proyecto', detail);
     case 'PROYECTO_DERIVADO_REGISTRADO': return detail['iniciativaOrigen'] ? `Iniciativa de origen: ${detail['iniciativaOrigen']}.` : 'Se registró el proyecto derivado.';
@@ -120,9 +126,9 @@ function updateSummary(subject: string, detail: AuditDetail): string {
     : `${subject} se actualizó${version}.`;
 }
 
-function statusChangeSummary(subject: string, detail: AuditDetail): string {
-  const previous = presentValue('estadoAnterior', detail['estadoAnterior']);
-  const current = presentValue('estadoNuevo', detail['estadoNuevo']);
+function statusChangeSummary(subject: string, event: AuditEvent, detail: AuditDetail): string {
+  const previous = event.previousStatus?.name ?? presentValue('estadoAnterior', detail['estadoAnterior']);
+  const current = event.newStatus?.name ?? presentValue('estadoNuevo', detail['estadoNuevo']);
   const observation = detail['observacion'] ? ` Observación: ${detail['observacion']}` : '';
   return `${subject} cambió de ${previous} a ${current}.${observation}`;
 }

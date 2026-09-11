@@ -2,6 +2,7 @@ package pe.gob.midagri.piip.dashboard.api;
 
 import java.time.Instant;
 import java.util.List;
+import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.PortfolioStatusReferenceResponse;
 
 /** Contratos HTTP propios de la consulta de portafolio de Inicio. */
 public final class DashboardDtos {
@@ -20,10 +21,10 @@ public final class DashboardDtos {
         String recordType,
         String code,
         String name,
-        String status,
+        PortfolioStatusReferenceResponse status,
         Long executingUnitId,
         String executingUnit,
         Instant updatedAt) {}
 
-    public record PortfolioStatusCountResponse(String status, long count) {}
+    public record PortfolioStatusCountResponse(PortfolioStatusReferenceResponse status, long count) {}
 }

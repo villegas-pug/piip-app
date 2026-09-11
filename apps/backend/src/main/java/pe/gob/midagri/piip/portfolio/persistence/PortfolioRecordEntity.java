@@ -38,6 +38,10 @@ public class PortfolioRecordEntity {
     @Lob @Column(name = "RESULTADOS_CLAVE") private String keyResults;
     @Column(name = "NOTA", length = 600) private String note;
     @Enumerated(EnumType.STRING) @Column(name = "ESTADO", length = 40, nullable = false) private PortfolioStatus status;
+    /** Metadata vigente del estado; asociación de solo lectura sobre la misma columna ESTADO (FK por código natural). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ESTADO", referencedColumnName = "CODIGO", insertable = false, updatable = false,
+        foreignKey = @ForeignKey(name = "FK_REG_ESTADO")) private PortfolioStatusCatalogEntity statusCatalog;
     @Enumerated(EnumType.STRING) @Column(name = "TIPO_PRODUCTO_FINAL", length = 40, nullable = false) private FinalProductType finalProductType = FinalProductType.NA;
     @Enumerated(EnumType.STRING) @Column(name = "COMPONENTE_DIGITAL", length = 10, nullable = false) private DigitalComponent digitalComponent;
     @Column(name = "FECHA_CIERRE") private LocalDate closingDate;
@@ -170,6 +174,7 @@ public class PortfolioRecordEntity {
     public String getKeyResults() { return keyResults; }
     public String getNote() { return note; }
     public PortfolioStatus getStatus() { return status; }
+    public PortfolioStatusCatalogEntity getStatusCatalog() { return statusCatalog; }
     public FinalProductType getFinalProductType() { return finalProductType; }
     public DigitalComponent getDigitalComponent() { return digitalComponent; }
     public LocalDate getClosingDate() { return closingDate; }

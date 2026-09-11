@@ -35,6 +35,7 @@ class OracleSchemaGenerationTest {
         "FK_NOTIF_REGISTRO",
         "FK_REG_UE",
         "FK_REG_ORIGEN",
+        "FK_REG_ESTADO",
         "FK_REG_PEI",
         "FK_REG_POI",
         "FK_REG_SOLUCION",
@@ -76,7 +77,7 @@ class OracleSchemaGenerationTest {
             .doesNotContainIgnoringCase(" TIPO_SOLUCION varchar")
             .doesNotContainIgnoringCase(" FUENTE_ORIGEN varchar")
             .doesNotContain("INSERT INTO");
-        assertThat(read(DDL).lines().filter(line -> line.startsWith("create table ")).count()).isEqualTo(20);
+        assertThat(read(DDL).lines().filter(line -> line.startsWith("create table ")).count()).isEqualTo(21);
     }
 
     @Test

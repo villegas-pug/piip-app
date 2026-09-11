@@ -5,8 +5,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { PROJECT_STATUS_TRANSITIONS, type ProjectStatus } from '../../core/piip.catalogs';
-import type { PiipStatus, ProjectDetail } from '../../core/piip.models';
+import { PROJECT_STATUS_TRANSITIONS, statusDisplayName, type ProjectStatus } from '../../core/piip.catalogs';
+import type { PiipStatus, PortfolioStatusReference, ProjectDetail } from '../../core/piip.models';
 import { canEditProject } from '../../core/portfolio-edit-permissions';
 import { presentAuditEvent, type PresentedAuditEvent } from '../audit/audit-event.presenter';
 import { ProjectStatusTransitionDialogComponent, type ProjectStatusTransitionDialogResult } from './project-status-transition-dialog.component';
@@ -28,16 +28,27 @@ export class ProjectDetailComponent {
   private readonly paramMap = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
 
   readonly code = computed(() => this.paramMap().get('code') ?? '');
+  readonly catalogState = this.repository.catalogs;
   readonly detail = computed(() => this.repository.getProjectDetail(this.code()));
   readonly canAdministerRecord = computed(() => {
     const detail = this.detail();
     return this.repository.canAdministerExecutingUnit(detail?.project.executingUnitId ?? detail?.portfolioRecord.executingUnitId);
   });
   readonly canEditRecord = computed(() => canEditProject(this.detail(), this.canAdministerRecord()));
+  /** El origen histórico puede estar inactivo y, aun así, salir por la matriz vigente. */
+  readonly statusActionsReady = computed(() => {
+    const status = this.detail()?.project.status;
+    return this.catalogState().phase === 'ready' && Boolean(status?.code) && status?.active !== undefined;
+  });
   readonly transitionOptions = computed(() => {
-    const status = this.detail()?.project.status as ProjectStatus | undefined;
-    if (!status) return [] as readonly ProjectStatus[];
-    return PROJECT_STATUS_TRANSITIONS[status] ?? [];
+    const status = this.detail()?.project.status.code as ProjectStatus | undefined;
+    if (this.catalogState().phase !== 'ready' || !status) return [] as readonly ProjectStatus[];
+    const matrix = PROJECT_STATUS_TRANSITIONS[status] ?? [];
+    const statuses = this.catalogState().value.portfolioStatuses;
+    return matrix.filter((code) => {
+      const option = statuses.find((item) => item.code === code);
+      return option?.active === true && option.applicability === 'PROJECT';
+    });
   });
   readonly timeline = computed(() => this.repository.auditEvents()
     .filter((event) => event.recordCode === this.code())
@@ -51,6 +62,8 @@ export class ProjectDetailComponent {
   statusVisual(status: PiipStatus | string): ProjectStatusVisual {
     return projectStatusVisual(status);
   }
+
+  statusName(status: PortfolioStatusReference | undefined): string { return statusDisplayName(status); }
 
   activityKind(event: PresentedAuditEvent): 'document' | 'transition' | 'record' {
     if (event.source.documentName || /documento|cargad|publicad|retirad/i.test(`${event.eventLabel} ${event.source.event}`)) return 'document';
@@ -84,7 +97,7 @@ export class ProjectDetailComponent {
   openStatusDialog(): void {
     const detail = this.detail();
     const options = this.transitionOptions();
-    if (!detail || !this.canAdministerRecord() || !options.length) return;
+    if (!detail || !this.statusActionsReady() || !this.canAdministerRecord() || !options.length) return;
 
     this.dialog.open(ProjectStatusTransitionDialogComponent, {
       width: '560px',
@@ -94,7 +107,7 @@ export class ProjectDetailComponent {
       restoreFocus: true,
       closeOnNavigation: true,
       panelClass: 'project-status-dialog-panel',
-      data: { projectCode: detail.project.code, currentStatus: detail.project.status, options },
+      data: { projectCode: detail.project.code, currentStatus: detail.project.status.code as ProjectStatus, options },
     }).afterClosed().subscribe((result: ProjectStatusTransitionDialogResult | undefined) => {
       if (result) this.snackBar.open(`Proyecto actualizado a ${result.targetStatus}.`, 'Cerrar', { duration: 3800 });
     });

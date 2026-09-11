@@ -79,7 +79,7 @@ describe('DashboardComponent', () => {
     statusCounts.forEach((item, index) => {
       const chartRow = chartRows[index]!;
       expect(chartRow.getAttribute('role')).toBe('listitem');
-      expect(chartRow.getAttribute('aria-label')).toBe(`${item.status}: ${item.count} registros`);
+      expect(chartRow.getAttribute('aria-label')).toBe(`${item.status.name}: ${item.count} registros`);
     });
   });
 
@@ -87,17 +87,7 @@ describe('DashboardComponent', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     const component = fixture.componentInstance;
     const expected = [
-      ['Presentado', 'schedule', 'pending'],
-      ['Iniciativa aprobada', 'check_circle', 'success'],
-      ['Producto aprobado', 'check_circle', 'success'],
-      ['Finalizado', 'check_circle', 'success'],
-      ['Proyecto en ejecución', 'play_circle', 'progress'],
-      ['Iniciativa archivada', 'archive', 'neutral'],
-      ['No Aplicable', 'remove_circle_outline', 'neutral'],
-      ['Suspendido', 'pause_circle', 'warning'],
-      ['Producto no aprobado', 'cancel', 'danger'],
-      ['No Admisible', 'cancel', 'danger'],
-      ['Cancelado', 'cancel', 'danger'],
+      ['PRESENTED', 'schedule', 'pending'], ['INITIATIVE_APPROVED', 'check_circle', 'success'], ['PRODUCT_APPROVED', 'check_circle', 'success'], ['FINISHED', 'check_circle', 'success'], ['PROJECT_IN_PROGRESS', 'play_circle', 'progress'], ['INITIATIVE_ARCHIVED', 'archive', 'neutral'], ['NOT_APPLICABLE', 'remove_circle_outline', 'neutral'], ['SUSPENDED', 'pause_circle', 'warning'], ['PRODUCT_NOT_APPROVED', 'cancel', 'danger'], ['NOT_ADMISSIBLE', 'cancel', 'danger'], ['CANCELLED', 'cancel', 'danger'],
     ] as const;
 
     expected.forEach(([status, icon, tone]) => {
@@ -120,7 +110,7 @@ describe('DashboardComponent', () => {
 
     expect(statusTags).toHaveLength(records.length);
     records.forEach((record, index) => {
-      const visual = fixture.componentInstance.statusVisual(record.status);
+      const visual = fixture.componentInstance.statusVisual(record.status.code ?? '');
       const tag = statusTags[index]!;
       expect(tag.getAttribute('data-tone')).toBe(visual.tone);
       expect(tag.querySelector('mat-icon')?.getAttribute('aria-hidden')).toBe('true');
@@ -216,7 +206,7 @@ describe('DashboardComponent', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
       const load = vi.spyOn(repository, 'loadHomePortfolio');
-      fixture.componentInstance.query.set({ executingUnitId: 1, q: 'I-024', type: 'Iniciativa', status: 'Presentado', page: 2, size: 5 });
+      fixture.componentInstance.query.set({ executingUnitId: 1, q: 'I-024', type: 'Iniciativa', status: 'PRESENTED', page: 2, size: 5 });
       fixture.detectChanges();
 
       const search = fixture.nativeElement.querySelector('.search-field') as HTMLElement;
@@ -231,7 +221,7 @@ describe('DashboardComponent', () => {
       clear.click();
       fixture.detectChanges();
 
-      expect(fixture.componentInstance.query()).toMatchObject({ q: '', type: 'Iniciativa', status: 'Presentado', page: 0 });
+      expect(fixture.componentInstance.query()).toMatchObject({ q: '', type: 'Iniciativa', status: 'PRESENTED', page: 0 });
       expect(load).not.toHaveBeenCalled();
       vi.advanceTimersByTime(299);
       expect(load).not.toHaveBeenCalled();
@@ -246,7 +236,7 @@ describe('DashboardComponent', () => {
   it('presenta Tipo y Estado con el mismo control base y permite limpiar sus valores', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-    fixture.componentInstance.query.update((current) => ({ ...current, type: 'Iniciativa', status: 'Presentado', page: 2 }));
+      fixture.componentInstance.query.update((current) => ({ ...current, type: 'Iniciativa', status: 'PRESENTED', page: 2 }));
     fixture.detectChanges();
 
     const filterFields = fixture.nativeElement.querySelectorAll('.filter-field');
@@ -269,7 +259,7 @@ describe('DashboardComponent', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
       const load = vi.spyOn(repository, 'loadHomePortfolio');
-      fixture.componentInstance.query.update((value) => ({ ...value, page: 2, status: 'Presentado' }));
+      fixture.componentInstance.query.update((value) => ({ ...value, page: 2, status: 'PRESENTED' }));
       fixture.componentInstance.onSearch('texto');
       expect(load).not.toHaveBeenCalled();
       vi.advanceTimersByTime(299);

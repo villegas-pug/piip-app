@@ -17,7 +17,7 @@
       </div>
       <div class="hero-chips" aria-label="Contexto del registro">
         <span class="context-chip"><mat-icon aria-hidden="true">description</mat-icon>{{ detail.portfolioRecord.recordType }}</span>
-        <span class="context-chip status-chip"><mat-icon aria-hidden="true">flag</mat-icon>{{ detail.portfolioRecord.status }}</span>
+        <span class="context-chip status-chip"><mat-icon aria-hidden="true">flag</mat-icon>{{ statusName(detail.portfolioRecord.status) }}</span>
         <span class="context-chip version-chip"><mat-icon aria-hidden="true">history</mat-icon>Versión {{ detail.portfolioRecord.version ?? 0 }}</span>
       </div>
     </header>
@@ -84,7 +84,7 @@
           <aside class="panel readonly-section" aria-labelledby="readonly-title">
             <header><span class="lock-icon"><mat-icon aria-hidden="true">lock</mat-icon></span><div><h3 id="readonly-title">Datos protegidos</h3><p>Contexto que no forma parte de la actualización.</p></div></header>
             <dl class="metadata-grid">
-              <div><dt>Código</dt><dd>{{ detail.portfolioRecord.code }}</dd></div><div><dt>Tipo</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div><div><dt>Origen</dt><dd>{{ detail.portfolioRecord.originCode }}</dd></div>@if (isPreexistingProject()) {<div><dt>Tipo de solución</dt><dd>{{ detail.portfolioRecord.solutionType }}</dd></div>}<div><dt>Unidad Ejecutora</dt><dd class="executing-unit-value">{{ formatExecutingUnit(detail.portfolioRecord.executingUnit) }}</dd></div><div><dt>Estado</dt><dd>{{ detail.portfolioRecord.status }}</dd></div><div><dt>Producto final</dt><dd>{{ detail.portfolioRecord.finalProductType }}</dd></div><div><dt>Fecha de cierre</dt><dd>{{ detail.portfolioRecord.closingDate ? formatDate(detail.portfolioRecord.closingDate) : 'Sin fecha registrada' }}</dd></div><div><dt>Última modificación</dt><dd>{{ formatDateTime(detail.portfolioRecord.updatedAt) }}</dd></div>
+              <div><dt>Código</dt><dd>{{ detail.portfolioRecord.code }}</dd></div><div><dt>Tipo</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div><div><dt>Origen</dt><dd>{{ detail.portfolioRecord.originCode }}</dd></div>@if (isPreexistingProject()) {<div><dt>Tipo de solución</dt><dd>{{ detail.portfolioRecord.solutionType }}</dd></div>}<div><dt>Unidad Ejecutora</dt><dd class="executing-unit-value">{{ formatExecutingUnit(detail.portfolioRecord.executingUnit) }}</dd></div><div><dt>Estado</dt><dd>{{ statusName(detail.portfolioRecord.status) }}</dd></div><div><dt>Producto final</dt><dd>{{ detail.portfolioRecord.finalProductType }}</dd></div><div><dt>Fecha de cierre</dt><dd>{{ detail.portfolioRecord.closingDate ? formatDate(detail.portfolioRecord.closingDate) : 'Sin fecha registrada' }}</dd></div><div><dt>Última modificación</dt><dd>{{ formatDateTime(detail.portfolioRecord.updatedAt) }}</dd></div>
             </dl>
           </aside>
         </div>

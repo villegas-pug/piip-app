@@ -7,7 +7,7 @@
         <div class="hero-meta"><span class="record-kicker">PROYECTO</span><span class="code-chip">{{ detail.project.code }}</span></div>
         <h2 id="project-detail-title">{{ detail.project.name }}</h2>
         <p class="hero-description">{{ detail.portfolioRecord.description }}</p>
-        <span class="status-tag" [attr.data-tone]="statusVisual(detail.project.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(detail.project.status).icon }}</mat-icon><span>{{ detail.project.status }}</span></span>
+        <span class="status-tag" [attr.data-tone]="statusVisual(detail.project.status.code ?? '').tone"><mat-icon aria-hidden="true">{{ statusVisual(detail.project.status.code ?? '').icon }}</mat-icon><span>{{ statusName(detail.project.status) }}</span>@if (detail.project.status.active === false) {<small>Inactivo</small>}</span>
       </div>
       <div class="hero-actions">
         @if (canEditRecord()) {<a class="primary-button" [routerLink]="['/proyectos', detail.project.code, 'editar']"><mat-icon aria-hidden="true">edit</mat-icon>Editar</a>}

@@ -110,14 +110,14 @@ describe('ProjectsComponent', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const template = repository.projects()[0];
     const expected = [
-      ['Proyecto en ejecución', 'play_circle', 'progress'],
-      ['Producto aprobado', 'check_circle', 'success'],
-      ['Producto no aprobado', 'cancel', 'danger'],
-      ['Suspendido', 'pause_circle', 'warning'],
-      ['Cancelado', 'cancel', 'danger'],
-      ['Finalizado', 'check_circle', 'success'],
+      ['PROJECT_IN_PROGRESS', 'Proyecto en ejecución', 'play_circle', 'progress'],
+      ['PRODUCT_APPROVED', 'Producto aprobado', 'check_circle', 'success'],
+      ['PRODUCT_NOT_APPROVED', 'Producto no aprobado', 'cancel', 'danger'],
+      ['SUSPENDED', 'Suspendido', 'pause_circle', 'warning'],
+      ['CANCELLED', 'Cancelado', 'cancel', 'danger'],
+      ['FINISHED', 'Finalizado', 'check_circle', 'success'],
     ] as const;
-    repository.projects.set(expected.map(([status], index) => ({ ...template, code: `P-STATUS-${index}-2026`, status })));
+    repository.projects.set(expected.map(([code, name], index) => ({ ...template, code: `P-STATUS-${index}-2026`, status: { code, name, active: true } })));
 
     const fixture = TestBed.createComponent(ProjectsComponent);
     fixture.detectChanges();
@@ -126,7 +126,7 @@ describe('ProjectsComponent', () => {
     const firstPageTags = Array.from(nativeElement.querySelectorAll<HTMLElement>('.status-tag'));
 
     expect(firstPageTags).toHaveLength(5);
-    expected.slice(0, 5).forEach(([status, icon, tone], index) => {
+    expected.slice(0, 5).forEach(([, status, icon, tone], index) => {
       const tag = firstPageTags[index]!;
       expect(tag.getAttribute('data-tone')).toBe(tone);
       expect(tag.textContent).toContain(status);
@@ -140,6 +140,13 @@ describe('ProjectsComponent', () => {
     expect(lastTag?.getAttribute('data-tone')).toBe('success');
     expect(lastTag?.textContent).toContain('Finalizado');
     expect(component.statusVisual('Estado desconocido')).toEqual({ icon: 'circle', tone: 'neutral' });
+  });
+
+  it('filtra por código y no ofrece NOT_APPLICABLE', () => {
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.componentInstance.filters.patchValue({ status: 'PROJECT_IN_PROGRESS' });
+    expect(fixture.componentInstance.filteredProjects().every((item) => item.status.code === 'PROJECT_IN_PROGRESS')).toBe(true);
+    expect(fixture.componentInstance.projectStatuses().map((item) => item.code)).not.toContain('NOT_APPLICABLE');
   });
 
   it('opens the general project detail and keeps documents as a separate menu option', () => {

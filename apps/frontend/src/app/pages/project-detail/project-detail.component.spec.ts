@@ -21,15 +21,15 @@ describe('ProjectDetailComponent', () => {
 
   it('exposes only contextual project destinations', () => {
     const fixture = TestBed.createComponent(ProjectDetailComponent);
-    expect(fixture.componentInstance.transitionOptions()).toEqual(['Producto aprobado', 'Producto no aprobado', 'Suspendido', 'Cancelado']);
-    expect(fixture.componentInstance.transitionOptions()).not.toContain('Iniciativa aprobada');
-    expect(fixture.componentInstance.transitionOptions()).not.toContain('No Aplicable');
+    expect(fixture.componentInstance.transitionOptions()).toEqual(['PRODUCT_APPROVED', 'PRODUCT_NOT_APPROVED', 'SUSPENDED', 'CANCELLED']);
+    expect(fixture.componentInstance.transitionOptions()).not.toContain('INITIATIVE_APPROVED');
+    expect(fixture.componentInstance.transitionOptions()).not.toContain('NOT_APPLICABLE');
   });
 
   it('does not expose destinations for a terminal project', () => {
     const repository = TestBed.inject(PiipMockRepository);
-    repository.projects.update((projects) => projects.map((project) => project.code === 'P-005-2026' ? { ...project, status: 'Finalizado' } : project));
-    repository.portfolioRecords.update((records) => records.map((record) => record.code === 'P-005-2026' ? { ...record, status: 'Finalizado', closingDate: '2026-08-18' } : record));
+    repository.projects.update((projects) => projects.map((project) => project.code === 'P-005-2026' ? { ...project, status: { code: 'FINISHED', name: 'Finalizado', active: true } } : project));
+    repository.portfolioRecords.update((records) => records.map((record) => record.code === 'P-005-2026' ? { ...record, status: { code: 'FINISHED', name: 'Finalizado', active: true }, closingDate: '2026-08-18' } : record));
     const fixture = TestBed.createComponent(ProjectDetailComponent);
     expect(fixture.componentInstance.transitionOptions()).toEqual([]);
   });
@@ -64,7 +64,7 @@ describe('ProjectDetailComponent', () => {
   });
 
   it('abre un diálogo con los destinos permitidos y restaura el flujo al cerrarlo', async () => {
-    open.mockReturnValue({ afterClosed: () => of({ targetStatus: 'Producto aprobado' }) });
+    open.mockReturnValue({ afterClosed: () => of({ targetStatus: 'PRODUCT_APPROVED' }) });
     const fixture = TestBed.createComponent(ProjectDetailComponent);
     fixture.componentInstance.openStatusDialog();
     await Promise.resolve();
@@ -75,8 +75,8 @@ describe('ProjectDetailComponent', () => {
       restoreFocus: true,
       data: expect.objectContaining({
         projectCode: 'P-005-2026',
-        currentStatus: 'Proyecto en ejecución',
-        options: ['Producto aprobado', 'Producto no aprobado', 'Suspendido', 'Cancelado'],
+        currentStatus: 'PROJECT_IN_PROGRESS',
+        options: ['PRODUCT_APPROVED', 'PRODUCT_NOT_APPROVED', 'SUSPENDED', 'CANCELLED'],
       }),
     }));
   });
@@ -159,8 +159,8 @@ describe('ProjectDetailComponent', () => {
     expect(fixture.componentInstance.canEditRecord()).toBe(false);
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Editar');
 
-    repository.portfolioRecords.update((records) => records.map((record) => record.code === 'P-005-2026' ? { ...record, executingUnitId: 1, status: 'Finalizado' } : record));
-    repository.projects.update((projects) => projects.map((project) => project.code === 'P-005-2026' ? { ...project, executingUnitId: 1, status: 'Finalizado' } : project));
+    repository.portfolioRecords.update((records) => records.map((record) => record.code === 'P-005-2026' ? { ...record, executingUnitId: 1, status: { code: 'FINISHED', name: 'Finalizado', active: true } } : record));
+    repository.projects.update((projects) => projects.map((project) => project.code === 'P-005-2026' ? { ...project, executingUnitId: 1, status: { code: 'FINISHED', name: 'Finalizado', active: true } } : project));
     fixture.detectChanges();
     expect(fixture.componentInstance.canEditRecord()).toBe(false);
   });

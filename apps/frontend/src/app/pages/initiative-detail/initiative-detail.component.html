@@ -7,14 +7,14 @@
         <div class="hero-meta"><span class="record-kicker">INICIATIVA</span><span class="code-chip">{{ detail.initiative.code }}</span></div>
         <h2 id="initiative-detail-title">{{ detail.initiative.name }}</h2>
         <p class="hero-description">{{ detail.portfolioRecord.description }}</p>
-        <span class="status-tag" [attr.data-tone]="statusVisual(detail.initiative.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(detail.initiative.status).icon }}</mat-icon><span>{{ detail.initiative.status }}</span></span>
+        <span class="status-tag" [attr.data-tone]="statusVisual(detail.initiative.status.code ?? '').tone"><mat-icon aria-hidden="true">{{ statusVisual(detail.initiative.status.code ?? '').icon }}</mat-icon><span>{{ statusName(detail.initiative.status) }}</span>@if (detail.initiative.status.active === false) {<small>Inactivo</small>}</span>
       </div>
       <div class="hero-actions">
         @if (canEditRecord()) {<a class="primary-button" [routerLink]="['/iniciativas', detail.initiative.code, 'editar']"><mat-icon aria-hidden="true">edit</mat-icon>Editar</a>}
         <a class="secondary-button" [routerLink]="['/iniciativas', detail.initiative.code, 'documentos']"><mat-icon aria-hidden="true">description</mat-icon>{{ canAdministerRecord() ? 'Gestionar documentos' : 'Ver documentos' }}</a>
-        @if (canAdministerRecord() && detail.initiative.status === 'Presentado' && !detail.derivedProject) {<button class="primary-button" type="button" (click)="openApproval()"><mat-icon aria-hidden="true">verified</mat-icon>Registrar aprobación</button>}
+        @if (canAdministerRecord() && detail.initiative.status.code === 'PRESENTED' && !detail.derivedProject) {<button class="primary-button" type="button" (click)="openApproval()"><mat-icon aria-hidden="true">verified</mat-icon>Registrar aprobación</button>}
         @if (canAdministerRecord() && initiativeTransitionOptions().length && !detail.derivedProject) {<button class="secondary-button" type="button" (click)="openStatusDialog()"><mat-icon aria-hidden="true">swap_horiz</mat-icon>Cambiar estado</button>}
-        @if (canAdministerRecord() && detail.initiative.status === 'Iniciativa aprobada') {
+        @if (canAdministerRecord() && detail.initiative.status.code === 'INITIATIVE_APPROVED') {
           @if (detail.derivedProject; as project) {<a class="primary-button" [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon aria-hidden="true">account_tree</mat-icon>Ver proyecto {{ project.code }}</a>} @else {<a class="primary-button gold" [routerLink]="['/proyectos/nuevo/derivado', detail.initiative.code]"><mat-icon aria-hidden="true">account_tree</mat-icon>Crear proyecto</a>}
         }
       </div>
@@ -84,9 +84,9 @@
           @if (detail.derivedProject; as project) {
             <a class="derived-project-code" [routerLink]="['/proyectos', project.code]">{{ project.code }}</a>
             <p class="derived-project-name">{{ project.name }}</p>
-            <span class="status-tag" [attr.data-tone]="derivedProjectStatusVisual(project.status).tone"><mat-icon aria-hidden="true">{{ derivedProjectStatusVisual(project.status).icon }}</mat-icon><span>{{ project.status }}</span></span>
+            <span class="status-tag" [attr.data-tone]="derivedProjectStatusVisual(project.status.code ?? '').tone"><mat-icon aria-hidden="true">{{ derivedProjectStatusVisual(project.status.code ?? '').icon }}</mat-icon><span>{{ statusName(project.status) }}</span>@if (project.status.active === false) {<small>Inactivo</small>}</span>
             <p class="linked-project-lock" role="status"><mat-icon aria-hidden="true">lock</mat-icon><span>Las acciones de cambio de estado están bloqueadas porque ya existe un proyecto vinculado.</span></p>
-          } @else if (detail.initiative.status === 'Iniciativa aprobada') {
+          } @else if (detail.initiative.status.code === 'INITIATIVE_APPROVED') {
             <p class="relation-message"><mat-icon aria-hidden="true">account_tree</mat-icon><span>La iniciativa está habilitada para originar un proyecto.</span></p>
             @if (canAdministerRecord()) {<a class="primary-button gold relation-action" [routerLink]="['/proyectos/nuevo/derivado', detail.initiative.code]">Crear proyecto</a>}
           } @else {
@@ -109,16 +109,16 @@
                     @if (activityInitialStatus(event); as initialStatus) {
                       <div class="activity-status-row">
                         <span class="activity-status-label">Estado inicial</span>
-                        <span class="status-tag" [attr.data-tone]="statusVisual(initialStatus).tone"><mat-icon aria-hidden="true">{{ statusVisual(initialStatus).icon }}</mat-icon><span>{{ initialStatus }}</span></span>
+                        <span class="status-tag" [attr.data-tone]="statusVisual(initialStatus.code ?? '').tone"><mat-icon aria-hidden="true">{{ statusVisual(initialStatus.code ?? '').icon }}</mat-icon><span>{{ statusName(initialStatus) }}</span></span>
                       </div>
                     } @else {
                       @if (activityStatusChange(event); as statusChange) {
                         <div class="activity-status-change" role="group" aria-label="Cambio de estado">
                           <span class="activity-status-label">De</span>
-                          <span class="status-tag" [attr.data-tone]="statusVisual(statusChange.previous).tone"><mat-icon aria-hidden="true">{{ statusVisual(statusChange.previous).icon }}</mat-icon><span>{{ statusChange.previous }}</span></span>
+                          <span class="status-tag" [attr.data-tone]="statusVisual(statusChange.previous.code ?? '').tone"><mat-icon aria-hidden="true">{{ statusVisual(statusChange.previous.code ?? '').icon }}</mat-icon><span>{{ statusName(statusChange.previous) }}</span></span>
                           <mat-icon class="activity-status-arrow" aria-hidden="true">arrow_forward</mat-icon>
                           <span class="activity-status-label">A</span>
-                          <span class="status-tag" [attr.data-tone]="statusVisual(statusChange.current).tone"><mat-icon aria-hidden="true">{{ statusVisual(statusChange.current).icon }}</mat-icon><span>{{ statusChange.current }}</span></span>
+                          <span class="status-tag" [attr.data-tone]="statusVisual(statusChange.current.code ?? '').tone"><mat-icon aria-hidden="true">{{ statusVisual(statusChange.current.code ?? '').icon }}</mat-icon><span>{{ statusName(statusChange.current) }}</span></span>
                         </div>
                         @if (activityStatusChangeObservation(event); as observation) {<p class="activity-summary">Observación: {{ observation }}</p>}
                       } @else {

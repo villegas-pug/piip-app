@@ -112,6 +112,16 @@ describe('InitiativeFormComponent', () => {
     expect(fixture.componentInstance.form.controls.source.enabled).toBe(true);
   });
 
+  it('bloquea revisión y registro si PRESENTED no está activo o el catálogo no está listo', async () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(InitiativeFormComponent);
+    const component = fixture.componentInstance;
+    repository.catalogs.set({ phase: 'loading', value: repository.catalogs().value, error: null, requestId: 7 });
+    component.openReview();
+    await expect(component.registerInitiative()).resolves.toBe(false);
+    expect(open).not.toHaveBeenCalled();
+  });
+
   it('preserva y envía las selecciones por ID', async () => {
     const repository = TestBed.inject(PiipMockRepository);
     const register = vi.spyOn(repository, 'registerInitiative').mockResolvedValue(repository.portfolioRecords()[0]);

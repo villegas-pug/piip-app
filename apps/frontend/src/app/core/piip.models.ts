@@ -1,15 +1,33 @@
 export type PiipStatus =
-  | 'Presentado'
-  | 'Iniciativa aprobada'
-  | 'Iniciativa archivada'
-  | 'Proyecto en ejecución'
-  | 'Producto aprobado'
-  | 'Producto no aprobado'
-  | 'Suspendido'
-  | 'Cancelado'
-  | 'Finalizado'
-  | 'No Aplicable'
-  | 'No Admisible';
+  | 'PRESENTED'
+  | 'INITIATIVE_APPROVED'
+  | 'INITIATIVE_ARCHIVED'
+  | 'PROJECT_IN_PROGRESS'
+  | 'PRODUCT_APPROVED'
+  | 'PRODUCT_NOT_APPROVED'
+  | 'SUSPENDED'
+  | 'CANCELLED'
+  | 'FINISHED'
+  | 'NOT_APPLICABLE'
+  | 'NOT_ADMISSIBLE';
+
+export type PortfolioStatusApplicability = 'INITIATIVE' | 'PROJECT' | 'NONE';
+
+/** Entrada activa del catálogo persistente de estados del portafolio (identidad por código, sin id). */
+export interface PortfolioStatusOption {
+  code: string;
+  name: string;
+  displayOrder: number;
+  active: boolean;
+  applicability: string;
+}
+
+/** Metadata vigente de un estado referenciado por un registro histórico, incluso si está inactivo. */
+export interface PortfolioStatusReference {
+  code?: PiipStatus | string;
+  name?: string;
+  active?: boolean;
+}
 
 export type UserRole = 'Administrador PIIP' | 'Consulta externa';
 
@@ -47,6 +65,7 @@ export interface CatalogBundle {
   peiObjectives: PersistentCatalogOption[];
   poiActivities: PersistentCatalogOption[];
   documentTypes: PersistentCatalogOption[];
+  portfolioStatuses: PortfolioStatusOption[];
 }
 
 export type ResourcePhase = 'idle' | 'loading' | 'ready' | 'error';
@@ -80,7 +99,7 @@ export interface PiipPortfolioRecord {
   description: string;
   keyResults: string;
   note: string;
-  status: PiipStatus;
+  status: PortfolioStatusReference;
   finalProductType: 'Prototipo de solución conceptualizada' | 'Solución funcional' | 'NA';
   digitalComponent: 'Si' | 'No';
   closingDate: string;
@@ -111,7 +130,7 @@ export interface InitiativeRecord {
   responsible: string;
   role: string;
   unit: string;
-  status: PiipStatus;
+  status: PortfolioStatusReference;
   updatedAt: string;
   executingUnitId?: number;
   sourceReference?: HistoricalCatalogReference;
@@ -125,7 +144,7 @@ export interface ProjectRecord {
   originMode: ProjectOriginMode;
   unit: string;
   responsible: string;
-  status: PiipStatus;
+  status: PortfolioStatusReference;
   digitalComponent: 'Si' | 'No';
   executingUnitId?: number;
   organizationalUnits?: OrganizationalUnit[];
@@ -175,19 +194,19 @@ export interface InitiativeInput {
 
 export interface InitiativeDecisionInput {
   initiativeCode: string;
-  targetStatus: 'Iniciativa aprobada';
+  targetStatus: Extract<PiipStatus, 'INITIATIVE_APPROVED'>;
   observation: string;
 }
 
 export interface InitiativeStatusTransitionInput {
   initiativeCode: string;
-  targetStatus: Extract<PiipStatus, 'Iniciativa archivada' | 'No Admisible'>;
+  targetStatus: Extract<PiipStatus, 'INITIATIVE_ARCHIVED' | 'NOT_ADMISSIBLE'>;
   observation: string;
 }
 
 export interface ProjectStatusTransitionInput {
   projectCode: string;
-  targetStatus: Extract<PiipStatus, 'Proyecto en ejecución' | 'Producto aprobado' | 'Producto no aprobado' | 'Suspendido' | 'Cancelado' | 'Finalizado'>;
+  targetStatus: Extract<PiipStatus, 'PROJECT_IN_PROGRESS' | 'PRODUCT_APPROVED' | 'PRODUCT_NOT_APPROVED' | 'SUSPENDED' | 'CANCELLED' | 'FINISHED'>;
   observation: string;
 }
 
@@ -308,7 +327,7 @@ export interface DocumentDossier {
   code: string;
   name: string;
   unit: string;
-  status: PiipStatus;
+  status: PortfolioStatusReference;
   lastActivity: string;
   executingUnitId?: number;
   stages: DocumentStage[];
@@ -319,7 +338,7 @@ export interface DocumentDossierSummary {
   code: string;
   name: string;
   unit: string;
-  status: PiipStatus;
+  status: PortfolioStatusReference;
   loadedCount: number;
   pendingCount: number;
   notApplicableCount: number;
@@ -339,6 +358,9 @@ export interface AuditEvent {
   rawDetail?: string;
   documentName?: string;
   icon: string;
+  status?: PortfolioStatusReference;
+  previousStatus?: PortfolioStatusReference;
+  newStatus?: PortfolioStatusReference;
 }
 
 export interface WorkItem {
@@ -455,13 +477,18 @@ export interface OrganizationalUnit {
   active: boolean;
 }
 
+export interface PortfolioStatusCount {
+  status: PortfolioStatusReference;
+  count: number;
+}
+
 export interface DashboardSummary {
   initiatives: number;
   projects: number;
   alerts: number;
   pendingTasks: number;
   notifications: number;
-  portfolioByStatus: Record<string, number>;
+  portfolioStatusCounts: PortfolioStatusCount[];
 }
 
 export interface HomePortfolioQuery {
@@ -477,14 +504,14 @@ export interface HomePortfolioItem {
   recordType: PiipRecordType;
   code: string;
   name: string;
-  status: PiipStatus;
+  status: PortfolioStatusReference;
   executingUnitId: number;
   executingUnit: string;
   updatedAt: string;
 }
 
 export interface HomePortfolioStatusCount {
-  status: PiipStatus;
+  status: PortfolioStatusReference;
   count: number;
 }
 

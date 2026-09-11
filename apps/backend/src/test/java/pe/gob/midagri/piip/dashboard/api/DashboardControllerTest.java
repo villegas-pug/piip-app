@@ -30,6 +30,7 @@ import pe.gob.midagri.piip.portfolio.domain.RecordType;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.work.domain.TaskPriority;
 import pe.gob.midagri.piip.work.domain.TaskStatus;
 import pe.gob.midagri.piip.work.domain.TaskType;
@@ -44,6 +45,7 @@ class DashboardControllerTest {
     @Mock NotificationRepository notifications;
     @Mock LocalAuthorizationService authorization;
     @Mock DashboardPortfolioService portfolioService;
+    @Mock PortfolioStatusRepository statuses;
     @InjectMocks DashboardController controller;
 
     @Test

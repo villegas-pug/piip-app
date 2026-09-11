@@ -24,7 +24,7 @@ describe('InitiativeApprovalDialogComponent', () => {
           useValue: {
             initiativeCode: 'I-024-2026',
             initiativeName: 'Iniciativa de prueba',
-            currentStatus: 'Presentado',
+            currentStatus: 'PRESENTED',
             approvalDocuments: [
               { name: 'Informe técnico', required: false, filename: null, version: null, uploadedAt: null, state: 'Pendiente' },
               { name: 'Decisión formal', required: false, filename: 'decision.pdf', version: '1', uploadedAt: '20/05/2026', state: 'Cargado' },
@@ -58,7 +58,7 @@ describe('InitiativeApprovalDialogComponent', () => {
 
     expect(approve).toHaveBeenCalledWith({
       initiativeCode: 'I-024-2026',
-      targetStatus: 'Iniciativa aprobada',
+      targetStatus: 'INITIATIVE_APPROVED',
       observation: 'Revisión conforme',
     });
     expect(component.approved()).toBe(true);

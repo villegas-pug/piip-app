@@ -1,7 +1,7 @@
 -- =============================================================================
 -- SEED INICIAL PIIP - Datos sinteticos para test-reset
 -- Este archivo se ejecuta exclusivamente bajo el perfil test,test-reset
--- despues de que Hibernate recrea las 19 tablas.
+-- despues de que Hibernate recrea las 21 tablas.
 --
 -- Contenido:
 --   1. Roles del sistema (2)
@@ -12,8 +12,9 @@
 --   6. Catalogos: cabeceras (4)
 --   7. Catalogos: items (17)
 --   8. Tipos documentales (6)
+--   9. Estados del portafolio (11)
 --
--- Total: 38 filas DML, cero DDL, cero IDs identity, cero secretos.
+-- Total: 50 filas DML, cero DDL, cero IDs identity, cero secretos.
 -- =============================================================================
 
 
@@ -501,3 +502,44 @@ WHEN MATCHED THEN
 WHEN NOT MATCHED THEN
     INSERT (CODIGO, NOMBRE, ORDEN_PRESENTACION, ACTIVO)
     VALUES (s.codigo, s.nombre, s.orden, 1);
+
+
+-- =============================================================================
+-- Estados del portafolio
+-- =============================================================================
+-- Once estados fijos con identidad por CODIGO (PK natural). Insert-only:
+-- una divergencia de datos se reporta como fallo de la postvalidacion en lugar
+-- de corregirse silenciosamente (FR-022/FR-025/FR-026). Sin rama UPDATE.
+
+MERGE INTO ESTADO_PORTAFOLIO e
+USING (
+    SELECT 'PRESENTED' AS codigo,
+           'Presentado' AS nombre,
+           1 AS orden,
+           'INITIATIVE' AS aplicabilidad
+    FROM   dual
+    UNION ALL
+    SELECT 'INITIATIVE_APPROVED', 'Iniciativa aprobada', 2, 'INITIATIVE' FROM dual
+    UNION ALL
+    SELECT 'INITIATIVE_ARCHIVED', 'Iniciativa archivada', 3, 'INITIATIVE' FROM dual
+    UNION ALL
+    SELECT 'PROJECT_IN_PROGRESS', 'Proyecto en ejecución', 4, 'PROJECT' FROM dual
+    UNION ALL
+    SELECT 'PRODUCT_APPROVED', 'Producto aprobado', 5, 'PROJECT' FROM dual
+    UNION ALL
+    SELECT 'PRODUCT_NOT_APPROVED', 'Producto no aprobado', 6, 'PROJECT' FROM dual
+    UNION ALL
+    SELECT 'SUSPENDED', 'Suspendido', 7, 'PROJECT' FROM dual
+    UNION ALL
+    SELECT 'CANCELLED', 'Cancelado', 8, 'PROJECT' FROM dual
+    UNION ALL
+    SELECT 'FINISHED', 'Finalizado', 9, 'PROJECT' FROM dual
+    UNION ALL
+    SELECT 'NOT_APPLICABLE', 'No Aplicable', 10, 'NONE' FROM dual
+    UNION ALL
+    SELECT 'NOT_ADMISSIBLE', 'No Admisible', 11, 'INITIATIVE' FROM dual
+) s
+ON (e.CODIGO = s.codigo)
+WHEN NOT MATCHED THEN
+    INSERT (CODIGO, NOMBRE, ORDEN_PRESENTACION, ACTIVO, APLICABILIDAD)
+    VALUES (s.codigo, s.nombre, s.orden, 1, s.aplicabilidad);

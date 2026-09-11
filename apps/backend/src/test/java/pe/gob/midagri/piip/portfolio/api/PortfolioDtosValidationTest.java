@@ -9,7 +9,9 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.InitiativeCreateRequest;
+import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.InitiativeStatusTransitionRequest;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.InitiativeUpdateRequest;
+import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ProjectStatusTransitionRequest;
 import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.ResponsibleUnitInput;
 import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 
@@ -59,5 +61,21 @@ class PortfolioDtosValidationTest {
 
         assertThat(validator.validate(request)).anyMatch(violation ->
             violation.getPropertyPath().toString().equals("responsibleUnits"));
+    }
+
+    @Test
+    void transitionRequestRequiresANonBlankTargetStatus() {
+        var request = new InitiativeStatusTransitionRequest(0L, null, null);
+
+        assertThat(validator.validate(request)).anyMatch(violation ->
+            violation.getPropertyPath().toString().equals("targetStatus"));
+    }
+
+    @Test
+    void transitionRequestAcceptsACodeTargetStatus() {
+        var request = new ProjectStatusTransitionRequest(0L, "PRODUCT_APPROVED", "observación");
+
+        assertThat(validator.validate(request)).noneMatch(violation ->
+            violation.getPropertyPath().toString().equals("targetStatus"));
     }
 }

@@ -5,9 +5,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { Router, RouterLink } from '@angular/router';
-import { PIIP_CATALOGS, PROJECT_STATUSES } from '../../core/piip.catalogs';
+import { PIIP_CATALOGS, applicableStatusOptions, statusDisplayName } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { PiipStatus } from '../../core/piip.models';
+import { PiipStatus, PortfolioStatusReference } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 import {
@@ -31,7 +31,8 @@ export class ProjectsComponent {
   private readonly router = inject(Router);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly catalogs = PIIP_CATALOGS;
-  readonly projectStatuses = PROJECT_STATUSES;
+  readonly catalogState = this.repository.catalogs;
+  readonly projectStatuses = computed(() => applicableStatusOptions(this.catalogState().value.portfolioStatuses, 'PROJECT'));
   readonly units = this.repository.organizationalUnits;
   readonly unitsState = this.repository.organizationalUnitsState;
   readonly filters = this.formBuilder.nonNullable.group({ search: '', status: 'Todos', unit: 'Todas', digital: 'Todos' });
@@ -42,7 +43,7 @@ export class ProjectsComponent {
     const search = (value.search ?? '').toLocaleLowerCase().trim();
     return this.repository.projects().filter((project) =>
       (!search || `${project.code} ${project.name}`.toLocaleLowerCase().includes(search)) &&
-      (value.status === 'Todos' || project.status === value.status) &&
+      (value.status === 'Todos' || project.status.code === value.status) &&
       (value.unit === 'Todas' || project.organizationalUnits?.some((unit) => unit.id === Number(value.unit))) &&
       (value.digital === 'Todos' || project.digitalComponent === value.digital),
     );
@@ -81,12 +82,14 @@ export class ProjectsComponent {
   }
 
   projectCount(status: PiipStatus): number {
-    return this.repository.projects().filter((project) => project.status === status).length;
+    return this.repository.projects().filter((project) => project.status.code === status).length;
   }
 
   canAdminister(project: { executingUnitId?: number }): boolean {
     return this.repository.canAdministerExecutingUnit(project.executingUnitId);
   }
+
+  statusName(status: PortfolioStatusReference | undefined): string { return statusDisplayName(status); }
 
   statusVisual(status: PiipStatus | string): ProjectStatusVisual { return projectStatusVisual(status); }
 }

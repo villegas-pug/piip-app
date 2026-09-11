@@ -47,12 +47,21 @@ describe('DocumentsInboxComponent', () => {
     fixture.componentInstance.filters.patchValue({
       search: target.code,
       recordType: target.recordType,
-      status: target.status,
+      status: target.status.code,
       unit: String(target.organizationalUnits[0]?.id),
     });
 
     expect(Object.keys(fixture.componentInstance.filters.getRawValue()).sort()).toEqual(['recordType', 'search', 'status', 'unit']);
     expect(fixture.componentInstance.filteredDossiers().map((item) => item.code)).toEqual([target.code]);
+  });
+
+  it('ofrece solo códigos activos aplicables y filtra por el código de la referencia', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const fixture = TestBed.createComponent(DocumentsInboxComponent);
+    fixture.componentInstance.filters.patchValue({ status: 'PRESENTED' });
+    expect(fixture.componentInstance.filteredDossiers().every((item) => item.status.code === 'PRESENTED')).toBe(true);
+    expect(fixture.componentInstance.statusOptions().map((item) => item.code)).not.toContain('NOT_APPLICABLE');
+    expect(repository.getDocumentDossierSummaries()[0].status).toMatchObject({ code: expect.any(String), name: expect.any(String), active: expect.any(Boolean) });
   });
 
   it('muestra todas las Unidades Orgánicas Involucradas en orden y no la Unidad Ejecutora legada', () => {

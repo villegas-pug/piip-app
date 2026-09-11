@@ -26,9 +26,9 @@
       <div class="status-transition-summary">
         <span>Cambio de estado</span>
         <div class="status-transition-value">
-          <span class="status-tag" [attr.data-tone]="statusVisual(data.currentStatus).tone"><mat-icon aria-hidden="true">{{ statusVisual(data.currentStatus).icon }}</mat-icon><span>{{ data.currentStatus }}</span></span>
+          <span class="status-tag" [attr.data-tone]="statusVisual(data.currentStatus).tone"><mat-icon aria-hidden="true">{{ statusVisual(data.currentStatus).icon }}</mat-icon><span>{{ currentStatusName() }}</span></span>
           <mat-icon class="transition-arrow" aria-hidden="true">arrow_forward</mat-icon>
-          <span class="status-tag" [attr.data-tone]="statusVisual('Iniciativa aprobada').tone"><mat-icon aria-hidden="true">{{ statusVisual('Iniciativa aprobada').icon }}</mat-icon><span>Iniciativa aprobada</span></span>
+          <span class="status-tag" [attr.data-tone]="statusVisual('INITIATIVE_APPROVED').tone"><mat-icon aria-hidden="true">{{ statusVisual('INITIATIVE_APPROVED').icon }}</mat-icon><span>{{ approvedStatusName() }}</span></span>
         </div>
       </div>
 

@@ -6,11 +6,14 @@ public final class CatalogDtos {
     private CatalogDtos() {}
     public record PersistentCatalogItemResponse(Long id, String code, String name, int displayOrder, boolean active) {}
     public record TechnicalCatalogItemResponse(String code, String name, int displayOrder, boolean active) {}
+    /** Entrada del catálogo de estados del portafolio; el código es la identidad contractual, sin identificador interno. */
+    public record PortfolioStatusCatalogResponse(String code, String name, Integer displayOrder, Boolean active, String applicability) {}
     public record CatalogBundleResponse(
         List<TechnicalCatalogItemResponse> recordTypes,
         List<PersistentCatalogItemResponse> solutionTypes,
         List<PersistentCatalogItemResponse> sources,
         List<PersistentCatalogItemResponse> peiObjectives,
         List<PersistentCatalogItemResponse> poiActivities,
-        List<PersistentCatalogItemResponse> documentTypes) {}
+        List<PersistentCatalogItemResponse> documentTypes,
+        List<PortfolioStatusCatalogResponse> portfolioStatuses) {}
 }

@@ -306,12 +306,12 @@ describe('PiipHttpRepository', () => {
     const load = (repository as unknown as { loadDocumentSummaries(): Promise<void> }).loadDocumentSummaries.call(repository);
     const request = http.expectOne((candidate) => candidate.url === 'http://127.0.0.1:4001/api/v1/documents' && candidate.params.get('executingUnitId') === '1');
     request.flush([
-      { code: 'I-001-2026', name: 'UE 001', recordType: 'Iniciativa', status: 'Presentado', executingUnitId: 1, loadedCount: 0, pendingCount: 1,
+      { code: 'I-001-2026', name: 'UE 001', recordType: 'Iniciativa', status: { code: 'PRESENTED', name: 'Presentado', active: true }, executingUnitId: 1, loadedCount: 0, pendingCount: 1,
         organizationalUnits: [
           { id: 101, code: 'UE-001-UO-01', name: 'Unidad uno', acronym: 'UO1', executingUnitId: 1, active: true },
           { id: 102, code: 'UE-001-UO-02', name: 'Unidad dos', acronym: 'UO2', executingUnitId: 1, active: true },
         ] },
-      { code: 'I-002-2026', name: 'UE 002', recordType: 'Iniciativa', status: 'Presentado', executingUnitId: 2, loadedCount: 0, pendingCount: 1 },
+      { code: 'I-002-2026', name: 'UE 002', recordType: 'Iniciativa', status: { code: 'PRESENTED', name: 'Presentado', active: true }, executingUnitId: 2, loadedCount: 0, pendingCount: 1 },
     ]);
     await load;
 
@@ -357,12 +357,12 @@ describe('PiipHttpRepository', () => {
       roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 }],
       roles: ['ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1], institutionWide: false,
     });
-    const record = { recordType: 'Proyecto', code: 'P-001-2026', originCode: 'NA', name: 'Proyecto', solutionType: 'No aplica', source: 'Otros', startDate: '2026-08-18', responsible: 'Responsable', peiObjective: '', poiActivity: '', responsibleUnits: '', description: 'Descripción', keyResults: '', note: '', status: 'Proyecto en ejecución', finalProductType: 'NA', digitalComponent: 'No', closingDate: '', technicalOpinionReport: '', formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '', executingUnitId: 1 } as const;
+    const record = { recordType: 'Proyecto', code: 'P-001-2026', originCode: 'NA', name: 'Proyecto', solutionType: 'No aplica', source: 'Otros', startDate: '2026-08-18', responsible: 'Responsable', peiObjective: '', poiActivity: '', responsibleUnits: '', description: 'Descripción', keyResults: '', note: '', status: { code: 'PROJECT_IN_PROGRESS', name: 'Proyecto en ejecución', active: true }, finalProductType: 'NA', digitalComponent: 'No', closingDate: '', technicalOpinionReport: '', formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '', executingUnitId: 1 } as const;
     repository.portfolioRecords.set([record]);
     (repository as unknown as { recordVersions: Map<string, number> }).recordVersions.set(record.code, 3);
     vi.spyOn(repository, 'refreshAll').mockResolvedValue();
 
-    const operation = repository.transitionProjectStatus({ projectCode: record.code, targetStatus: 'Producto aprobado', observation: 'Producto revisado' });
+    const operation = repository.transitionProjectStatus({ projectCode: record.code, targetStatus: 'PRODUCT_APPROVED', observation: 'Producto revisado' });
     const request = http.expectOne('http://127.0.0.1:4001/api/v1/projects/P-001-2026/status-transitions');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ version: 3, targetStatus: 'PRODUCT_APPROVED', observation: 'Producto revisado' });
@@ -372,7 +372,7 @@ describe('PiipHttpRepository', () => {
       source: { id: 14, code: 'OTHER', name: 'Otros', displayOrder: 5, active: true },
       peiObjective: null, poiActivity: null,
       responsibleUnits: [{ originalDesignation: 'Responsable', displayOrder: 1, organizationalUnit: { id: 10, code: 'UO-10', name: 'Responsable', acronym: 'UO', active: true, executingUnitId: 1 } }],
-      status: 'Producto aprobado', version: 4, updatedAt: '2026-08-18T12:00:00Z' });
+      status: { code: 'PRODUCT_APPROVED', name: 'Producto aprobado', active: true }, version: 4, updatedAt: '2026-08-18T12:00:00Z' });
     await operation;
 
     expect((repository as unknown as { recordVersions: Map<string, number> }).recordVersions.get(record.code)).toBe(4);
@@ -390,19 +390,21 @@ describe('PiipHttpRepository', () => {
       roleScopes: [{ role: 'ADMINISTRADOR_PIIP', institutionId: 1, executingUnitId: 1 }],
       roles: ['ADMINISTRADOR_PIIP'], institutionIds: [1], executingUnitIds: [1], institutionWide: false,
     });
-    const record = { recordType: 'Proyecto', code: 'P-002-2026', originCode: 'NA', name: 'Proyecto', solutionType: 'No aplica', source: 'Otros', startDate: '2026-08-18', responsible: 'Responsable', peiObjective: '', poiActivity: '', responsibleUnits: '', description: 'Descripción', keyResults: '', note: '', status: 'Proyecto en ejecución', finalProductType: 'NA', digitalComponent: 'No', closingDate: '', technicalOpinionReport: '', formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '', executingUnitId: 1 } as const;
+    const record = { recordType: 'Proyecto', code: 'P-002-2026', originCode: 'NA', name: 'Proyecto', solutionType: 'No aplica', source: 'Otros', startDate: '2026-08-18', responsible: 'Responsable', peiObjective: '', poiActivity: '', responsibleUnits: '', description: 'Descripción', keyResults: '', note: '', status: { code: 'PROJECT_IN_PROGRESS', name: 'Proyecto en ejecución', active: true }, finalProductType: 'NA', digitalComponent: 'No', closingDate: '', technicalOpinionReport: '', formalApprovalDecision: '', finalProductApprovalDocument: '', projectManagementDocumentation: '', finalClosureReport: '', executingUnitId: 1 } as const;
     repository.portfolioRecords.set([record]);
     (repository as unknown as { recordVersions: Map<string, number> }).recordVersions.set(record.code, 1);
     const refresh = vi.spyOn(repository, 'refreshAll').mockResolvedValue();
 
-    const operation = repository.transitionProjectStatus({ projectCode: record.code, targetStatus: 'Producto aprobado', observation: '' });
+    const operation = repository.transitionProjectStatus({ projectCode: record.code, targetStatus: 'PRODUCT_APPROVED', observation: '' });
     http.expectOne('http://127.0.0.1:4001/api/v1/projects/P-002-2026/status-transitions').flush(
       { title: 'Conflicto de versión', detail: 'Recarga el expediente', status: 409 },
       { status: 409, statusText: 'Conflict' },
     );
     await expect(operation).rejects.toMatchObject({ status: 409, message: 'Recarga el expediente' });
 
-    expect(repository.portfolioRecords()[0].status).toBe('Proyecto en ejecución');
+    expect(repository.portfolioRecords()[0].status).toMatchObject({
+      code: 'PROJECT_IN_PROGRESS', name: 'Proyecto en ejecución', active: true,
+    });
     expect(refresh).not.toHaveBeenCalled();
     expect((repository as unknown as { recordVersions: Map<string, number> }).recordVersions.get(record.code)).toBe(1);
     expect(repository.lastError()).not.toBe('Fin de prueba');
@@ -427,7 +429,7 @@ describe('PiipHttpRepository', () => {
       solutionType: { id: 1, code: 'SOLUTION', name: 'Solución potencial o adaptable', displayOrder: 1, active: true },
       source: { id: 2, code: 'SOURCE', name: 'Fuente', displayOrder: 1, active: true },
       startDate: '2026-08-01', responsible: 'Responsable', peiObjective: null, poiActivity: null,
-      responsibleUnits: [], description: 'Descripción', keyResults: null, note: null, status: 'Presentado',
+      responsibleUnits: [], description: 'Descripción', keyResults: null, note: null, status: { code: 'PRESENTED', name: 'Presentado', active: true },
       finalProductType: 'NA', digitalComponent: 'No', closingDate: null, technicalOpinionReport: null,
       formalApprovalDecision: null, finalProductApprovalDocument: null, projectManagementDocumentation: null,
       finalClosureReport: null, executingUnitId: 1, executingUnit: '  Unidad Ejecutora de Prueba  ', updatedAt: '2026-08-22T10:00:00Z', version: 2,
@@ -443,7 +445,7 @@ describe('PiipHttpRepository', () => {
     expect(repository.portfolioRecords().find((record) => record.code === 'I-006-2026')?.updatedAt).toBe('2026-08-22T10:00:00Z');
     expect(refreshAudit).toHaveBeenCalledOnce();
 
-    const projectResponse = { ...response, recordType: { ...response.recordType, code: 'PROJECT', name: 'Proyecto' }, code: 'P-004-2026', originCode: 'NA', status: 'Proyecto en ejecución' };
+    const projectResponse = { ...response, recordType: { ...response.recordType, code: 'PROJECT', name: 'Proyecto' }, code: 'P-004-2026', originCode: 'NA', status: { code: 'PROJECT_IN_PROGRESS', name: 'Proyecto en ejecución', active: true } };
     vi.spyOn(portfolio, 'updateProject').mockReturnValue(of(projectResponse as unknown as PortfolioRecordResponse));
     await repository.updateProject('P-004-2026', { version: 1, name: 'Proyecto actualizado' });
     expect(refreshAudit).toHaveBeenCalledTimes(2);
@@ -472,9 +474,9 @@ describe('PiipHttpRepository', () => {
     expect(request.request.params.get('page')).toBe('1');
     expect(request.request.params.get('size')).toBe('5');
     request.flush({
-      content: [{ recordType: 'Iniciativa', code: 'I-001-2026', name: 'Riego', status: 'Presentado', executingUnitId: 10, executingUnit: 'UE-010', updatedAt: '2026-08-18T12:00:00Z' }],
+      content: [{ recordType: 'Iniciativa', code: 'I-001-2026', name: 'Riego', status: { code: 'PRESENTED', name: 'Presentado', active: true }, executingUnitId: 10, executingUnit: 'UE-010', updatedAt: '2026-08-18T12:00:00Z' }],
       page: 1, size: 5, totalElements: 6, totalPages: 2, executingUnitTotalElements: 8,
-      statusCounts: [{ status: 'Presentado', count: 4 }, { status: 'Iniciativa aprobada', count: 2 }],
+      statusCounts: [{ status: { code: 'PRESENTED', name: 'Presentado', active: true }, count: 4 }, { status: { code: 'INITIATIVE_APPROVED', name: 'Iniciativa aprobada', active: true }, count: 2 }],
     });
     await operation;
 

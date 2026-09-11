@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.media.Schema;
 import pe.gob.midagri.piip.audit.application.AuditQueryService;
 import pe.gob.midagri.piip.audit.application.AuditReadModels;
+import pe.gob.midagri.piip.portfolio.api.PortfolioDtos.PortfolioStatusReferenceResponse;
 
 @RestController
 @RequestMapping("/audit")
@@ -32,7 +33,7 @@ public class AuditController {
 
     static EventResponse toEventResponse(AuditReadModels.EventView event) {
         return new EventResponse(event.event(), event.entityCode(), event.detail(), event.actor(), event.actorName(),
-            event.actorEmail(), event.occurredAt());
+            event.actorEmail(), event.occurredAt(), event.status(), event.previousStatus(), event.newStatus());
     }
 
     public record AccessResponse(String subject, String roles, String method, String path, int status,
@@ -40,5 +41,7 @@ public class AuditController {
             @Schema(nullable = true, description = "Motivo seguro del rechazo, sin detalle HTTP") String safeReason,
             Instant occurredAt) {}
     public record EventResponse(String event, String entityCode, String detail, String actor, String actorName,
-            String actorEmail, Instant occurredAt) {}
+            String actorEmail, Instant occurredAt,
+            PortfolioStatusReferenceResponse status, PortfolioStatusReferenceResponse previousStatus,
+            PortfolioStatusReferenceResponse newStatus) {}
 }

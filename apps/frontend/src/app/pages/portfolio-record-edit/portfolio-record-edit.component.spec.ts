@@ -10,6 +10,10 @@ import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { PortfolioRecordEditComponent } from './portfolio-record-edit.component';
 
 describe('PortfolioRecordEditComponent', () => {
+  it('conserva la referencia estructurada de estado durante la edición', async () => {
+    const { repository } = await setup();
+    expect(repository.getInitiativeDetail('I-024-2026')?.portfolioRecord.status).toMatchObject({ code: 'PRESENTED', name: expect.any(String), active: true });
+  });
   async function setup(
     recordType: PiipRecordType = 'Iniciativa',
     code = 'I-024-2026',

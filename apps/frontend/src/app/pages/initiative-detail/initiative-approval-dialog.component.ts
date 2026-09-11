@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
+import { resolveStatusName } from '../../core/piip.catalogs';
 import type { DocumentRecord, PiipStatus } from '../../core/piip.models';
 import { initiativeStatusVisual, type InitiativeStatusVisual } from '../initiatives/initiative-status-visual';
 
@@ -38,6 +39,8 @@ export class InitiativeApprovalDialogComponent {
   private readonly observationValue = toSignal(this.approvalForm.controls.observation.valueChanges, { initialValue: '' });
   readonly observationLength = computed(() => this.observationValue().length);
   readonly missingDocuments = computed(() => this.data.approvalDocuments.filter((document) => document.state !== 'Cargado'));
+  readonly currentStatusName = computed(() => resolveStatusName(this.repository.catalogs().value.portfolioStatuses, this.data.currentStatus));
+  readonly approvedStatusName = computed(() => resolveStatusName(this.repository.catalogs().value.portfolioStatuses, 'INITIATIVE_APPROVED'));
 
   statusVisual(status: PiipStatus | string): InitiativeStatusVisual {
     return initiativeStatusVisual(status);
@@ -62,7 +65,7 @@ export class InitiativeApprovalDialogComponent {
     try {
       await Promise.resolve(this.repository.approveInitiative({
         initiativeCode: this.data.initiativeCode,
-        targetStatus: 'Iniciativa aprobada',
+        targetStatus: 'INITIATIVE_APPROVED',
         observation: this.approvalForm.controls.observation.value,
       }));
       this.approved.set(true);

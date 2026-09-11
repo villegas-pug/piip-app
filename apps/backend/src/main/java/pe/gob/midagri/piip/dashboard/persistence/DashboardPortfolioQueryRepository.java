@@ -60,6 +60,7 @@ public class DashboardPortfolioQueryRepository {
         CriteriaQuery<PortfolioRecordEntity> criteria = builder.createQuery(PortfolioRecordEntity.class);
         Root<PortfolioRecordEntity> root = criteria.from(PortfolioRecordEntity.class);
         root.fetch("executingUnit", JoinType.INNER);
+        root.fetch("statusCatalog", JoinType.LEFT);
         criteria.select(root).where(predicates(builder, root, executingUnitId, query, type, status)
             .toArray(Predicate[]::new));
         criteria.orderBy(builder.desc(root.get("updatedAt")), builder.desc(root.get("id")));

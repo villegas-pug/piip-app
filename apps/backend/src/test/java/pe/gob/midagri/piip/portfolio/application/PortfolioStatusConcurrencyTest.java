@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,6 +45,7 @@ import pe.gob.midagri.piip.portfolio.domain.DigitalComponent;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordEntity;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.catalogs.persistence.*;
 import pe.gob.midagri.piip.organization.persistence.*;
 import pe.gob.midagri.piip.support.PortfolioRecordTestBuilder;
@@ -64,6 +66,12 @@ class PortfolioStatusConcurrencyTest {
     @Autowired CatalogRepository catalogs;
     @Autowired CatalogItemRepository catalogItems;
     @Autowired OrganizationalUnitRepository organizationalUnits;
+    @Autowired PortfolioStatusRepository statuses;
+
+    @BeforeEach
+    void seedStatusCatalog() {
+        PortfolioRecordTestBuilder.seedPortfolioStatuses(statuses);
+    }
 
     @AfterEach
     void clearSecurityContext() {
@@ -83,7 +91,7 @@ class PortfolioStatusConcurrencyTest {
             authenticate(actor);
             try {
                 initiatives.transitionInitiativeStatus(initiative.getCode(),
-                    new PortfolioDtos.InitiativeStatusTransitionRequest(0L, PortfolioStatus.INITIATIVE_ARCHIVED, "archivar"));
+                    new PortfolioDtos.InitiativeStatusTransitionRequest(0L, "INITIATIVE_ARCHIVED", "archivar"));
                 return true;
             } catch (RuntimeException exception) {
                 return false;
@@ -136,7 +144,7 @@ class PortfolioStatusConcurrencyTest {
         return () -> {
             authenticate(actor);
             try {
-                projects.transitionProjectStatus(code, new ProjectStatusTransitionRequest(0L, target, "decisión concurrente"));
+                projects.transitionProjectStatus(code, new ProjectStatusTransitionRequest(0L, target.name(), "decisión concurrente"));
                 return true;
             } catch (RuntimeException exception) {
                 return false;

@@ -53,7 +53,8 @@ class PortfolioControllerContractTest {
             new pe.gob.midagri.piip.catalogs.api.CatalogDtos.TechnicalCatalogItemResponse(
                 "INITIATIVE", "Iniciativa", 0, true),
             "I-001-2026", "NA", "Iniciativa", null, null, null, null, null, null,
-            List.of(), "Descripción", null, null, "Presentado", "No aplica", "No", null,
+            List.of(), "Descripción", null, null, new PortfolioDtos.PortfolioStatusReferenceResponse("PRESENTED", "Presentado", true),
+            "No aplica", "No", null,
             null, null, null, null, null, 100L, "UE", null, 4L);
 
         assertThat(response.code()).isEqualTo("I-001-2026");

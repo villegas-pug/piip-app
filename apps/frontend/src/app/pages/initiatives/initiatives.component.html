@@ -15,7 +15,7 @@
         </label>
         <label class="filter-field">
           <span class="filter-label">Estado</span>
-          <span class="filter-control select-control"><select formControlName="status"><option>Todos</option>@for (status of initiativeStatuses; track status) {<option [value]="status">{{ status }}</option>}</select></span>
+          <span class="filter-control select-control"><select formControlName="status"><option>Todos</option>@for (option of initiativeStatuses(); track option.code) {<option [value]="option.code">{{ option.name }}</option>}</select></span>
         </label>
         <label class="filter-field source-field">
           <span class="filter-label">Fuente u origen</span>
@@ -56,7 +56,7 @@
                     <span class="unit-empty">Sin Unidades Orgánicas registradas</span>
                   }
                 </td>
-                <td><span class="status-tag" [attr.data-tone]="statusVisual(initiative.status).tone"><mat-icon aria-hidden="true">{{ statusVisual(initiative.status).icon }}</mat-icon><span>{{ initiative.status }}</span></span></td>
+                <td><span class="status-tag" [attr.data-tone]="statusVisual(initiative.status.code ?? '').tone"><mat-icon aria-hidden="true">{{ statusVisual(initiative.status.code ?? '').icon }}</mat-icon><span>{{ statusName(initiative.status) }}</span></span></td>
                 <td>{{ initiative.updatedAt }}</td>
                 <td>
                   <span class="row-actions">
@@ -64,10 +64,10 @@
                     <button class="icon-action" type="button" [matMenuTriggerFor]="initiativeMenu" [attr.aria-label]="'Acciones de ' + initiative.code"><mat-icon>more_vert</mat-icon></button>
                     <mat-menu #initiativeMenu="matMenu">
                       <a mat-menu-item [routerLink]="['/iniciativas', initiative.code, 'documentos']"><mat-icon>description</mat-icon>Ver documentos</a>
-                      @if (canAdminister(initiative) && initiative.status === 'Presentado') {
+                      @if (canAdminister(initiative) && initiative.status.code === 'PRESENTED') {
                         <a mat-menu-item [routerLink]="['/iniciativas', initiative.code]" [queryParams]="{ action: 'approve' }"><mat-icon>verified</mat-icon>Registrar aprobación</a>
                       }
-                      @if (canAdminister(initiative) && initiative.status === 'Iniciativa aprobada') {
+                      @if (canAdminister(initiative) && initiative.status.code === 'INITIATIVE_APPROVED') {
                         @if (repository.getProjectByOrigin(initiative.code); as project) {
                           <a mat-menu-item [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon>account_tree</mat-icon>Ver proyecto derivado</a>
                         } @else {

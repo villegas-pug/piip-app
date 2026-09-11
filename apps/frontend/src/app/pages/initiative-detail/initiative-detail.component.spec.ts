@@ -57,7 +57,7 @@ describe('InitiativeDetailComponent', () => {
       restoreFocus: true,
       panelClass: 'initiative-review-dialog-panel',
       backdropClass: 'initiative-review-dialog-backdrop',
-      data: expect.objectContaining({ initiativeCode: 'I-024-2026', currentStatus: 'Presentado' }),
+      data: expect.objectContaining({ initiativeCode: 'I-024-2026', currentStatus: 'PRESENTED' }),
     }));
   });
 
@@ -114,8 +114,8 @@ describe('InitiativeDetailComponent', () => {
 
   it('hides status controls and explains the lock when a derived project is linked', () => {
     const repository = TestBed.inject(PiipMockRepository);
-    repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
-    repository.portfolioRecords.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
+    repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: { code: 'INITIATIVE_APPROVED', name: 'Iniciativa aprobada', active: true } } : item));
+    repository.portfolioRecords.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: { code: 'INITIATIVE_APPROVED', name: 'Iniciativa aprobada', active: true } } : item));
     repository.projects.update((projects) => [
       { ...projects[0], originCode: 'I-024-2026', originMode: 'DERIVED_FROM_INITIATIVE' },
       ...projects.slice(1),
@@ -156,12 +156,8 @@ describe('InitiativeDetailComponent', () => {
     expect(timeline.querySelectorAll('.activity-item')).toHaveLength(2);
     expect(timeline.textContent).toContain('Iniciativa registrada');
     expect(timeline.textContent).toContain('Estado inicial');
-    expect(timeline.textContent).not.toContain('Estado inicial: Presentado.');
-    const initialStatus = timeline.querySelector('.activity-status-row .status-tag');
-    expect(initialStatus?.textContent).toContain('Presentado');
-    expect(initialStatus?.getAttribute('data-tone')).toBe('pending');
-    expect(initialStatus?.querySelector('mat-icon')?.textContent).toContain('schedule');
-    expect(initialStatus?.querySelector('mat-icon')?.getAttribute('aria-hidden')).toBe('true');
+    expect(timeline.textContent).toContain('Estado inicial: Presentado.');
+    expect(timeline.querySelector('.activity-status-row')).toBeNull();
     expect(timeline.textContent).toContain('Documento cargado');
     expect(timeline.textContent).toContain('Se cargó Informe de opinión técnica de evaluación de iniciativa, versión 1.');
     expect(timeline.textContent).toContain('Informe_tecnico_I-024-2026.pdf');
@@ -172,14 +168,14 @@ describe('InitiativeDetailComponent', () => {
   it('ofrece solo los destinos de iniciativa en un diálogo genérico', () => {
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
     fixture.detectChanges();
-    expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual(['Iniciativa archivada', 'No Admisible']);
+    expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual(['INITIATIVE_ARCHIVED', 'NOT_ADMISSIBLE']);
     fixture.componentInstance.openStatusDialog();
 
     expect(open).toHaveBeenCalledWith(InitiativeStatusTransitionDialogComponent, expect.objectContaining({
       data: {
         initiativeCode: 'I-024-2026',
-        currentStatus: 'Presentado',
-        options: ['Iniciativa archivada', 'No Admisible'],
+        currentStatus: 'PRESENTED',
+        options: ['INITIATIVE_ARCHIVED', 'NOT_ADMISSIBLE'],
       },
     }));
   });
@@ -189,7 +185,10 @@ describe('InitiativeDetailComponent', () => {
     repository.auditEvents.set([{
       recordCode: 'I-024-2026', timestamp: '20/05/2026\n10:28:19', event: 'ESTADO_INICIATIVA_CAMBIADO', user: 'Ana Analista', email: 'ana@midagri.gob.pe',
       observation: '{"estadoAnterior":"Presentado","estadoNuevo":"No Admisible","observacion":"Revisión documental concluida."}',
-      rawDetail: '{"estadoAnterior":"Presentado","estadoNuevo":"No Admisible","observacion":"Revisión documental concluida."}', icon: 'swap_horiz',
+      rawDetail: '{"observacion":"Revisión documental concluida."}',
+      previousStatus: { code: 'PRESENTED', name: 'Presentado', active: true },
+      newStatus: { code: 'NOT_ADMISSIBLE', name: 'No Admisible', active: true },
+      icon: 'swap_horiz',
     }]);
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
     fixture.detectChanges();
@@ -232,17 +231,17 @@ describe('InitiativeDetailComponent', () => {
 
   it('conserva archivo como único destino de una iniciativa aprobada sin proyecto', () => {
     const repository = TestBed.inject(PiipMockRepository);
-    repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
-    repository.portfolioRecords.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
+    repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: { code: 'INITIATIVE_APPROVED', name: 'Iniciativa aprobada', active: true } } : item));
+    repository.portfolioRecords.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: { code: 'INITIATIVE_APPROVED', name: 'Iniciativa aprobada', active: true } } : item));
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
     fixture.detectChanges();
-    expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual(['Iniciativa archivada']);
+    expect(fixture.componentInstance.initiativeTransitionOptions()).toEqual(['INITIATIVE_ARCHIVED']);
     fixture.componentInstance.openStatusDialog();
     expect(open).toHaveBeenCalledWith(InitiativeStatusTransitionDialogComponent, expect.objectContaining({
       data: {
         initiativeCode: 'I-024-2026',
-        currentStatus: 'Iniciativa aprobada',
-        options: ['Iniciativa archivada'],
+        currentStatus: 'INITIATIVE_APPROVED',
+        options: ['INITIATIVE_ARCHIVED'],
       },
     }));
   });
@@ -335,8 +334,8 @@ describe('InitiativeDetailComponent', () => {
 
   it('oculta edición cuando la iniciativa aprobada ya tiene proyecto derivado', () => {
     const repository = TestBed.inject(PiipMockRepository);
-    repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
-    repository.portfolioRecords.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: 'Iniciativa aprobada' } : item));
+    repository.initiatives.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: { code: 'INITIATIVE_APPROVED', name: 'Iniciativa aprobada', active: true } } : item));
+    repository.portfolioRecords.update((items) => items.map((item) => item.code === 'I-024-2026' ? { ...item, status: { code: 'INITIATIVE_APPROVED', name: 'Iniciativa aprobada', active: true } } : item));
     repository.projects.update((items) => [{ ...items[0], originCode: 'I-024-2026', originMode: 'DERIVED_FROM_INITIATIVE' }, ...items.slice(1)]);
     const fixture = TestBed.createComponent(InitiativeDetailComponent);
     fixture.detectChanges();

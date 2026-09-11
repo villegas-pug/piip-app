@@ -13,7 +13,7 @@ describe('ProjectStatusTransitionDialogComponent', () => {
     dialogRef.disableClose = false;
     await TestBed.configureTestingModule({
       imports: [ProjectStatusTransitionDialogComponent],
-      providers: [PiipMockRepository, { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository }, { provide: MatDialogRef, useValue: dialogRef }, { provide: MAT_DIALOG_DATA, useValue: { projectCode: 'P-005-2026', currentStatus: 'Proyecto en ejecución', options: ['Producto aprobado', 'Producto no aprobado', 'Suspendido', 'Cancelado'] } }],
+        providers: [PiipMockRepository, { provide: PIIP_REPOSITORY, useExisting: PiipMockRepository }, { provide: MatDialogRef, useValue: dialogRef }, { provide: MAT_DIALOG_DATA, useValue: { projectCode: 'P-005-2026', currentStatus: 'PROJECT_IN_PROGRESS', options: ['PRODUCT_APPROVED', 'PRODUCT_NOT_APPROVED', 'SUSPENDED', 'CANCELLED'] } }],
     }).compileComponents();
   });
 
@@ -21,11 +21,11 @@ describe('ProjectStatusTransitionDialogComponent', () => {
     const fixture = TestBed.createComponent(ProjectStatusTransitionDialogComponent);
     const component = fixture.componentInstance;
 
-    component.selectTarget('Producto aprobado');
-    expect(component.selectedTarget()).toBe('Producto aprobado');
+    component.selectTarget('PRODUCT_APPROVED');
+    expect(component.selectedTarget()).toBe('PRODUCT_APPROVED');
 
-    component.selectTarget('Finalizado');
-    expect(component.selectedTarget()).toBe('Producto aprobado');
+    component.selectTarget('FINISHED');
+    expect(component.selectedTarget()).toBe('PRODUCT_APPROVED');
   });
 
   it('confirma la transición con la observación y cierra el diálogo', async () => {
@@ -33,13 +33,13 @@ describe('ProjectStatusTransitionDialogComponent', () => {
     const transition = vi.spyOn(repository, 'transitionProjectStatus').mockResolvedValue(repository.portfolioRecords()[0]);
     const fixture = TestBed.createComponent(ProjectStatusTransitionDialogComponent);
     const component = fixture.componentInstance;
-    component.selectTarget('Producto aprobado');
+    component.selectTarget('PRODUCT_APPROVED');
     component.transitionForm.patchValue({ observation: 'Validación aprobada' });
 
     await component.confirm();
 
-    expect(transition).toHaveBeenCalledWith({ projectCode: 'P-005-2026', targetStatus: 'Producto aprobado', observation: 'Validación aprobada' });
-    expect(close).toHaveBeenCalledWith({ targetStatus: 'Producto aprobado' });
+    expect(transition).toHaveBeenCalledWith({ projectCode: 'P-005-2026', targetStatus: 'PRODUCT_APPROVED', observation: 'Validación aprobada' });
+    expect(close).toHaveBeenCalledWith({ targetStatus: 'PRODUCT_APPROVED' });
     expect(dialogRef.disableClose).toBe(false);
   });
 });

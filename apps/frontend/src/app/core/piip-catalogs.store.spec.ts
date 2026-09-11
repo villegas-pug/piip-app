@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PiipCatalogsStore } from './piip-catalogs.store';
 import { CatalogBundle, OrganizationalUnit } from './piip.models';
 
-const EMPTY: CatalogBundle = { recordTypes: [], solutionTypes: [], sources: [], peiObjectives: [], poiActivities: [], documentTypes: [] };
+const EMPTY: CatalogBundle = { recordTypes: [], solutionTypes: [], sources: [], peiObjectives: [], poiActivities: [], documentTypes: [], portfolioStatuses: [] };
 
 describe('PiipCatalogsStore', () => {
   it('distingue carga, respuesta vacía, error y reintento', async () => {
@@ -18,6 +18,15 @@ describe('PiipCatalogsStore', () => {
     await store.loadCatalogs(async () => ({ ...EMPTY, sources: [option(1, 'SOURCE', 'Fuente')] }));
     expect(store.catalogs().phase).toBe('ready');
     expect(store.catalogs().value.sources[0]?.id).toBe(1);
+  });
+
+  it('no reconstruye estados de portafolio cuando el bundle está vacío o falla', async () => {
+    const store = new PiipCatalogsStore();
+    await store.loadCatalogs(async () => EMPTY);
+    expect(store.catalogs().value.portfolioStatuses).toEqual([]);
+
+    await store.loadCatalogs(async () => { throw new Error('Estados no disponibles'); });
+    expect(store.catalogs()).toMatchObject({ phase: 'error', value: { portfolioStatuses: [] } });
   });
 
   it('descarta la respuesta tardía de una Unidad Ejecutora anterior', async () => {

@@ -33,6 +33,11 @@ export class InitiativeFormComponent {
   readonly catalogState = this.repository.catalogs;
   readonly unitsState = this.repository.organizationalUnitsState;
   readonly units = this.repository.organizationalUnits;
+  readonly initialStatusOption = computed(() =>
+    this.catalogState().value.portfolioStatuses.find((option) => option.code === 'PRESENTED' && option.active && option.applicability === 'INITIATIVE'),
+  );
+  readonly initialStatusReady = computed(() => this.catalogState().phase === 'ready' && Boolean(this.initialStatusOption()));
+  readonly initialStatusName = computed(() => this.initialStatusOption()?.name ?? 'Estado inicial no disponible');
   readonly uploadedFilename = signal<string | null>(null);
   readonly uploadedFile = signal<File | null>(null);
   readonly submitting = signal(false);
@@ -48,7 +53,7 @@ export class InitiativeFormComponent {
     originCode: [{ value: 'NA', disabled: true }],
     startDate: ['', Validators.required],
     name: ['', [Validators.required, Validators.maxLength(180)]],
-    status: [{ value: 'Presentado', disabled: true }],
+    status: [{ value: this.initialStatusName(), disabled: true }],
     solutionType: [{ value: '', disabled: this.catalogState().phase !== 'ready' }, Validators.required],
     source: [{ value: '', disabled: this.catalogState().phase !== 'ready' }, Validators.required],
     digitalComponent: ['', Validators.required],
@@ -61,6 +66,11 @@ export class InitiativeFormComponent {
   });
 
   constructor() {
+    effect(() => {
+      const name = this.initialStatusName();
+      if (this.form.controls.status.value !== name) this.form.controls.status.setValue(name, { emitEvent: false });
+    });
+
     effect(() => {
       const catalogsReady = this.catalogState().phase === 'ready';
       const unitsReady = this.unitsState().phase === 'ready';
@@ -119,6 +129,7 @@ export class InitiativeFormComponent {
         responsible: this.form.controls.responsible.value,
         organizationalUnits: this.selectedUnits(),
         uploadedFilename: this.uploadedFilename(),
+        officialStatusName: this.initialStatusName(),
         registerInitiative: () => this.registerInitiative(),
       },
     });
@@ -165,7 +176,7 @@ export class InitiativeFormComponent {
     const catalogs = this.catalogState();
     const units = this.unitsState();
     return catalogs.phase === 'ready' && catalogs.value.solutionTypes.length > 0 && catalogs.value.sources.length > 0
-       && units.phase === 'ready' && units.value.length > 0 && this.hasValidUnits();
+       && units.phase === 'ready' && units.value.length > 0 && this.hasValidUnits() && this.initialStatusReady();
   }
 
   selectableUnits(): readonly OrganizationalUnit[] { return this.units().filter((unit) => unit.active && unit.acronym.trim()); }

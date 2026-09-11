@@ -111,6 +111,7 @@ class PortfolioControllerUpdateContractTest {
     private PortfolioDtos.PortfolioRecordResponse response(String code, String name, long version) {
         return new PortfolioDtos.PortfolioRecordResponse(new TechnicalCatalogItemResponse("INITIATIVE", "Iniciativa", 0, true),
             code, "NA", name, null, null, null, null, null, null, List.of(), "Descripción", null, null,
-            "Presentado", "No aplica", "No", null, null, null, null, null, null, 7L, "UE", null, version);
+            new PortfolioDtos.PortfolioStatusReferenceResponse("PRESENTED", "Presentado", true),
+            "No aplica", "No", null, null, null, null, null, null, 7L, "UE", null, version);
     }
 }

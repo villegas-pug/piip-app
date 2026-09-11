@@ -3,11 +3,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { INITIATIVE_STATUS_TRANSITIONS, type InitiativeStatus } from '../../core/piip.catalogs';
+import { INITIATIVE_STATUS_TRANSITIONS, resolveStatusName, type InitiativeStatus } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { initiativeStatusVisual, type InitiativeStatusVisual } from '../initiatives/initiative-status-visual';
 
-type InitiativeTransitionTarget = Extract<InitiativeStatus, 'Iniciativa archivada' | 'No Admisible'>;
+type InitiativeTransitionTarget = Extract<InitiativeStatus, 'INITIATIVE_ARCHIVED' | 'NOT_ADMISSIBLE'>;
 
 export interface InitiativeStatusTransitionDialogData {
   readonly initiativeCode: string;
@@ -32,7 +32,9 @@ export class InitiativeStatusTransitionDialogComponent {
   private readonly repository = inject(PIIP_REPOSITORY);
   readonly data = inject<InitiativeStatusTransitionDialogData>(MAT_DIALOG_DATA);
   readonly options = this.data.options.filter((target) =>
-    (INITIATIVE_STATUS_TRANSITIONS[this.data.currentStatus] as readonly InitiativeTransitionTarget[]).includes(target));
+    (INITIATIVE_STATUS_TRANSITIONS[this.data.currentStatus] as readonly InitiativeStatus[]).includes(target));
+  readonly catalogReady = computed(() => this.repository.catalogs().phase === 'ready');
+  readonly catalogStatuses = computed(() => this.repository.catalogs().value.portfolioStatuses);
   readonly selectedTarget = signal<InitiativeTransitionTarget | null>(null);
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
@@ -44,8 +46,10 @@ export class InitiativeStatusTransitionDialogComponent {
     return initiativeStatusVisual(status);
   }
 
+  statusName(code: string): string { return resolveStatusName(this.catalogStatuses(), code); }
+
   selectTarget(target: InitiativeTransitionTarget): void {
-    if (!this.submitting() && this.options.includes(target)) {
+    if (this.catalogReady() && !this.submitting() && this.isSelectableTarget(target)) {
       this.selectedTarget.set(target);
       this.error.set(null);
     }
@@ -57,7 +61,7 @@ export class InitiativeStatusTransitionDialogComponent {
 
   async confirm(): Promise<void> {
     const targetStatus = this.selectedTarget();
-    if (!targetStatus || this.submitting() || !this.options.includes(targetStatus)) return;
+    if (!this.catalogReady() || !targetStatus || this.submitting() || !this.isSelectableTarget(targetStatus)) return;
 
     this.submitting.set(true);
     this.error.set(null);
@@ -75,5 +79,10 @@ export class InitiativeStatusTransitionDialogComponent {
       this.dialogRef.disableClose = false;
       this.submitting.set(false);
     }
+  }
+
+  private isSelectableTarget(target: InitiativeTransitionTarget): boolean {
+    return this.options.includes(target)
+      && this.catalogStatuses().some((status) => status.code === target && status.active && status.applicability === 'INITIATIVE');
   }
 }

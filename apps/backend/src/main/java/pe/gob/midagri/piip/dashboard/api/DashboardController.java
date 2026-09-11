@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.List;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -15,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import pe.gob.midagri.piip.dashboard.api.DashboardDtos.PortfolioStatusCountResponse;
 import pe.gob.midagri.piip.dashboard.application.DashboardPortfolioService;
 import pe.gob.midagri.piip.dashboard.application.DashboardSummaryReadModel;
 import pe.gob.midagri.piip.dashboard.application.DashboardSummaryService;
@@ -22,6 +22,7 @@ import pe.gob.midagri.piip.identity.application.LocalAuthorizationService;
 import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
 import pe.gob.midagri.piip.portfolio.domain.RecordType;
 import pe.gob.midagri.piip.portfolio.persistence.PortfolioRecordRepository;
+import pe.gob.midagri.piip.portfolio.persistence.PortfolioStatusRepository;
 import pe.gob.midagri.piip.work.persistence.NotificationRepository;
 import pe.gob.midagri.piip.work.persistence.WorkTaskRepository;
 
@@ -40,20 +41,21 @@ public class DashboardController {
     /** Constructor de compatibilidad para pruebas unitarias existentes. */
     public DashboardController(PortfolioRecordRepository records, WorkTaskRepository tasks,
             NotificationRepository notifications, LocalAuthorizationService authorization,
-            DashboardPortfolioService portfolioService) {
-        this(new DashboardSummaryService(records, tasks, notifications, authorization), portfolioService);
+            DashboardPortfolioService portfolioService, PortfolioStatusRepository statuses) {
+        this(new DashboardSummaryService(records, tasks, notifications, authorization, statuses), portfolioService);
     }
 
     public DashboardController(PortfolioRecordRepository records, WorkTaskRepository tasks,
-            NotificationRepository notifications, LocalAuthorizationService authorization) {
-        this(records, tasks, notifications, authorization, null);
+            NotificationRepository notifications, LocalAuthorizationService authorization,
+            PortfolioStatusRepository statuses) {
+        this(records, tasks, notifications, authorization, null, statuses);
     }
 
     @GetMapping
     public DashboardResponse summary() {
         DashboardSummaryReadModel value = summaryService.summary();
         return new DashboardResponse(value.initiatives(), value.projects(), value.alerts(), value.pendingTasks(),
-            value.notifications(), value.portfolioByStatus());
+            value.notifications(), value.portfolioStatusCounts());
     }
 
     @ApiResponses({
@@ -77,5 +79,5 @@ public class DashboardController {
     }
 
     public record DashboardResponse(long initiatives, long projects, long alerts, long pendingTasks,
-            long notifications, Map<String, Long> portfolioByStatus) {}
+            long notifications, List<PortfolioStatusCountResponse> portfolioStatusCounts) {}
 }

@@ -4,9 +4,9 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
-import { INITIATIVE_STATUSES } from '../../core/piip.catalogs';
+import { applicableStatusOptions, statusDisplayName } from '../../core/piip.catalogs';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { PiipStatus } from '../../core/piip.models';
+import { PiipStatus, PortfolioStatusReference } from '../../core/piip.models';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 import { clampPageIndex, paginateItems } from '../../shared/pagination/piip-pagination.utils';
 import { initiativeStatusVisual, type InitiativeStatusVisual } from './initiative-status-visual';
@@ -23,7 +23,7 @@ export class InitiativesComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly repository = inject(PIIP_REPOSITORY);
   readonly catalogState = this.repository.catalogs;
-  readonly initiativeStatuses = INITIATIVE_STATUSES;
+  readonly initiativeStatuses = computed(() => applicableStatusOptions(this.catalogState().value.portfolioStatuses, 'INITIATIVE'));
   readonly units = this.repository.organizationalUnits;
   readonly unitsState = this.repository.organizationalUnitsState;
   readonly filters = this.formBuilder.nonNullable.group({ search: '', status: 'Todos', source: [{ value: 'Todos', disabled: this.catalogState().phase !== 'ready' }], unit: 'Todas', date: '' });
@@ -36,7 +36,7 @@ export class InitiativesComponent {
     const source = value.source ?? 'Todos';
     return this.repository.initiatives().filter((initiative) =>
       (!search || `${initiative.code} ${initiative.name}`.toLocaleLowerCase().includes(search)) &&
-      (value.status === 'Todos' || initiative.status === value.status) &&
+      (value.status === 'Todos' || initiative.status.code === value.status) &&
       (source === 'Todos' || initiative.sourceReference?.id === Number(source)) &&
       (value.unit === 'Todas' || initiative.organizationalUnits?.some((unit) => unit.id === Number(value.unit))),
     );
@@ -63,7 +63,9 @@ export class InitiativesComponent {
     this.filters.reset({ search: '', status: 'Todos', source: 'Todos', unit: 'Todas', date: '' });
   }
 
-  statusVisual(status: PiipStatus): InitiativeStatusVisual { return initiativeStatusVisual(status); }
+  statusVisual(status: PiipStatus | string): InitiativeStatusVisual { return initiativeStatusVisual(status); }
+
+  statusName(status: PortfolioStatusReference | undefined): string { return statusDisplayName(status); }
 
   private syncSourceFilterDisabled(disabled: boolean): void {
     const control = this.filters.controls.source;

@@ -10,6 +10,7 @@ export interface InitiativeReviewDialogData {
   responsible: string;
   organizationalUnits?: readonly OrganizationalUnit[];
   uploadedFilename: string | null;
+  officialStatusName: string;
   registerInitiative: () => Promise<boolean>;
 }
 

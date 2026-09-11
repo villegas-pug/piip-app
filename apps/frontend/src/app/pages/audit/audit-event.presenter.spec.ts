@@ -45,11 +45,20 @@ describe('presentAuditEvent', () => {
       ...baseEvent,
       event: 'INICIATIVA_REGISTRADA',
       observation: '{"estado":"Presentado"}',
-      rawDetail: '{"estado":"Presentado"}',
+      rawDetail: '{"estado":"Presentado"}', status: { code: 'PRESENTED', name: 'Presentado', active: true },
     });
 
     expect(event.eventLabel).toBe('Iniciativa registrada');
     expect(event.observation).toBe('Estado inicial: Presentado.');
+  });
+
+  it('prioriza referencias estructuradas y conserva los eventos legados como texto histórico', () => {
+    const structured = presentAuditEvent({ ...baseEvent, event: 'ESTADO_PROYECTO_CAMBIADO', previousStatus: { code: 'PROJECT_IN_PROGRESS', name: 'En ejecución vigente', active: false }, newStatus: { code: 'PRODUCT_APPROVED', name: 'Producto vigente', active: true } });
+    expect(structured.observation).toContain('En ejecución vigente');
+    expect(structured.previousStatus).toMatchObject({ code: 'PROJECT_IN_PROGRESS', active: false });
+    const legacy = presentAuditEvent({ ...baseEvent, event: 'ESTADO_PROYECTO_CAMBIADO', observation: '{"estadoAnterior":"Texto histórico","estadoNuevo":"Otro texto"}', rawDetail: '{"estadoAnterior":"Texto histórico","estadoNuevo":"Otro texto"}' });
+    expect(legacy.observation).toContain('Texto histórico');
+    expect(legacy.previousStatus).toBeUndefined();
   });
 
   it('uses a safe fallback for unknown events and invalid technical details', () => {

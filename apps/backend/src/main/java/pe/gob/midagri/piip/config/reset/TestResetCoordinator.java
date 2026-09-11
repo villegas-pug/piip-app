@@ -24,6 +24,8 @@ import pe.gob.midagri.piip.catalogs.persistence.*;
 import pe.gob.midagri.piip.documents.persistence.*;
 import pe.gob.midagri.piip.identity.persistence.*;
 import pe.gob.midagri.piip.organization.persistence.*;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatus;
+import pe.gob.midagri.piip.portfolio.domain.PortfolioStatusApplicability;
 import pe.gob.midagri.piip.portfolio.persistence.*;
 import pe.gob.midagri.piip.work.persistence.*;
 
@@ -46,7 +48,7 @@ public class TestResetCoordinator implements ApplicationRunner {
     private final PortfolioRecordRepository portfolios; private final ResponsibleUnitRepository responsibleUnits;
     private final CodeCounterRepository codeCounters; private final DocumentRepository documents;
     private final DocumentVersionRepository documentVersions; private final DocumentContentRepository documentContents;
-    private final WorkTaskRepository workTasks;
+    private final WorkTaskRepository workTasks; private final PortfolioStatusRepository portfolioStatuses;
     private volatile boolean preflightCompleted;
 
     public TestResetCoordinator(TestResetEnvironmentGuard guard, HibernateMetadataCapture capture,
@@ -56,13 +58,15 @@ public class TestResetCoordinator implements ApplicationRunner {
             AccessAuditRepository accessAudits, NotificationRepository notifications, CatalogRepository catalogs,
             CatalogItemRepository catalogItems, DocumentTypeRepository documentTypes, PortfolioRecordRepository portfolios,
             ResponsibleUnitRepository responsibleUnits, CodeCounterRepository codeCounters, DocumentRepository documents,
-            DocumentVersionRepository documentVersions, DocumentContentRepository documentContents, WorkTaskRepository workTasks) {
+            DocumentVersionRepository documentVersions, DocumentContentRepository documentContents, WorkTaskRepository workTasks,
+            PortfolioStatusRepository portfolioStatuses) {
         this.guard = guard; this.capture = capture; this.filters = filters; this.entityManagerFactory = entityManagerFactory; this.dataSource = dataSource;
         this.institutions = institutions; this.executingUnits = executingUnits; this.organizationalUnits = organizationalUnits;
         this.roles = roles; this.users = users; this.scopes = scopes; this.auditEvents = auditEvents; this.accessAudits = accessAudits;
         this.notifications = notifications; this.catalogs = catalogs; this.catalogItems = catalogItems; this.documentTypes = documentTypes;
         this.portfolios = portfolios; this.responsibleUnits = responsibleUnits; this.codeCounters = codeCounters;
         this.documents = documents; this.documentVersions = documentVersions; this.documentContents = documentContents; this.workTasks = workTasks;
+        this.portfolioStatuses = portfolioStatuses;
     }
 
     @Override public void run(ApplicationArguments args) {
@@ -99,6 +103,7 @@ public class TestResetCoordinator implements ApplicationRunner {
                 throw new IllegalStateException("El seed de identidad, organización o catálogos quedó incompleto");
             }
             validateSyntheticOrganization(executingUnits.findAll(), organizationalUnits::findByExecutingUnitIdOrderByCode);
+            validatePortfolioStatuses(portfolioStatuses.findAllByOrderByDisplayOrderAscCodeAsc());
             if (!operationalTablesAreEmpty()) throw new IllegalStateException("Las tablas operativas, auditoría o notificaciones recibieron datos durante test-reset");
         });
         LOGGER.info("test-reset completado correctamente sobre el esquema allowlisted");
@@ -108,7 +113,7 @@ public class TestResetCoordinator implements ApplicationRunner {
         Set<String> mapped = new TreeSet<>();
         metadata.collectTableMappings().forEach(table -> mapped.add(table.getName().toUpperCase(Locale.ROOT)));
         Set<String> expected = new TreeSet<>(TestResetSchemaFilterProvider.ALLOWLIST);
-        if (expected.size() != 20 || !mapped.equals(expected)) throw new IllegalStateException("El Metadata JPA no coincide con las 20 tablas del reset");
+        if (expected.size() != 21 || !mapped.equals(expected)) throw new IllegalStateException("El Metadata JPA no coincide con las 21 tablas del reset");
         metadata.collectTableMappings().forEach(source -> source.getForeignKeyCollection().forEach(foreignKey -> {
             String targetName = foreignKey.getReferencedTable().getName().toUpperCase(Locale.ROOT);
             if (!expected.contains(targetName)) throw new IllegalStateException("La FK del Metadata apunta fuera de la matriz test-reset");
@@ -189,6 +194,37 @@ public class TestResetCoordinator implements ApplicationRunner {
                 throw new IllegalStateException("La Unidad Ejecutora sintética " + executingUnit.getCode()
                     + " no dispone de dos Unidades Orgánicas activas");
         }
+    }
+
+    /**
+     * Postvalidación del catálogo de estados del portafolio (FR-025/FR-026): exactamente los once
+     * códigos oficiales, sin extras ni faltantes, con denominación, orden, actividad y aplicabilidad
+     * coincidentes con el inventario canónico. Cualquier discrepancia falla de forma segura.
+     */
+    static void validatePortfolioStatuses(List<PortfolioStatusCatalogEntity> estados) {
+        Set<PortfolioStatus> codes = estados.stream().map(PortfolioStatusCatalogEntity::getCode)
+            .collect(java.util.stream.Collectors.toSet());
+        if (estados.size() != 11 || !codes.equals(EnumSet.allOf(PortfolioStatus.class))) {
+            throw new IllegalStateException("El catálogo de estados del portafolio debe contener exactamente los once códigos oficiales sin extras");
+        }
+        for (PortfolioStatusCatalogEntity estado : estados) {
+            if (!estado.getName().equals(estado.getCode().label()))
+                throw new IllegalStateException("El estado " + estado.getCode() + " tiene una denominación incorrecta");
+            if (estado.getDisplayOrder() != estado.getCode().ordinal() + 1)
+                throw new IllegalStateException("El estado " + estado.getCode() + " tiene un orden de presentación incorrecto");
+            if (!estado.isActive())
+                throw new IllegalStateException("El estado " + estado.getCode() + " debe estar activo");
+            if (estado.getApplicability() != applicabilityOf(estado.getCode()))
+                throw new IllegalStateException("El estado " + estado.getCode() + " tiene una aplicabilidad incorrecta");
+        }
+    }
+
+    private static PortfolioStatusApplicability applicabilityOf(PortfolioStatus code) {
+        return switch (code) {
+            case PRESENTED, INITIATIVE_APPROVED, INITIATIVE_ARCHIVED, NOT_ADMISSIBLE -> PortfolioStatusApplicability.INITIATIVE;
+            case PROJECT_IN_PROGRESS, PRODUCT_APPROVED, PRODUCT_NOT_APPROVED, SUSPENDED, CANCELLED, FINISHED -> PortfolioStatusApplicability.PROJECT;
+            case NOT_APPLICABLE -> PortfolioStatusApplicability.NONE;
+        };
     }
     static void stage(String name, Runnable action) {
         try { action.run(); }

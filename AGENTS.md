@@ -62,5 +62,7 @@
 - Ningún especialista ejecuta pruebas, builds, generación OpenAPI, integración Oracle ni acciones destructivas sin autorización explícita del usuario en el turno actual.
 
 <!-- SPECKIT START -->
-Para la feature activa, leer `specs/015-inicializacion-oracle/plan.md` antes de planificar o implementar.
+## Plan activo Spec Kit
+
+- Plan activo: `specs/018-centralizar-estados-portafolio/plan.md` (feature 018, rama `018-centralizar-estados-portafolio`).
 <!-- SPECKIT END -->
