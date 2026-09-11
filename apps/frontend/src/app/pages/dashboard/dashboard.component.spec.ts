@@ -12,7 +12,7 @@ describe('DashboardComponent', () => {
     }).compileComponents();
   });
 
-  it('mantiene el resumen compacto en tres notificaciones y expande en línea', () => {
+  it('muestra todas las notificaciones existentes desde el inicio', () => {
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
     const component = fixture.componentInstance;
@@ -20,10 +20,8 @@ describe('DashboardComponent', () => {
     repository.loadHomePortfolio(component.query());
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelectorAll('.notification-row')).toHaveLength(3);
-    (fixture.nativeElement.querySelector('.all-notifications') as HTMLButtonElement).click();
-    fixture.detectChanges();
     expect(fixture.nativeElement.querySelectorAll('.notification-row')).toHaveLength(4);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('puede originar un proyecto');
   });
 
   it('solo marca una notificación mediante la acción explícita de la fila', async () => {

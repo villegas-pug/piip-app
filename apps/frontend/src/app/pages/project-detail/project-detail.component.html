@@ -26,7 +26,7 @@
             <dl class="data-grid">
               <div><dt>Tipo de registro</dt><dd>{{ detail.portfolioRecord.recordType }}</dd></div>
               <div><dt>Origen</dt><dd>{{ detail.project.originMode === 'DERIVED_FROM_INITIATIVE' ? 'Proyecto derivado' : 'Proyecto preexistente' }}</dd></div>
-              <div><dt>Iniciativa de origen</dt><dd>@if (detail.originInitiative) {<a [routerLink]="['/iniciativas', detail.originInitiative.code]">{{ detail.originInitiative.code }}</a>} @else {NA}</dd></div>
+              <div><dt>Iniciativa de origen</dt><dd>@if (detail.originInitiative) {<a [routerLink]="['/iniciativas', detail.originInitiative.code]">{{ detail.originInitiative.code }}</a>}</dd></div>
               <div><dt>Fecha de inicio</dt><dd><time [attr.datetime]="detail.portfolioRecord.startDate">{{ formatDate(detail.portfolioRecord.startDate) }}</time></dd></div>
             </dl>
           </section>
@@ -34,7 +34,7 @@
           <section class="detail-group" aria-labelledby="project-classification-title">
             <h4 id="project-classification-title">Clasificación</h4>
             <dl class="data-grid">
-              <div><dt>Tipo de solución</dt><dd>@if (detail.portfolioRecord.solutionTypeReference; as value) {<span>{{ value.name }}</span><small class="catalog-code">{{ value.code }}@if (!value.active) {<b> · Inactivo</b>}</small>} @else { {{ detail.portfolioRecord.solutionType }} }</dd></div>
+              <div><dt>Tipo de solución</dt><dd>@if (detail.portfolioRecord.solutionTypeReference; as value) {<span>{{ value.name }}</span>@if (value.code !== 'NOT_APPLICABLE') {<small class="catalog-code">{{ value.code }}@if (!value.active) {<b> · Inactivo</b>}</small>}} @else { {{ detail.portfolioRecord.solutionType }} }</dd></div>
               <div><dt>Fuente u origen</dt><dd>@if (detail.portfolioRecord.sourceReference; as value) {<span>{{ value.name }}</span><small class="catalog-code">{{ value.code }}@if (!value.active) {<b> · Inactivo</b>}</small>} @else { {{ detail.portfolioRecord.source }} }</dd></div>
               <div><dt>Componente digital</dt><dd><span class="value-badge" [class.is-positive]="detail.portfolioRecord.digitalComponent === 'Si'">{{ detail.portfolioRecord.digitalComponent }}</span></dd></div>
             </dl>

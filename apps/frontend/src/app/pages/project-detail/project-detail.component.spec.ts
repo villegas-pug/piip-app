@@ -50,6 +50,16 @@ describe('ProjectDetailComponent', () => {
     expect(text).toContain('Inactivo');
   });
 
+  it('oculta los códigos técnicos del proyecto preexistente en la presentación', () => {
+    const fixture = TestBed.createComponent(ProjectDetailComponent);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).not.toContain('NA');
+    expect(text).not.toContain('NOT_APPLICABLE');
+    expect(text).toContain('No aplica');
+  });
+
   it('presenta el estado, fecha y Unidad Ejecutora en formato humano', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.executingUnits.set([{ id: 1, code: 'UE-001', name: 'Unidad Ejecutora Demo', institutionId: 1 }]);

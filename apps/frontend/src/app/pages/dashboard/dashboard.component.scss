@@ -106,10 +106,8 @@
 .read-button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 6px; padding: 6px 10px; border: 0; color: var(--piip-green-800); background: transparent; font-size: 13px; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .read-button mat-icon { width: 18px; height: 18px; font-size: 18px; }
 .notification-state { display: flex; min-height: 76px; align-items: center; justify-content: center; gap: 8px; padding: 16px; color: #65736b; }
-.all-notifications { display: flex; width: 100%; min-height: 44px; align-items: center; justify-content: center; gap: 6px; border: 0; color: var(--piip-green-800); background: #fff; font-weight: 700; cursor: pointer; }
-.all-notifications mat-icon { width: 18px; height: 18px; font-size: 18px; }
 
-.search-clear:focus-visible, .clear-button:focus-visible, .state-panel button:focus-visible, .notification-state button:focus-visible, .secondary-button:focus-visible, .module-link:focus-visible, .distribution-toggle:focus-visible, .notification-tabs button:focus-visible, .read-button:focus-visible, .all-notifications:focus-visible { outline: 3px solid rgba(230, 169, 0, .35); outline-offset: 2px; }
+.search-clear:focus-visible, .clear-button:focus-visible, .state-panel button:focus-visible, .notification-state button:focus-visible, .secondary-button:focus-visible, .module-link:focus-visible, .distribution-toggle:focus-visible, .notification-tabs button:focus-visible, .read-button:focus-visible { outline: 3px solid rgba(230, 169, 0, .35); outline-offset: 2px; }
 .button-spinner { animation: spin 1s linear infinite; }
 
 @keyframes spin { to { transform: rotate(360deg); } }

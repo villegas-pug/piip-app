@@ -41,7 +41,6 @@ export class DashboardComponent implements OnDestroy {
   readonly pageSize = 5;
   readonly query = signal<HomePortfolioQuery>({ executingUnitId: 0, q: '', type: 'Todos', status: 'Todos', page: 0, size: this.pageSize });
   readonly notificationTab = signal<'all' | 'unread'>('all');
-  readonly notificationsExpanded = signal(false);
   readonly statusDistributionExpanded = signal(true);
   readonly activeUnit = computed(() => this.repository.executingUnits().find((unit) => unit.id === this.repository.selectedExecutingUnitId()));
   readonly catalogState = this.repository.catalogs;
@@ -51,7 +50,7 @@ export class DashboardComponent implements OnDestroy {
   readonly unreadNotifications = computed(() => this.allNotifications().filter((item) => !item.read));
   readonly visibleNotifications = computed(() => {
     const values = this.notificationTab() === 'unread' ? this.unreadNotifications() : this.allNotifications();
-    return this.notificationsExpanded() ? values : values.slice(0, 3);
+    return values;
   });
   readonly statusCounts = computed(() => this.repository.homePortfolio().statusCounts);
   readonly maximumStatusCount = computed(() => Math.max(...this.statusCounts().map((item) => item.count), 1));
@@ -94,8 +93,7 @@ export class DashboardComponent implements OnDestroy {
   changePage(page: number): void { this.query.update((current) => ({ ...current, page })); void this.loadPortfolio(); }
   resetFilters(): void { this.query.update((current) => ({ ...current, q: '', type: 'Todos', status: 'Todos', page: 0 })); void this.loadPortfolio(); }
   toggleStatusDistribution(): void { this.statusDistributionExpanded.update((expanded) => !expanded); }
-  toggleNotifications(): void { this.notificationsExpanded.update((expanded) => !expanded); }
-  setNotificationTab(tab: 'all' | 'unread'): void { this.notificationTab.set(tab); this.notificationsExpanded.set(false); }
+  setNotificationTab(tab: 'all' | 'unread'): void { this.notificationTab.set(tab); }
 
   async markAsRead(id: number): Promise<void> {
     try { await Promise.resolve(this.repository.markNotificationRead(id)); }

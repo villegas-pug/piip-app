@@ -142,6 +142,18 @@ describe('ProjectsComponent', () => {
     expect(component.statusVisual('Estado desconocido')).toEqual({ icon: 'circle', tone: 'neutral' });
   });
 
+  it('oculta el código NA y conserva la marca de proyecto preexistente', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const preexisting = repository.projects().find((project) => project.originMode === 'PREEXISTING')!;
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.detectChanges();
+
+    const row = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr')).find((item) => item.textContent?.includes(preexisting.code)) as HTMLElement;
+    const origin = row.querySelector('.origin-value') as HTMLElement;
+    expect(origin.textContent).not.toContain('NA');
+    expect(origin.textContent).toContain('Preexistente');
+  });
+
   it('filtra por código y no ofrece NOT_APPLICABLE', () => {
     const fixture = TestBed.createComponent(ProjectsComponent);
     fixture.componentInstance.filters.patchValue({ status: 'PROJECT_IN_PROGRESS' });
