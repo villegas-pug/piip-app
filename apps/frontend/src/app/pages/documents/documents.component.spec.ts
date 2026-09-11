@@ -66,6 +66,30 @@ describe('DocumentsComponent archivos independientes', () => {
     expect(host.querySelector('[aria-label="Descargar versión 1 de anexo-b-v1.pdf"]')).not.toBeNull();
   });
 
+  it('muestra el nombre de la iniciativa en el banner del expediente de un proyecto derivado', () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        paramMap: of(convertToParamMap({ code: 'P-005-2026' })),
+        data: of({ recordType: 'Proyecto' }),
+        snapshot: {
+          paramMap: convertToParamMap({ code: 'P-005-2026' }),
+          data: { recordType: 'Proyecto' },
+        },
+      },
+    });
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.projects.update((projects) => projects.map((project) => project.code === 'P-005-2026'
+      ? { ...project, originCode: 'I-019-2026', originMode: 'DERIVED_FROM_INITIATIVE' }
+      : project));
+    const fixture = TestBed.createComponent(DocumentsComponent);
+    fixture.detectChanges();
+    const banner = fixture.nativeElement.querySelector('.origin-document-banner') as HTMLElement;
+
+    expect(banner.textContent).toContain('Fortalecimiento de capacidades para la gestión de la innovación agraria');
+    expect(banner.textContent).not.toContain('I-019-2026');
+    expect(banner.querySelector('a[href="/iniciativas/I-019-2026/documentos"]')).not.toBeNull();
+  });
+
   it('distingue Agregar archivo de Nueva versión y conserva un selector de archivo por operación', async () => {
     const repository = TestBed.inject(PiipMockRepository);
     const addFile = vi.spyOn(repository, 'addDocumentFile').mockImplementation(() => Promise.resolve() as unknown as void);

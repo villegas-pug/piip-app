@@ -6,7 +6,7 @@
   } @else if (detail()!.initiative.status.code !== 'INITIATIVE_APPROVED') {
     <article class="panel controlled-state"><mat-icon>block</mat-icon><h2>Iniciativa no habilitada</h2><p>Solo una iniciativa con estado <strong>{{ approvedStatusName() }}</strong> puede originar un proyecto.</p><a class="primary-button" [routerLink]="['/iniciativas', initiativeCode]">Volver al detalle</a></article>
   } @else if (existingProject()) {
-    <article class="panel controlled-state"><mat-icon>account_tree</mat-icon><h2>Proyecto ya registrado</h2><p>{{ initiativeCode }} ya originó el proyecto <strong>{{ existingProject()!.code }}</strong>.</p><a class="primary-button" [routerLink]="['/proyectos', existingProject()!.code, 'documentos']">Ver proyecto derivado</a></article>
+    <article class="panel controlled-state"><mat-icon>account_tree</mat-icon><h2>Proyecto ya registrado</h2><p>{{ detail()!.initiative.name }} ya originó el proyecto <strong>{{ existingProject()!.code }}</strong>.</p><a class="primary-button" [routerLink]="['/proyectos', existingProject()!.code, 'documentos']">Ver proyecto derivado</a></article>
   } @else {
     <div class="section-nav" aria-label="Secciones del registro">
       <button type="button" (click)="scrollTo('origin')"><b>01</b>Origen</button>
@@ -16,7 +16,7 @@
 
     <form [formGroup]="form" (ngSubmit)="openReview()">
       <header class="panel form-hero derived-hero">
-        <div><p>PROYECTO DERIVADO DE INICIATIVA APROBADA</p><h2>Crear proyecto desde {{ initiativeCode }}</h2><span>Los datos comunes han sido precargados. Revísalos y completa la información propia del inicio del proyecto.</span></div>
+        <div><p>PROYECTO DERIVADO DE INICIATIVA APROBADA</p><h2>Crear proyecto desde {{ detail()!.initiative.name }}</h2><span>Los datos comunes han sido precargados. Revísalos y completa la información propia del inicio del proyecto.</span></div>
         <aside><small>Código provisional</small><strong>{{ provisionalCode() }}</strong><span class="status running">{{ initialStatusName() }}</span></aside>
       </header>
 
@@ -44,7 +44,7 @@
           <label class="field span-3"><span>Descripción *</span><textarea formControlName="description"></textarea><small>{{ form.controls.description.value.length }}/1000 caracteres</small></label>
           <label class="field"><span>Objetivo PEI</span><select formControlName="peiObjective"><option value="">Sin selección</option>@for (option of catalogState().value.peiObjectives; track option.id) {<option [value]="option.id">{{ option.name }}</option>}</select></label>
           <label class="field span-2"><span>Actividad POI</span><select formControlName="poiActivity"><option value="">Sin selección</option>@for (option of catalogState().value.poiActivities; track option.id) {<option [value]="option.id">{{ option.name }}</option>}</select></label>
-          @if (inheritedInactive().length) {<p class="error span-2" role="alert">La opción seleccionada ya no está disponible. Elige una opción vigente. Valores heredados: @for (option of inheritedInactive(); track option!.id) {<strong>{{ option!.code }} — {{ option!.name }} (Inactivo)</strong>}</p>}
+          @if (inheritedInactive().length) {<p class="error span-2" role="alert">La opción seleccionada ya no está disponible. Elige una opción vigente. Valores heredados: @for (option of inheritedInactive(); track option!.id) {<strong>{{ option!.name }} (Inactivo)</strong>}</p>}
         </div>
       </article>
 

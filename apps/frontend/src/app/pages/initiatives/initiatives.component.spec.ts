@@ -85,7 +85,7 @@ describe('InitiativesComponent pagination', () => {
     expect(Object.keys(component.filters.getRawValue()).sort()).toEqual(['date', 'search', 'source', 'status', 'unit']);
   });
 
-  it('muestra las siglas de todas las Unidades Orgánicas en orden y oculta el campo legado', () => {
+  it('muestra los nombres de todas las Unidades Orgánicas y conserva las siglas como contexto accesible', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const first = { ...repository.organizationalUnits()[0], id: 101, name: 'Primera Unidad Orgánica', acronym: 'UO1' };
     const second = { ...first, id: 102, name: 'Segunda Unidad Orgánica', acronym: 'UO2' };
@@ -94,9 +94,8 @@ describe('InitiativesComponent pagination', () => {
     fixture.detectChanges();
 
     const cell = (fixture.nativeElement as HTMLElement).querySelector('tbody tr td:nth-child(5)') as HTMLElement;
-    expect(cell.textContent).toContain('UO1');
-    expect(cell.textContent).toContain('UO2');
-    expect(cell.textContent).not.toContain('Primera Unidad Orgánica');
+    expect(cell.textContent).toContain('Primera Unidad Orgánica');
+    expect(cell.textContent).toContain('Segunda Unidad Orgánica');
     expect(cell.textContent).not.toContain('Descripción legado');
     expect(Array.from(cell.querySelectorAll('.unit-chip')).map((chip) => chip.getAttribute('title'))).toEqual([first.name, second.name]);
     expect(Array.from(cell.querySelectorAll('.unit-chip')).map((chip) => chip.getAttribute('aria-label'))).toEqual([

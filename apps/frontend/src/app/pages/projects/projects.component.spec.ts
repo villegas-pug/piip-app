@@ -155,6 +155,25 @@ describe('ProjectsComponent', () => {
     expect(origin.querySelector('.preexisting-badge')).not.toBeNull();
   });
 
+  it('muestra el nombre de la iniciativa de origen y conserva el código solo para la ruta', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    const source = repository.projects().find((project) => project.code === 'P-003-2026')!;
+    repository.projects.update((projects) => projects.map((project) => project.code === source.code
+      ? { ...project, originCode: 'I-019-2026' }
+      : project));
+    const derived = repository.projects().find((project) => project.code === source.code)!;
+    const initiative = repository.initiatives().find((item) => item.code === derived.originCode)!;
+    const fixture = TestBed.createComponent(ProjectsComponent);
+    fixture.detectChanges();
+
+    const row = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr'))
+      .find((item) => item.textContent?.includes(derived.code)) as HTMLElement;
+    const origin = row.querySelector('.origin-value') as HTMLElement;
+    expect(origin.textContent).toContain(initiative.name);
+    expect(origin.textContent).not.toContain(derived.originCode);
+    expect(row.querySelector(`a[href="/proyectos/${derived.code}"]`)).not.toBeNull();
+  });
+
   it('filtra por código y no ofrece NOT_APPLICABLE', () => {
     const fixture = TestBed.createComponent(ProjectsComponent);
     fixture.componentInstance.filters.patchValue({ status: 'PROJECT_IN_PROGRESS' });
@@ -211,7 +230,7 @@ describe('ProjectsComponent', () => {
     expect(Object.keys(fixture.componentInstance.filters.getRawValue()).sort()).toEqual(['digital', 'search', 'status', 'unit']);
   });
 
-  it('muestra las siglas de todas las Unidades Orgánicas en orden y oculta el campo legado', () => {
+  it('muestra los nombres de todas las Unidades Orgánicas y conserva las siglas como contexto accesible', () => {
     const repository = TestBed.inject(PiipMockRepository);
     const first = { ...repository.organizationalUnits()[0], id: 101, name: 'Primera Unidad Orgánica', acronym: 'UO1' };
     const second = { ...first, id: 102, name: 'Segunda Unidad Orgánica', acronym: 'UO2' };
@@ -220,9 +239,8 @@ describe('ProjectsComponent', () => {
     fixture.detectChanges();
 
     const cell = (fixture.nativeElement as HTMLElement).querySelector('tbody tr td:nth-child(4)') as HTMLElement;
-    expect(cell.textContent).toContain('UO1');
-    expect(cell.textContent).toContain('UO2');
-    expect(cell.textContent).not.toContain('Primera Unidad Orgánica');
+    expect(cell.textContent).toContain('Primera Unidad Orgánica');
+    expect(cell.textContent).toContain('Segunda Unidad Orgánica');
     expect(cell.textContent).not.toContain('Descripción legado');
     expect(Array.from(cell.querySelectorAll('.unit-chip')).map((chip) => chip.getAttribute('title'))).toEqual([first.name, second.name]);
     expect(Array.from(cell.querySelectorAll('.unit-chip')).map((chip) => chip.getAttribute('aria-label'))).toEqual([

@@ -8,6 +8,7 @@ describe('DerivedProjectReviewDialogComponent', () => {
   const dialogRef = { close, disableClose: false };
   const data: DerivedProjectReviewDialogData = {
     initiativeCode: 'I-007-2026',
+    initiativeName: 'Iniciativa de innovación agraria',
     projectCode: 'P-005-2026',
     name: 'Agro exportación',
     startDateIso: '2026-08-23',
@@ -44,7 +45,8 @@ describe('DerivedProjectReviewDialogComponent', () => {
     fixture.detectChanges();
     const content = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(content).toContain('I-007-2026');
+    expect(content).toContain('Iniciativa de innovación agraria');
+    expect(content).not.toContain('I-007-2026');
     expect(content).toContain('P-005-2026');
     expect(content).toContain('Solución por definir');
     expect(content).toContain('Unidades Orgánicas Involucradas');

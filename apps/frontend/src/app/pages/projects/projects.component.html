@@ -23,7 +23,7 @@
         </label>
         <label class="filter-field">
           <span class="filter-label">Unidad</span>
-          <span class="filter-control select-control"><select formControlName="unit"><option>Todas</option>@for (unit of units(); track unit.id) {<option [value]="unit.id">{{ unit.acronym || unit.name }}</option>}</select></span>
+          <span class="filter-control select-control"><select formControlName="unit"><option>Todas</option>@for (unit of units(); track unit.id) {<option [value]="unit.id">{{ unit.name }}</option>}</select></span>
         </label>
         <label class="filter-field">
           <span class="filter-label">Componente digital</span>

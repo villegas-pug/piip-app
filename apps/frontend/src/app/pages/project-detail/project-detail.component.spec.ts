@@ -38,6 +38,8 @@ describe('ProjectDetailComponent', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.portfolioRecords.update((records) => records.map((record) => record.code === 'P-005-2026' ? {
       ...record,
+      solutionTypeReference: { id: 1, code: 'SOLUTION-01', name: 'Solución potencial o adaptable', displayOrder: 1, active: true },
+      sourceReference: { id: 2, code: 'INITIATIVE_SHEET', name: 'Fuente amigable', displayOrder: 1, active: true },
       peiObjectiveReference: { id: 20, code: 'PEI-02', name: 'Objetivo del proyecto', displayOrder: 1, active: true },
       poiActivityReference: { id: 30, code: 'POI-02', name: 'Actividad anterior', displayOrder: 1, active: false },
     } : record));
@@ -45,8 +47,14 @@ describe('ProjectDetailComponent', () => {
     fixture.detectChanges();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(text).toContain('PEI-02 — Objetivo del proyecto');
-    expect(text).toContain('POI-02 — Actividad anterior');
+    expect(text).toContain('Objetivo del proyecto');
+    expect(text).toContain('Actividad anterior');
+    expect(text).toContain('Solución potencial o adaptable');
+    expect(text).toContain('Fuente amigable');
+    expect(text).not.toContain('SOLUTION-01');
+    expect(text).not.toContain('INITIATIVE_SHEET');
+    expect(text).not.toContain('PEI-02');
+    expect(text).not.toContain('POI-02');
     expect(text).toContain('Inactivo');
   });
 
@@ -57,6 +65,7 @@ describe('ProjectDetailComponent', () => {
 
     expect(text).not.toContain('NA');
     expect(text).not.toContain('NOT_APPLICABLE');
+    expect(text).not.toContain('INITIATIVE_SHEET');
     expect(text).toContain('No aplica');
     expect(fixture.nativeElement.querySelector('.preexisting-badge')?.textContent).toContain('Preexistente');
   });

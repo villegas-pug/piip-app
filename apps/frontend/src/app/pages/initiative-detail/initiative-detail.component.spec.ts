@@ -126,6 +126,9 @@ describe('InitiativeDetailComponent', () => {
 
     expect(nativeElement.textContent).toContain('Iniciativa aprobada');
     expect(nativeElement.textContent).toContain('acciones de cambio de estado están bloqueadas');
+    expect(nativeElement.textContent).toContain('Plataforma de Innovación Agraria Sostenible');
+    expect(nativeElement.textContent).not.toContain('Ver proyecto P-003-2026');
+    expect(nativeElement.querySelector('a[href="/proyectos/P-003-2026"]')).not.toBeNull();
     expect(nativeElement.querySelector('.hero-actions button')).toBeNull();
     expect(nativeElement.textContent).not.toContain('Registrar aprobación');
   });

@@ -15,7 +15,7 @@
         @if (canAdministerRecord() && detail.initiative.status.code === 'PRESENTED' && !detail.derivedProject) {<button class="primary-button" type="button" (click)="openApproval()"><mat-icon aria-hidden="true">verified</mat-icon>Registrar aprobación</button>}
         @if (canAdministerRecord() && initiativeTransitionOptions().length && !detail.derivedProject) {<button class="secondary-button" type="button" (click)="openStatusDialog()"><mat-icon aria-hidden="true">swap_horiz</mat-icon>Cambiar estado</button>}
         @if (canAdministerRecord() && detail.initiative.status.code === 'INITIATIVE_APPROVED') {
-          @if (detail.derivedProject; as project) {<a class="primary-button" [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon aria-hidden="true">account_tree</mat-icon>Ver proyecto {{ project.code }}</a>} @else {<a class="primary-button gold" [routerLink]="['/proyectos/nuevo/derivado', detail.initiative.code]"><mat-icon aria-hidden="true">account_tree</mat-icon>Crear proyecto</a>}
+          @if (detail.derivedProject; as project) {<a class="primary-button" [routerLink]="['/proyectos', project.code, 'documentos']"><mat-icon aria-hidden="true">account_tree</mat-icon>Ver proyecto: {{ project.name }}</a>} @else {<a class="primary-button gold" [routerLink]="['/proyectos/nuevo/derivado', detail.initiative.code]"><mat-icon aria-hidden="true">account_tree</mat-icon>Crear proyecto</a>}
         }
       </div>
     </header>
@@ -82,7 +82,7 @@
         <article class="panel detail-card relation-card">
           <header class="card-header"><span class="card-icon"><mat-icon aria-hidden="true">account_tree</mat-icon></span><div><h3>Proyecto derivado</h3><p>Trazabilidad con el proyecto originado.</p></div></header>
           @if (detail.derivedProject; as project) {
-            <a class="derived-project-code" [routerLink]="['/proyectos', project.code]" [attr.aria-label]="'Ver proyecto ' + project.code">{{ project.name }}</a>
+            <a class="derived-project-code" [routerLink]="['/proyectos', project.code]" [attr.aria-label]="'Ver proyecto: ' + project.name">{{ project.name }}</a>
             <span class="status-tag" [attr.data-tone]="derivedProjectStatusVisual(project.status.code ?? '').tone"><mat-icon aria-hidden="true">{{ derivedProjectStatusVisual(project.status.code ?? '').icon }}</mat-icon><span>{{ statusName(project.status) }}</span>@if (project.status.active === false) {<small>Inactivo</small>}</span>
             <p class="linked-project-lock" role="status"><mat-icon aria-hidden="true">lock</mat-icon><span>Las acciones de cambio de estado están bloqueadas porque ya existe un proyecto vinculado.</span></p>
           } @else if (detail.initiative.status.code === 'INITIATIVE_APPROVED') {

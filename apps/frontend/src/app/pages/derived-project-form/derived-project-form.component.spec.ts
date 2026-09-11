@@ -69,7 +69,7 @@ describe('DerivedProjectFormComponent', () => {
     repository.portfolioRecords.set([...repository.portfolioRecords(), portfolioRecord]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Crear proyecto desde I-019-2026');
+    expect(fixture.nativeElement.textContent).toContain('Crear proyecto desde Fortalecimiento de capacidades para la gestión de la innovación agraria');
     expect(fixture.componentInstance.form.controls.name.value).toBe(portfolioRecord.name);
     expect(fixture.componentInstance.responsibleUnitIds()).toEqual(portfolioRecord.responsibleUnitReferences?.map((unit) => unit.id));
   });
@@ -125,6 +125,7 @@ describe('DerivedProjectFormComponent', () => {
       panelClass: 'derived-project-review-dialog-panel',
     }));
     expect(config.data).toEqual(expect.objectContaining({
+      initiativeName: 'Fortalecimiento de capacidades para la gestión de la innovación agraria',
       solutionType: solutionType.name,
       source: source.name,
       organizationalUnits: [unit],

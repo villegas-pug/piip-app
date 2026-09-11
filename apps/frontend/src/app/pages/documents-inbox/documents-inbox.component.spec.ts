@@ -78,8 +78,8 @@ describe('DocumentsInboxComponent', () => {
     fixture.detectChanges();
 
     const cell = (fixture.nativeElement as HTMLElement).querySelector('tbody tr td:nth-child(4)') as HTMLElement;
-    expect(cell.textContent).toContain('UO');
-    expect(cell.textContent).toContain('UO2');
+    expect(cell.textContent).toContain(firstUnit.name);
+    expect(cell.textContent).toContain(secondUnit.name);
     expect(cell.textContent).not.toContain('1 ·');
     expect(cell.textContent).not.toContain('2 ·');
     expect(cell.textContent).not.toContain('Unidad Ejecutora legada');

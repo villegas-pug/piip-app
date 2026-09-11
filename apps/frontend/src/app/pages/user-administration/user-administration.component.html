@@ -6,7 +6,7 @@
 
   <section class="administration-summary" aria-label="Cobertura de la administración de usuarios">
     @if (activeAdministratorUnit(); as activeUnit) {
-      <div><mat-icon>account_balance</mat-icon><strong>UE activa: {{ activeUnit.code }}</strong></div>
+      <div><mat-icon>account_balance</mat-icon><strong>UE activa: {{ activeUnit.name || activeUnit.code }}</strong></div>
     }
     <div><mat-icon>verified_user</mat-icon><strong>Cobertura: {{ administrableInstitutions().length === 1 ? administrableInstitutions()[0].name + ' completa' : 'Instituciones administrables' }}</strong></div>
     <a href="#coverage-help">¿Cómo funciona este acceso?</a>

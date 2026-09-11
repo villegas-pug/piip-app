@@ -26,8 +26,11 @@ describe('ProjectRegistrationDialogComponent', () => {
   it('shows only eligible initiatives and searches all visible metadata', () => {
     const fixture = TestBed.createComponent(ProjectRegistrationDialogComponent);
     const component = fixture.componentInstance;
+    fixture.detectChanges();
 
     expect(component.eligibleInitiatives().map((initiative) => initiative.code)).toEqual(['I-019-2026']);
+    expect(fixture.nativeElement.textContent).toContain('Fortalecimiento de capacidades para la gestión de la innovación agraria');
+    expect(fixture.nativeElement.textContent).not.toContain('I-019-2026');
 
     for (const searchTerm of ['I-019', 'Fortalecimiento', 'DIPNA', 'Carlos Rojas']) {
       component.searchControl.setValue(searchTerm);
@@ -46,6 +49,8 @@ describe('ProjectRegistrationDialogComponent', () => {
     expect(close).not.toHaveBeenCalled();
 
     component.selectInitiative('I-019-2026');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Fortalecimiento de capacidades para la gestión de la innovación agraria');
     component.continueWithInitiative();
 
     expect(close).toHaveBeenCalledWith({ mode: 'DERIVED_FROM_INITIATIVE', initiativeCode: 'I-019-2026' });

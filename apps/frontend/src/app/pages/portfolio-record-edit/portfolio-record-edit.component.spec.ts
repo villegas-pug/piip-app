@@ -14,6 +14,18 @@ describe('PortfolioRecordEditComponent', () => {
     const { repository } = await setup();
     expect(repository.getInitiativeDetail('I-024-2026')?.portfolioRecord.status).toMatchObject({ code: 'PRESENTED', name: expect.any(String), active: true });
   });
+
+  it('muestra el nombre de la iniciativa de origen en los datos protegidos del proyecto', async () => {
+    const { fixture, repository } = await setup('Proyecto', 'P-005-2026', (repository) => {
+      repository.projects.update((projects) => projects.map((project) => project.code === 'P-005-2026'
+        ? { ...project, originCode: 'I-019-2026', originMode: 'DERIVED_FROM_INITIATIVE' }
+        : project));
+    });
+    const metadata = fixture.nativeElement.querySelector('.metadata-grid') as HTMLElement;
+
+    expect(metadata.textContent).toContain('Fortalecimiento de capacidades para la gestión de la innovación agraria');
+    expect(metadata.textContent).not.toContain('I-019-2026');
+  });
   async function setup(
     recordType: PiipRecordType = 'Iniciativa',
     code = 'I-024-2026',
@@ -519,7 +531,9 @@ describe('PortfolioRecordEditComponent', () => {
     const host = fixture.nativeElement as HTMLElement;
     const historical = Array.from(host.querySelectorAll<HTMLOptionElement>('select[formcontrolname="solutionTypeId"] option'))
       .find((option) => option.value === '1');
+    const historicalCode = repository.catalogs().value.solutionTypes.find((option) => option.id === 1)!.code;
     expect(historical?.textContent).toContain('Histórico');
+    expect(historical?.textContent).not.toContain(historicalCode);
     expect(historical?.disabled).toBe(false);
     const unrelatedHistorical = Array.from(host.querySelectorAll<HTMLOptionElement>('select[formcontrolname="solutionTypeId"] option'))
       .find((option) => option.value === '99');
