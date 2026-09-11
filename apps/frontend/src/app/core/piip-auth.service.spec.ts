@@ -54,7 +54,7 @@ describe('PiipAuthService', () => {
       onLoad: 'check-sso',
       flow: 'standard',
       pkceMethod: 'S256',
-      checkLoginIframe: true,
+      checkLoginIframe: false,
     });
     expect(auth.ready()).toBe(true);
     expect(auth.authenticated()).toBe(true);

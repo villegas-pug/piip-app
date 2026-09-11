@@ -58,7 +58,7 @@ export class PiipAuthService {
         onLoad: 'check-sso',
         flow: 'standard',
         pkceMethod: 'S256',
-        checkLoginIframe: true,
+        checkLoginIframe: false,
       });
 
       this.authenticated.set(authenticated);
