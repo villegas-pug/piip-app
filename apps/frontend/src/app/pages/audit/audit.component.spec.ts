@@ -71,6 +71,23 @@ describe('AuditComponent', () => {
     expect(reasons).toEqual(['info_outline/admin/users: FORBIDDEN_SCOPE', 'info_outline/admin/users: Motivo no disponible']);
   });
 
+  it('muestra solo los nombres de estado en el historial visible', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.auditEvents.set([{
+      recordCode: 'P-005-2026', timestamp: '28/07/2026', event: 'ESTADO_PROYECTO_CAMBIADO', user: 'Administrador PIIP', email: '',
+      observation: '{"estadoAnterior":"Proyecto en ejecución","estadoNuevo":"Producto aprobado"}',
+      previousStatus: { code: 'PROJECT_IN_PROGRESS', name: 'Proyecto en ejecución', active: true },
+      newStatus: { code: 'PRODUCT_APPROVED', name: 'Producto aprobado', active: true }, icon: 'swap_horiz',
+    }]);
+    const fixture = TestBed.createComponent(AuditComponent);
+    fixture.detectChanges();
+
+    const observation = fixture.nativeElement.querySelector('.audit-observation') as HTMLElement;
+    expect(observation.textContent).toContain('Proyecto en ejecución → Producto aprobado');
+    expect(observation.textContent).not.toContain('PROJECT_IN_PROGRESS');
+    expect(observation.textContent).not.toContain('PRODUCT_APPROVED');
+  });
+
   it('filtra y presenta los metadatos técnicos de acceso por expediente', () => {
     const repository = TestBed.inject(PiipMockRepository);
     repository.auditAccesses.set([

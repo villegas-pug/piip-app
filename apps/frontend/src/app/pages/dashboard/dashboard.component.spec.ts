@@ -199,6 +199,18 @@ describe('DashboardComponent', () => {
     expect(repository.notifications()[0]!.type).toBe('TAREA_CREADA');
   });
 
+  it('presenta el nombre del estado en los mensajes de notificación y conserva el código del expediente', () => {
+    const repository = TestBed.inject(PiipMockRepository);
+    repository.notifications.update((items) => [{ ...items[0]!, message: 'I-024-2026 cambió a PRODUCT_APPROVED.' }]);
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+
+    const message = (fixture.nativeElement.querySelector('.notification-copy p') as HTMLElement).textContent;
+    expect(message).toContain('I-024-2026');
+    expect(message).toContain('Producto aprobado');
+    expect(message).not.toContain('PRODUCT_APPROVED');
+  });
+
   it('limpia únicamente la búsqueda y conserva el debounce de 300 ms', () => {
     vi.useFakeTimers();
     try {

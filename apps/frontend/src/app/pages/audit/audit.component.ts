@@ -5,7 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
-import { AuditAccess, AuditEvent } from '../../core/piip.models';
+import { AuditAccess, AuditEvent, PortfolioStatusReference } from '../../core/piip.models';
 import { AuditEventDetailDialogComponent } from './audit-event-detail-dialog.component';
 import { PresentedAuditEvent, presentAuditEvent } from './audit-event.presenter';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
@@ -72,6 +72,10 @@ export class AuditComponent {
     if (!access.occurredAt) return 'Fecha no registrada';
     const date = new Date(access.occurredAt);
     return Number.isNaN(date.getTime()) ? 'Fecha no registrada' : date.toLocaleString('es-PE');
+  }
+
+  statusName(status: PortfolioStatusReference | undefined): string {
+    return status?.name?.trim() || 'Estado no disponible';
   }
 
   private eventCategory(event: string): 'Creación' | 'Documento' | 'Transición' {

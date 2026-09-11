@@ -24,7 +24,7 @@
               <span class="audit-record" data-label="Expediente">{{ event.source.recordCode ?? '—' }}</span>
               <strong class="event-name" data-label="Evento">{{ event.eventLabel }}</strong>
               <span class="audit-user" data-label="Usuario">{{ event.source.user }}@if (event.source.email) {<small>{{ event.source.email }}</small>}</span>
-                <span class="audit-observation" data-label="Observación">{{ event.observation }}@if (event.previousStatus && event.newStatus) {<small>{{ event.previousStatus.code }} · {{ event.previousStatus.name }} → {{ event.newStatus.code }} · {{ event.newStatus.name }}</small>} @else if (event.status) {<small>{{ event.status.code }} · {{ event.status.name }}</small>}</span>
+                <span class="audit-observation" data-label="Observación">{{ event.observation }}@if (event.previousStatus && event.newStatus) {<small>{{ statusName(event.previousStatus) }} → {{ statusName(event.newStatus) }}</small>} @else if (event.status) {<small>{{ statusName(event.status) }}</small>}</span>
               <span class="audit-document" data-label="Documento">@if (event.documentName) {<span class="document-link"><mat-icon>description</mat-icon>{{ event.documentName }}</span>} @else {—}</span>
               <button class="secondary-button" type="button" (click)="showDetail(event)">Ver detalle <mat-icon>chevron_right</mat-icon></button>
             </div>
@@ -38,7 +38,7 @@
         <div class="verification"><span>Accesos registrados</span><strong><mat-icon>visibility</mat-icon>{{ repository.auditAccesses().length }}</strong></div>
         <p>Resumen de las últimas llamadas registradas por la auditoría de acceso.</p>
         <h3>Controles visibles</h3>
-        <ul><li><mat-icon>check_circle_outline</mat-icon>{{ deniedAccesses() }} accesos denegados</li><li><mat-icon>check_circle_outline</mat-icon>{{ failedAccesses() }} errores de servidor</li><li><mat-icon>check_circle_outline</mat-icon>Correlation ID por solicitud</li><li><mat-icon>check_circle_outline</mat-icon>Duración y código HTTP</li></ul>
+        <ul><li><mat-icon>check_circle_outline</mat-icon>{{ deniedAccesses() }} accesos denegados</li><li><mat-icon>check_circle_outline</mat-icon>{{ failedAccesses() }} errores de servidor</li><li><mat-icon>check_circle_outline</mat-icon>Identificador de correlación por solicitud</li><li><mat-icon>check_circle_outline</mat-icon>Duración y código HTTP</li></ul>
         @if (deniedAccessDetails().length) {
           <h3>Motivo seguro de accesos denegados</h3>
           <ul class="access-reasons">
@@ -59,7 +59,7 @@
       <div class="access-table-wrapper">
         <table class="access-table">
           <caption class="visually-hidden">Solicitudes HTTP auditadas</caption>
-          <thead><tr><th scope="col">Fecha y hora</th><th scope="col">Expediente</th><th scope="col">Método</th><th scope="col">Ruta</th><th scope="col">HTTP</th><th scope="col">Correlation ID</th><th scope="col">Duración</th></tr></thead>
+          <thead><tr><th scope="col">Fecha y hora</th><th scope="col">Expediente</th><th scope="col">Método</th><th scope="col">Ruta</th><th scope="col">Código HTTP</th><th scope="col">Identificador de correlación</th><th scope="col">Duración</th></tr></thead>
           <tbody>
             @for (access of filteredAccesses(); track access.correlationId) {
               <tr>
@@ -67,8 +67,8 @@
                 <td data-label="Expediente">{{ access.recordCode || '—' }}</td>
                 <td data-label="Método"><code>{{ access.method }}</code></td>
                 <td class="access-path" data-label="Ruta"><code>{{ access.path }}</code></td>
-                <td data-label="HTTP"><span class="http-status" [attr.data-status]="access.status">{{ access.status }}</span></td>
-                <td class="access-correlation" data-label="Correlation ID"><code>{{ access.correlationId }}</code></td>
+                <td data-label="Código HTTP"><span class="http-status" [attr.data-status]="access.status">{{ access.status }}</span></td>
+                <td class="access-correlation" data-label="Identificador de correlación"><code>{{ access.correlationId }}</code></td>
                 <td data-label="Duración">{{ access.durationMs }} ms</td>
               </tr>
             } @empty {

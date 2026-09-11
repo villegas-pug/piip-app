@@ -32,6 +32,15 @@ export const PROJECT_STATUS_TRANSITIONS: Readonly<Partial<Record<ProjectStatus, 
   FINISHED: [],
 };
 
+/** Códigos canónicos que pueden aparecer en mensajes funcionales provenientes del backend. */
+const PIIP_STATUS_CODES: readonly PiipStatus[] = [
+  'PRESENTED', 'INITIATIVE_APPROVED', 'INITIATIVE_ARCHIVED', 'PROJECT_IN_PROGRESS',
+  'PRODUCT_APPROVED', 'PRODUCT_NOT_APPROVED', 'SUSPENDED', 'CANCELLED', 'FINISHED',
+  'NOT_APPLICABLE', 'NOT_ADMISSIBLE',
+];
+
+const PIIP_STATUS_CODE_PATTERN = new RegExp(`\\b(${PIIP_STATUS_CODES.join('|')})\\b`, 'g');
+
 /** Opciones activas del catálogo filtradas por aplicabilidad al tipo de registro. */
 export function applicableStatusOptions(
   statuses: readonly PortfolioStatusOption[],
@@ -49,4 +58,11 @@ export function statusDisplayName(status: PortfolioStatusReference | undefined):
 export function resolveStatusName(statuses: readonly PortfolioStatusOption[], code: string | undefined): string {
   if (!code) return 'Sin información';
   return statuses.find((option) => option.code === code)?.name ?? code;
+}
+
+/** Sustituye códigos de estado conocidos por su denominación del catálogo sin tocar códigos de expedientes. */
+export function presentNotificationMessage(message: string, statuses: readonly PortfolioStatusOption[]): string {
+  if (!message) return message;
+  const names = new Map(statuses.map((option) => [option.code, option.name.trim() || 'Estado no disponible']));
+  return message.replace(PIIP_STATUS_CODE_PATTERN, (code) => names.get(code) ?? 'Estado no disponible');
 }

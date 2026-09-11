@@ -3,7 +3,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { PIIP_REPOSITORY } from '../../core/piip-repository.token';
 import { HomePortfolioQuery, PiipRecordType, PiipStatus, PortfolioStatusOption, PortfolioStatusReference } from '../../core/piip.models';
-import { statusDisplayName } from '../../core/piip.catalogs';
+import { presentNotificationMessage, statusDisplayName } from '../../core/piip.catalogs';
 import { PiipPaginationComponent } from '../../shared/pagination/piip-pagination.component';
 
 type StatusTone = 'pending' | 'success' | 'progress' | 'neutral' | 'warning' | 'danger';
@@ -108,6 +108,9 @@ export class DashboardComponent implements OnDestroy {
     if (!/^[A-Z0-9_]+$/.test(type)) return type;
     const normalized = type.toLocaleLowerCase('es-PE').replaceAll('_', ' ');
     return normalized.charAt(0).toLocaleUpperCase('es-PE') + normalized.slice(1);
+  }
+  notificationMessage(message: string): string {
+    return presentNotificationMessage(message, this.catalogState().value.portfolioStatuses);
   }
   formatNotificationDate(value: string): string {
     const date = new Date(value);
