@@ -1,0 +1,36 @@
+<section class="organization-admin-page" aria-labelledby="executing-units-title">
+  <header class="page-header">
+    <div><p>ADMINISTRACIÓN INSTITUCIONAL</p><h2 id="executing-units-title">Unidades Ejecutoras</h2><span>Gestiona las Unidades Ejecutoras de una institución autorizada. El código y las fechas los asigna el backend.</span></div>
+    <button mat-flat-button type="button" [disabled]="!canList() || pending()" (click)="openCreate()"><mat-icon>add</mat-icon>Nueva Unidad Ejecutora</button>
+  </header>
+
+  <p class="sr-only" role="status" aria-live="polite">{{ liveMessage() }}</p>
+  @if (institutions().length > 1) {
+    <section class="context-card" aria-labelledby="institution-selector-title">
+      <label for="institution-selector" id="institution-selector-title">Institución administrable</label>
+      <select id="institution-selector" [value]="selectedInstitutionId() ?? ''" (change)="selectInstitution($any($event.target).value)">
+        <option value="">Selecciona una institución</option>
+        @for (institution of institutions(); track institution.id) { <option [value]="institution.id">{{ institution.code }} · {{ institution.name }}</option> }
+      </select>
+    </section>
+  } @else if (selectedInstitution(); as institution) {
+    <section class="context-card readonly-context" aria-label="Institución heredada"><mat-icon aria-hidden="true">account_balance</mat-icon><span><small>Institución</small><strong>{{ institution.code }} · {{ institution.name }}</strong></span></section>
+  }
+
+  @if (loading()) { <div class="state" role="status" aria-busy="true"><mat-spinner diameter="32" /><span>Consultando Unidades Ejecutoras...</span></div> }
+  @else if (error()) { <div class="state error" role="alert"><mat-icon>lock</mat-icon><span>{{ error() }}</span><button mat-button type="button" (click)="load()">Reintentar</button></div> }
+  @else if (!canList()) { <div class="state empty" role="status"><mat-icon>account_balance</mat-icon><strong>Selecciona una institución</strong><span>Necesitas elegir una institución autorizada para consultar sus Unidades Ejecutoras.</span></div> }
+  @else {
+    <div class="table-card">
+      <table>
+        <caption>Unidades Ejecutoras activas e inactivas de la institución seleccionada</caption>
+        <thead><tr><th scope="col">Código</th><th scope="col">Nombre</th><th scope="col">Orden</th><th scope="col">Registro</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead>
+        <tbody>
+          @for (unit of units(); track unit.id) {
+            <tr><th scope="row">{{ unit.code }}</th><td>{{ unit.name }}</td><td>{{ unit.displayOrder }}</td><td>{{ unit.registeredAt | date:'short' }}</td><td><span class="status" [class.inactive]="!unit.active">{{ unit.active ? 'Activa' : 'Inactiva' }}</span></td><td class="actions"><button mat-button type="button" [disabled]="pending()" (click)="openEdit(unit)"><mat-icon>edit</mat-icon>Editar</button><button mat-button type="button" [disabled]="pending()" (click)="openOrganizationalUnits(unit)"><mat-icon>account_tree</mat-icon>UO</button><button mat-button type="button" [disabled]="pending()" (click)="changeState(unit)"><mat-icon>{{ unit.active ? 'pause_circle' : 'play_circle' }}</mat-icon>{{ unit.active ? 'Desactivar' : 'Reactivar' }}</button></td></tr>
+          } @empty { <tr><td colspan="6"><div class="empty-row" role="status"><mat-icon>domain_disabled</mat-icon>No hay Unidades Ejecutoras en esta institución.</div></td></tr> }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

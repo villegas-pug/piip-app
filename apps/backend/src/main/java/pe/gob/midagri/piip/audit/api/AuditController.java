@@ -27,13 +27,19 @@ public class AuditController {
     }
 
     @GetMapping(value = "/events", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<EventResponse> events(@RequestParam(value = "executingUnitId", required = false) Long executingUnitId) {
-        return service.events(executingUnitId).stream().map(AuditController::toEventResponse).toList();
+    public List<EventResponse> events(@RequestParam(value = "entityType", required = false) String entityType,
+            @RequestParam(value = "entityId", required = false) Long entityId,
+            @RequestParam(value = "institutionId", required = false) Long institutionId,
+            @RequestParam(value = "executingUnitId", required = false) Long executingUnitId,
+            @RequestParam(value = "organizationalUnitId", required = false) Long organizationalUnitId) {
+        return service.events(entityType, entityId, institutionId, executingUnitId, organizationalUnitId).stream()
+            .map(AuditController::toEventResponse).toList();
     }
 
     static EventResponse toEventResponse(AuditReadModels.EventView event) {
         return new EventResponse(event.event(), event.entityCode(), event.detail(), event.actor(), event.actorName(),
-            event.actorEmail(), event.occurredAt(), event.status(), event.previousStatus(), event.newStatus());
+            event.actorEmail(), event.occurredAt(), event.status(), event.previousStatus(), event.newStatus(), event.entityType(),
+            event.entityId(), event.institutionId(), event.executingUnitId(), event.organizationalUnitId());
     }
 
     public record AccessResponse(String subject, String roles, String method, String path, int status,
@@ -43,5 +49,6 @@ public class AuditController {
     public record EventResponse(String event, String entityCode, String detail, String actor, String actorName,
             String actorEmail, Instant occurredAt,
             PortfolioStatusReferenceResponse status, PortfolioStatusReferenceResponse previousStatus,
-            PortfolioStatusReferenceResponse newStatus) {}
+            PortfolioStatusReferenceResponse newStatus, String entityType, Long entityId,
+            Long institutionId, Long executingUnitId, Long organizationalUnitId) {}
 }

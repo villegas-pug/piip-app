@@ -1,0 +1,13 @@
+<section class="organization-admin-page" aria-labelledby="organizational-units-title">
+  <a class="back-link" routerLink="/administracion/unidades-ejecutoras"><mat-icon>arrow_back</mat-icon>Volver a Unidades Ejecutoras</a>
+  <header class="page-header"><div><p>ADMINISTRACIÓN ORGANIZACIONAL</p><h2 id="organizational-units-title">Unidades Orgánicas</h2><span>Administra las Unidades Orgánicas de la Unidad Ejecutora seleccionada. Esta experiencia no usa jerarquías internas.</span></div><button mat-flat-button type="button" [disabled]="!hasContext() || pending()" (click)="openCreate()"><mat-icon>add</mat-icon>Nueva Unidad Orgánica</button></header>
+  <p class="sr-only" role="status" aria-live="polite">{{ liveMessage() }}</p>
+  @if (executingUnit(); as unit) { <section class="context-card" aria-label="Unidad Ejecutora heredada"><mat-icon>account_balance</mat-icon><span><small>Unidad Ejecutora · contexto heredado</small><strong>{{ unit.code }} · {{ unit.name }}</strong><em>{{ unit.institution.code }} · {{ unit.institution.name }}</em></span></section> }
+  @if (loading()) { <div class="state" role="status" aria-busy="true"><mat-spinner diameter="32" /><span>Consultando Unidades Orgánicas...</span></div> }
+  @else if (error()) { <div class="state error" role="alert"><mat-icon>lock</mat-icon><span>{{ error() }}</span><button mat-button type="button" (click)="load()">Reintentar</button></div> }
+  @else {
+    <div class="table-card"><table><caption>Unidades Orgánicas activas e inactivas de la Unidad Ejecutora</caption><thead><tr><th scope="col">Código</th><th scope="col">Nombre</th><th scope="col">Sigla</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead><tbody>
+      @for (unit of units(); track unit.id) { <tr><th scope="row">{{ unit.code }}</th><td>{{ unit.name }}</td><td>{{ unit.acronym }}</td><td><span class="status" [class.inactive]="!unit.active">{{ unit.active ? 'Activa' : 'Inactiva' }}</span></td><td class="actions"><button mat-button type="button" [disabled]="pending()" (click)="openEdit(unit)"><mat-icon>edit</mat-icon>Editar</button><button mat-button type="button" [disabled]="pending()" (click)="changeState(unit)"><mat-icon>{{ unit.active ? 'pause_circle' : 'play_circle' }}</mat-icon>{{ unit.active ? 'Desactivar' : 'Reactivar' }}</button></td></tr> } @empty { <tr><td colspan="5"><div class="empty-row" role="status"><mat-icon>account_tree</mat-icon>No hay Unidades Orgánicas en esta Unidad Ejecutora.</div></td></tr> }
+    </tbody></table></div>
+  }
+</section>

@@ -161,9 +161,8 @@ public class TestResetCoordinator implements ApplicationRunner {
 
     /**
      * Postvalidación de las Unidades Orgánicas sintéticas (FR-027/FR-030): por cada unidad cargada,
-     * código y nombre no vacíos, sigla no vacía y asociación correcta con su Unidad Ejecutora (el
-     * código de la unidad lleva como prefijo el código de la Unidad Ejecutora, convención del seed
-     * versionado); por cada Unidad Ejecutora sintética, al menos dos unidades activas y sin códigos
+     * código UO-xxx y nombre no vacíos, sigla no vacía y asociación correcta con su Unidad Ejecutora;
+     * por cada Unidad Ejecutora sintética, fechas y orden válidos, al menos dos unidades activas y sin códigos
      * duplicados dentro de ella. Recorre por Unidad Ejecutora para no navegar relaciones lazy fuera
      * de transacción. Cualquier fallo deja la inicialización incompleta (fail-safe).
      */
@@ -172,11 +171,15 @@ public class TestResetCoordinator implements ApplicationRunner {
         for (ExecutingUnitEntity executingUnit : syntheticExecutingUnits) {
             Set<String> codes = new HashSet<>();
             int activeCount = 0;
+            if (executingUnit.getDisplayOrder() < 0 || executingUnit.getRegisteredAt() == null
+                    || executingUnit.getActivatedAt() == null || !executingUnit.getRegisteredAt().equals(executingUnit.getActivatedAt()))
+                throw new IllegalStateException("La Unidad Ejecutora sintética " + executingUnit.getCode()
+                    + " tiene orden o fechas funcionales inválidos");
             for (OrganizationalUnitEntity unit : unitsOfExecutingUnit.apply(executingUnit.getId())) {
                 if (unit.getCode() == null || unit.getCode().isBlank())
                     throw new IllegalStateException("La Unidad Orgánica sintética de la Unidad Ejecutora "
                         + executingUnit.getCode() + " tiene el código vacío");
-                if (!codes.add(unit.getCode()))
+                if (!codes.add(unit.getCode().toUpperCase(Locale.ROOT)))
                     throw new IllegalStateException("La Unidad Orgánica sintética " + unit.getCode()
                         + " está duplicada en la Unidad Ejecutora " + executingUnit.getCode());
                 if (unit.getName() == null || unit.getName().isBlank())
@@ -185,7 +188,10 @@ public class TestResetCoordinator implements ApplicationRunner {
                 if (unit.getAcronym() == null || unit.getAcronym().isBlank())
                     throw new IllegalStateException("La Unidad Orgánica sintética " + unit.getCode()
                         + " no tiene sigla registrada");
-                if (!unit.getCode().startsWith(executingUnit.getCode() + "-"))
+                if (!unit.getCode().matches("(?i)^UO-\\d{3}$"))
+                    throw new IllegalStateException("La Unidad Orgánica sintética " + unit.getCode()
+                        + " no cumple el formato UO-xxx esperado");
+                if (unit.getExecutingUnit() == null || !unit.getExecutingUnit().getId().equals(executingUnit.getId()))
                     throw new IllegalStateException("La Unidad Orgánica sintética " + unit.getCode()
                         + " no pertenece a la Unidad Ejecutora esperada " + executingUnit.getCode());
                 if (unit.isActive()) activeCount++;

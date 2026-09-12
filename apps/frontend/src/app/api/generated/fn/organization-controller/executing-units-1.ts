@@ -9,11 +9,11 @@ import { RequestBuilder } from '../../request-builder';
 
 import { ExecutingUnitResponse } from '../../models/executing-unit-response';
 
-export interface ExecutingUnits$Params {
+export interface ExecutingUnits1$Params {
 }
 
-export function executingUnits(http: HttpClient, rootUrl: string, params?: ExecutingUnits$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<ExecutingUnitResponse>>> {
-  const rb = new RequestBuilder(rootUrl, executingUnits.PATH, 'get');
+export function executingUnits1(http: HttpClient, rootUrl: string, params?: ExecutingUnits1$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<ExecutingUnitResponse>>> {
+  const rb = new RequestBuilder(rootUrl, executingUnits1.PATH, 'get');
   if (params) {
   }
 
@@ -27,4 +27,4 @@ export function executingUnits(http: HttpClient, rootUrl: string, params?: Execu
   );
 }
 
-executingUnits.PATH = '/executing-units';
+executingUnits1.PATH = '/executing-units';

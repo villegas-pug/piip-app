@@ -1,0 +1,20 @@
+<section class="organization-form-page" aria-labelledby="executing-unit-form-title">
+  <a class="back-link" routerLink="/administracion/unidades-ejecutoras"><mat-icon>arrow_back</mat-icon>Volver a Unidades Ejecutoras</a>
+  <header class="form-header"><div><p>ADMINISTRACIÓN INSTITUCIONAL</p><h2 id="executing-unit-form-title">{{ editing() ? 'Editar Unidad Ejecutora' : 'Nueva Unidad Ejecutora' }}</h2><span>La institución, el código y las fechas son datos heredados o asignados por el backend.</span></div></header>
+  <p class="sr-only" role="status" aria-live="polite">{{ liveMessage() }}</p>
+  @if (loading()) { <div class="state" role="status" aria-busy="true">Cargando contexto...</div> }
+  @else {
+    @if (error()) { <div class="form-alert" role="alert"><mat-icon>error_outline</mat-icon><span>{{ error() }}</span>@if (error().includes('borrador')) { <button mat-button type="button" (click)="reloadCurrent()">Recargar versión</button> }</div> }
+    <form [formGroup]="form" (ngSubmit)="save()" [attr.aria-busy]="saving()">
+      <div class="context-grid">
+        <label class="field readonly"><span>Institución</span><input formControlName="institution" readonly /></label>
+        <label class="field readonly"><span>Código</span><input formControlName="code" readonly placeholder="Se asignará al registrar" /></label>
+        <label class="field readonly"><span>Versión</span><input formControlName="version" readonly placeholder="Se asignará al registrar" /></label>
+        <label class="field readonly"><span>Fecha de registro</span><input formControlName="registeredAt" readonly placeholder="Asignada por el backend" /></label>
+        <label class="field readonly"><span>Fecha de activación</span><input formControlName="activatedAt" readonly placeholder="Asignada por el backend" /></label>
+      </div>
+      <div class="form-card"><label class="field"><span>Nombre *</span><input formControlName="name" maxlength="180" [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid ? 'true' : null" />@if (form.controls.name.touched && form.controls.name.invalid) { <small class="error">Ingresa un nombre válido.</small> }</label><label class="field"><span>Orden de presentación {{ editing() ? '*' : '(opcional)' }}</span><input type="number" min="0" step="1" formControlName="displayOrder" [attr.aria-describedby]="'order-help'" /> <small id="order-help">Solo ordena el listado; no representa jerarquía.</small>@if (form.controls.displayOrder.touched && form.controls.displayOrder.invalid) { <small class="error">Ingresa un entero no negativo.</small> }</label></div>
+      <footer class="form-actions"><button mat-button type="button" routerLink="/administracion/unidades-ejecutoras" [disabled]="saving()">Cancelar</button><button mat-flat-button type="submit" [disabled]="saving()" [attr.aria-busy]="saving()">{{ saving() ? 'Guardando...' : 'Guardar' }}</button></footer>
+    </form>
+  }
+</section>

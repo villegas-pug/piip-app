@@ -8,9 +8,14 @@ export interface EventResponse {
   actorName?: string;
   detail?: string;
   entityCode?: string;
+  entityId?: number;
+  entityType?: string;
   event?: string;
+  executingUnitId?: number;
+  institutionId?: number;
   newStatus?: PortfolioStatusReferenceResponse;
   occurredAt?: string;
+  organizationalUnitId?: number;
   previousStatus?: PortfolioStatusReferenceResponse;
   status?: PortfolioStatusReferenceResponse;
 }

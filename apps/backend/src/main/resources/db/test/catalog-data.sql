@@ -5,7 +5,7 @@
 --
 -- Contenido:
 --   1. Roles del sistema (2)
---   2. Organizacion: institucion y unidades ejecutoras (1 + 2)
+--   2. Organizacion: institucion y unidades ejecutoras (1 + 2), con orden y fechas deterministas
 --   3. Organizacion: unidades organicas sinteticas (4)
 --   4. Identidad: usuario administrador (1)
 --   5. Identidad: ambitos administrativos (2)
@@ -79,16 +79,24 @@ WHEN NOT MATCHED THEN
 MERGE INTO UNIDAD_EJECUTORA u
 USING (
     SELECT i.ID_INSTITUCION AS institucion_id,
-           v.codigo,
-           v.nombre
+            v.codigo,
+            v.nombre,
+            v.orden,
+            v.fecha_registro,
+            v.fecha_activacion
     FROM   INSTITUCION i
     CROSS JOIN (
-        SELECT 'UE-001' AS codigo,
-               'UE-001' AS nombre
-        FROM   dual
-        UNION ALL
-        SELECT 'UE-002', 'UE-002'
-        FROM   dual
+         SELECT 'UE-001' AS codigo,
+                'UE-001' AS nombre,
+                1 AS orden,
+                TO_TIMESTAMP_TZ('2026-09-11 12:00:00 +00:00', 'YYYY-MM-DD HH24:MI:SS TZH:TZM') AS fecha_registro,
+                TO_TIMESTAMP_TZ('2026-09-11 12:00:00 +00:00', 'YYYY-MM-DD HH24:MI:SS TZH:TZM') AS fecha_activacion
+         FROM   dual
+         UNION ALL
+         SELECT 'UE-002', 'UE-002', 2,
+                TO_TIMESTAMP_TZ('2026-09-11 12:01:00 +00:00', 'YYYY-MM-DD HH24:MI:SS TZH:TZM'),
+                TO_TIMESTAMP_TZ('2026-09-11 12:01:00 +00:00', 'YYYY-MM-DD HH24:MI:SS TZH:TZM')
+         FROM   dual
     ) v
     WHERE  i.CODIGO = 'MIDAGRI'
 ) s
@@ -96,17 +104,20 @@ ON (u.ID_INSTITUCION = s.institucion_id
     AND u.CODIGO = s.codigo)
 WHEN MATCHED THEN
     UPDATE SET u.NOMBRE = s.nombre,
-               u.ACTIVO = 1
+               u.ACTIVO = 1,
+               u.ORDEN_PRESENTACION = s.orden,
+               u.FECHA_REGISTRO = s.fecha_registro,
+               u.FECHA_ACTIVACION = s.fecha_activacion
 WHEN NOT MATCHED THEN
-    INSERT (ID_INSTITUCION, CODIGO, NOMBRE, ACTIVO, VERSION)
-    VALUES (s.institucion_id, s.codigo, s.nombre, 1, 0);
+    INSERT (ID_INSTITUCION, CODIGO, NOMBRE, ACTIVO, ORDEN_PRESENTACION, FECHA_REGISTRO, FECHA_ACTIVACION, VERSION)
+    VALUES (s.institucion_id, s.codigo, s.nombre, 1, s.orden, s.fecha_registro, s.fecha_activacion, 0);
 
 
 -- =============================================================================
 -- 3. ORGANIZACION: Unidades organicas sinteticas
 -- =============================================================================
 -- 4 UO: dos por cada UE.
--- Codigo sigue convencion UE-XXX-UO-NN.
+-- Codigo administrativo por UE: UO-001 y UO-002, sin prefijo de la UE.
 -- Resueltos por ID_UNIDAD_EJECUTORA + CODIGO (unique constraint UK_UO_EJECUTORA_CODIGO).
 
 MERGE INTO UNIDAD_ORGANICA u
@@ -117,21 +128,22 @@ USING (
            v.sigla
     FROM   UNIDAD_EJECUTORA ue
     CROSS JOIN (
-        SELECT 'UE-001-UO-01' AS codigo,
-               'UE-001-UO-01' AS nombre,
-               'UO1'          AS sigla
-        FROM   dual
-        UNION ALL
-        SELECT 'UE-001-UO-02', 'UE-001-UO-02', 'UO2'
-        FROM   dual
-        UNION ALL
-        SELECT 'UE-002-UO-01', 'UE-002-UO-01', 'UO1'
-        FROM   dual
-        UNION ALL
-        SELECT 'UE-002-UO-02', 'UE-002-UO-02', 'UO2'
-        FROM   dual
-    ) v
-    WHERE  ue.CODIGO = SUBSTR(v.codigo, 1, 6)
+         SELECT 'UE-001' AS ejecutora_codigo,
+                'UO-001' AS codigo,
+                'UO-001' AS nombre,
+                'UO1'          AS sigla
+         FROM   dual
+         UNION ALL
+         SELECT 'UE-001', 'UO-002', 'UO-002', 'UO2'
+         FROM   dual
+         UNION ALL
+         SELECT 'UE-002', 'UO-001', 'UO-001', 'UO1'
+         FROM   dual
+         UNION ALL
+         SELECT 'UE-002', 'UO-002', 'UO-002', 'UO2'
+         FROM   dual
+     ) v
+     WHERE  ue.CODIGO = v.ejecutora_codigo
 ) s
 ON (u.ID_UNIDAD_EJECUTORA = s.ejecutora_id
     AND u.CODIGO = s.codigo)

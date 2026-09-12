@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, firstValueFrom } from 'rxjs';
 import {
-  AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
+  AdministrativeExecutingUnit, AdministrativeInstitution, AdministrativeOrganizationalUnit, AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
   DocumentDossierSummary, DocumentFile, DocumentRecord, DocumentType, DocumentVersion, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail,
   InitiativeInput, InitiativeRecord, InitiativeStatusTransitionInput, InitiativeUpdateInput, NotificationItem, OrganizationalUnit,
   PiipPortfolioRecord, PiipRecordType, PreexistingProjectInput, ProjectDetail, ProjectRecord,
@@ -11,9 +11,10 @@ import {
   PortfolioStatusCount, PortfolioStatusOption, PortfolioStatusReference,
   AssignmentMutationInput, AssignmentMutationResult, AssignmentRole, UserAdministrationSnapshot,
   UserAdministrationUser, UserAssignmentCandidate, UserAssignmentScope,
-  TechnicalCatalogOption,
+  TechnicalCatalogOption, CreateAdministrativeExecutingUnitInput, UpdateAdministrativeExecutingUnitInput,
+  CreateAdministrativeOrganizationalUnitInput, UpdateAdministrativeOrganizationalUnitInput,
 } from './piip.models';
-import { CatalogControllerService, CurrentUserResponse, DashboardControllerService, DocumentControllerService, EventResponse, PortfolioControllerService, UserAdministrationControllerService } from '../api/generated';
+import { CatalogControllerService, CurrentUserResponse, DashboardControllerService, DocumentControllerService, EventResponse, OrganizationAdministrationControllerService, PortfolioControllerService, UserAdministrationControllerService } from '../api/generated';
 import { PiipRepository } from './piip.repository';
 import { PiipCatalogsStore } from './piip-catalogs.store';
 import { resolveApiUrl as runtimeApiUrl } from './piip-runtime-config';
@@ -127,6 +128,7 @@ export class PiipHttpRepository extends PiipRepository {
 
   private readonly http = inject(HttpClient);
   private readonly userAdministration = inject(UserAdministrationControllerService);
+  private readonly organizationAdministration = inject(OrganizationAdministrationControllerService);
   private readonly portfolio = inject(PortfolioControllerService);
   private readonly dashboard = inject(DashboardControllerService);
   private readonly catalogApi = inject(CatalogControllerService);
@@ -141,6 +143,7 @@ export class PiipHttpRepository extends PiipRepository {
   constructor() {
     super();
     this.userAdministration.rootUrl = this.apiUrl;
+    this.organizationAdministration.rootUrl = this.apiUrl;
     this.portfolio.rootUrl = this.apiUrl;
     this.dashboard.rootUrl = this.apiUrl;
     this.catalogApi.rootUrl = this.apiUrl;
@@ -238,6 +241,73 @@ export class PiipHttpRepository extends PiipRepository {
           }]
         : [],
     ));
+  }
+
+  async loadAdministrativeInstitutions(): Promise<AdministrativeInstitution[]> {
+    const response = await this.request(this.organizationAdministration.institutions1());
+    return response.flatMap(mapAdministrativeInstitution);
+  }
+
+  async loadAdministrativeExecutingUnits(institutionId: number): Promise<AdministrativeExecutingUnit[]> {
+    const response = await this.request(this.organizationAdministration.executingUnits({ institutionId }));
+    return response.flatMap((value) => mapAdministrativeExecutingUnit(value));
+  }
+
+  async loadAdministrativeExecutingUnit(executingUnitId: number): Promise<AdministrativeExecutingUnit | undefined> {
+    const institutions = await this.loadAdministrativeInstitutions();
+    const units = await Promise.all(institutions.map((institution) => this.loadAdministrativeExecutingUnits(institution.id)));
+    return units.flat().find((unit) => unit.id === executingUnitId);
+  }
+
+  async createAdministrativeExecutingUnit(input: CreateAdministrativeExecutingUnitInput): Promise<AdministrativeExecutingUnit> {
+    const response = await this.request(this.organizationAdministration.createExecutingUnit({
+      institutionId: input.institutionId,
+      body: { name: input.name, ...(input.displayOrder === undefined ? {} : { displayOrder: input.displayOrder }) },
+    }));
+    return requireAdministrativeExecutingUnit(response);
+  }
+
+  async updateAdministrativeExecutingUnit(id: number, version: number, input: UpdateAdministrativeExecutingUnitInput): Promise<AdministrativeExecutingUnit> {
+    const response = await this.request(this.organizationAdministration.updateExecutingUnit({ id, version, body: input }));
+    return requireAdministrativeExecutingUnit(response);
+  }
+
+  async deactivateAdministrativeExecutingUnit(id: number, version: number): Promise<AdministrativeExecutingUnit> {
+    const response = await this.request(this.organizationAdministration.deactivateExecutingUnit({ id, version }));
+    return requireAdministrativeExecutingUnit(response);
+  }
+
+  async reactivateAdministrativeExecutingUnit(id: number, version: number): Promise<AdministrativeExecutingUnit> {
+    const response = await this.request(this.organizationAdministration.reactivateExecutingUnit({ id, version }));
+    return requireAdministrativeExecutingUnit(response);
+  }
+
+  async loadAdministrativeOrganizationalUnits(executingUnitId: number): Promise<AdministrativeOrganizationalUnit[]> {
+    const response = await this.request(this.organizationAdministration.organizationalUnits({ executingUnitId }));
+    return response.flatMap(mapAdministrativeOrganizationalUnit);
+  }
+
+  async createAdministrativeOrganizationalUnit(input: CreateAdministrativeOrganizationalUnitInput): Promise<AdministrativeOrganizationalUnit> {
+    const response = await this.request(this.organizationAdministration.createOrganizationalUnit({
+      executingUnitId: input.executingUnitId,
+      body: { name: input.name, acronym: input.acronym, active: input.active },
+    }));
+    return requireAdministrativeOrganizationalUnit(response);
+  }
+
+  async updateAdministrativeOrganizationalUnit(id: number, version: number, input: UpdateAdministrativeOrganizationalUnitInput): Promise<AdministrativeOrganizationalUnit> {
+    const response = await this.request(this.organizationAdministration.updateOrganizationalUnit({ id, version, body: input }));
+    return requireAdministrativeOrganizationalUnit(response);
+  }
+
+  async deactivateAdministrativeOrganizationalUnit(id: number, version: number): Promise<AdministrativeOrganizationalUnit> {
+    const response = await this.request(this.organizationAdministration.deactivateOrganizationalUnit({ id, version }));
+    return requireAdministrativeOrganizationalUnit(response);
+  }
+
+  async reactivateAdministrativeOrganizationalUnit(id: number, version: number): Promise<AdministrativeOrganizationalUnit> {
+    const response = await this.request(this.organizationAdministration.reactivateOrganizationalUnit({ id, version }));
+    return requireAdministrativeOrganizationalUnit(response);
   }
 
   async loadUserAdministration(): Promise<UserAdministrationSnapshot> {
@@ -1008,12 +1078,22 @@ function problemMessage(problemCode: string): string | undefined {
     INCOMPATIBLE_ASSIGNMENT_STATE: 'La asignación no se encuentra en un estado compatible con la operación.',
     INVALID_ACTIVE_REFERENCE: 'La referencia de institución o Unidad Ejecutora ya no está activa.',
     BUSINESS_RULE_VIOLATION: 'La operación no cumple una regla de negocio.',
+    ORGANIZATION_CODE_DUPLICATE: 'El código organizacional generado ya existe. Intenta nuevamente.',
+    INCOMPATIBLE_ORGANIZATION_STATE: 'La Unidad Organizacional ya se encuentra en el estado solicitado.',
   };
   return messages[problemCode];
 }
 
 export function resolveApiUrl(): string {
   return runtimeApiUrl();
+}
+
+/** Obtiene el estado también de los errores tipados por el repositorio mock. */
+export function piipErrorStatus(error: unknown): number | undefined {
+  if (error instanceof PiipApiError) return error.status;
+  return typeof error === 'object' && error !== null && typeof (error as { status?: unknown }).status === 'number'
+    ? (error as { status: number }).status
+    : undefined;
 }
 
 function updateFields(input: InitiativeUpdateInput | ProjectUpdateInput): Record<string, unknown> {
@@ -1241,9 +1321,74 @@ function mapTechnicalOption(value: TechnicalCatalogItemResponse): TechnicalCatal
   return { code: value.code, name: value.name, displayOrder: value.displayOrder, active: value.active };
 }
 
+function mapAdministrativeInstitution(value: import('../api/generated/models').InstitutionResponse): AdministrativeInstitution[] {
+  return value.id !== undefined && value.code && value.name
+    ? [{ id: value.id, code: value.code, name: value.name }]
+    : [];
+}
+
+function mapAdministrativeExecutingUnit(value: import('../api/generated/models').ExecutingUnitResponse): AdministrativeExecutingUnit[] {
+  const institution = value.institution;
+  return value.id !== undefined && value.code && value.name && value.active !== undefined
+    && value.displayOrder !== undefined && value.registeredAt && value.activatedAt && value.version !== undefined
+    && institution?.id !== undefined && institution.code && institution.name
+    ? [{
+        id: value.id,
+        code: value.code,
+        name: value.name,
+        active: value.active,
+        displayOrder: value.displayOrder,
+        registeredAt: value.registeredAt,
+        activatedAt: value.activatedAt,
+        version: value.version,
+        institution: { id: institution.id, code: institution.code, name: institution.name },
+      }]
+    : [];
+}
+
+function requireAdministrativeExecutingUnit(value: import('../api/generated/models').ExecutingUnitResponse): AdministrativeExecutingUnit {
+  const unit = mapAdministrativeExecutingUnit(value)[0];
+  if (!unit) throw new PiipApiError(502, 'El backend devolvió una Unidad Ejecutora administrativa incompleta.');
+  return unit;
+}
+
+function mapAdministrativeOrganizationalUnit(value: import('../api/generated/models').OrganizationalUnitResponse): AdministrativeOrganizationalUnit[] {
+  const executingUnit = value.executingUnit;
+  return value.id !== undefined && value.code && value.name && value.acronym !== undefined
+    && value.active !== undefined && value.version !== undefined
+    && executingUnit?.id !== undefined && executingUnit.code && executingUnit.name
+    ? [{
+        id: value.id,
+        code: value.code,
+        name: value.name,
+        acronym: value.acronym ?? '',
+        active: value.active,
+        version: value.version,
+        executingUnit: { id: executingUnit.id, code: executingUnit.code, name: executingUnit.name },
+      }]
+    : [];
+}
+
+function requireAdministrativeOrganizationalUnit(value: import('../api/generated/models').OrganizationalUnitResponse): AdministrativeOrganizationalUnit {
+  const unit = mapAdministrativeOrganizationalUnit(value)[0];
+  if (!unit) throw new PiipApiError(502, 'El backend devolvió una Unidad Orgánica administrativa incompleta.');
+  return unit;
+}
+
 function mapOrganizationalUnit(value: import('../api/generated/models').OrganizationalUnitResponse): OrganizationalUnit[] {
-  return value.id !== undefined && value.code && value.name && value.executingUnitId !== undefined && value.active !== undefined
-    ? [{ id: value.id, code: value.code, name: value.name, acronym: value.acronym ?? '', parentId: value.parentId ?? null, executingUnitId: value.executingUnitId, active: value.active }]
+  const legacy = value as unknown as {
+    id?: number;
+    code?: string;
+    name?: string;
+    acronym?: string;
+    parentId?: number | null;
+    executingUnitId?: number;
+    active?: boolean;
+    executingUnit?: { id?: number };
+  };
+  const executingUnitId = legacy.executingUnitId ?? legacy.executingUnit?.id;
+  return legacy.id !== undefined && legacy.code && legacy.name && executingUnitId !== undefined && legacy.active !== undefined
+    ? [{ id: legacy.id, code: legacy.code, name: legacy.name, acronym: legacy.acronym ?? '', parentId: legacy.parentId ?? null, executingUnitId, active: legacy.active }]
     : [];
 }
 

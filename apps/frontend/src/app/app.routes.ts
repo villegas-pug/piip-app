@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { administratorGuard } from './core/administrator.guard';
 import { activeScopeAdministratorGuard } from './core/active-scope-administrator.guard';
 import { authenticatedGuard } from './core/authenticated.guard';
+import { organizationAdministrationGuard } from './core/organization-administration.guard';
 import { piipReadyGuard } from './core/piip-ready.guard';
 import { pendingChangesGuard } from './core/pending-changes.guard';
 
@@ -145,6 +146,46 @@ export const routes: Routes = [
           import('./pages/user-administration/user-administration.component').then(
             (module) => module.UserAdministrationComponent,
           ),
+      },
+      {
+        path: 'administracion/unidades-ejecutoras/nueva',
+        title: 'PIIP | Nueva Unidad Ejecutora',
+        canActivate: [organizationAdministrationGuard],
+        canDeactivate: [pendingChangesGuard],
+        loadComponent: () => import('./pages/executing-unit-administration/executing-unit-form.component').then((module) => module.ExecutingUnitFormComponent),
+      },
+      {
+        path: 'administracion/unidades-ejecutoras/:id/editar',
+        title: 'PIIP | Editar Unidad Ejecutora',
+        canActivate: [organizationAdministrationGuard],
+        canDeactivate: [pendingChangesGuard],
+        loadComponent: () => import('./pages/executing-unit-administration/executing-unit-form.component').then((module) => module.ExecutingUnitFormComponent),
+      },
+      {
+        path: 'administracion/unidades-ejecutoras/:executingUnitId/unidades-organicas/nueva',
+        title: 'PIIP | Nueva Unidad Orgánica',
+        canActivate: [organizationAdministrationGuard],
+        canDeactivate: [pendingChangesGuard],
+        loadComponent: () => import('./pages/organizational-unit-administration/organizational-unit-form.component').then((module) => module.OrganizationalUnitFormComponent),
+      },
+      {
+        path: 'administracion/unidades-ejecutoras/:executingUnitId/unidades-organicas/:id/editar',
+        title: 'PIIP | Editar Unidad Orgánica',
+        canActivate: [organizationAdministrationGuard],
+        canDeactivate: [pendingChangesGuard],
+        loadComponent: () => import('./pages/organizational-unit-administration/organizational-unit-form.component').then((module) => module.OrganizationalUnitFormComponent),
+      },
+      {
+        path: 'administracion/unidades-ejecutoras/:executingUnitId/unidades-organicas',
+        title: 'PIIP | Unidades Orgánicas',
+        canActivate: [organizationAdministrationGuard],
+        loadComponent: () => import('./pages/organizational-unit-administration/organizational-unit-administration.component').then((module) => module.OrganizationalUnitAdministrationComponent),
+      },
+      {
+        path: 'administracion/unidades-ejecutoras',
+        title: 'PIIP | Unidades Ejecutoras',
+        canActivate: [organizationAdministrationGuard],
+        loadComponent: () => import('./pages/executing-unit-administration/executing-unit-administration.component').then((module) => module.ExecutingUnitAdministrationComponent),
       },
       { path: '', redirectTo: 'inicio', pathMatch: 'full' },
     ],

@@ -22,6 +22,24 @@ Una asignación reúne tres elementos que se evalúan juntos:
 
 No se debe confundir la UE con las **Unidades Orgánicas Involucradas** que se registran en una iniciativa o proyecto: son un campo del portafolio y no constituyen el ámbito de autorización.
 
+## Administración de la organización
+
+La administración organizacional tiene dos experiencias independientes: **Unidades Ejecutoras** y **Unidades Orgánicas**. Solo `ADMINISTRADOR_PIIP` con ámbito institucional activo y vigente puede escribir en ellas. El backend vuelve a comprobar el rol y el ámbito en cada operación; ocultar una acción en la interfaz no concede autorización.
+
+### Unidades Ejecutoras
+
+El administrador selecciona una institución autorizada. Si solo tiene una, esta se preselecciona; si tiene varias, debe elegir una antes de consultar o modificar sus UE. La institución aparece como contexto heredado no editable. El alta solicita nombre y, opcionalmente, orden de presentación. Si no se informa el orden, el sistema asigna el mayor orden de esa institución más uno, o `0` cuando no existe otra UE. El código `UE-<consecutivo>` lo genera el backend y no se modifica después.
+
+El orden solo organiza la presentación del listado: se ordena ascendentemente y se desempata por nombre e identificador técnico. No representa una relación jerárquica. La fecha de registro se asigna al alta y la fecha de activación coincide con ella en una UE nueva activa. Desactivar conserva la fecha de activación; reactivar la actualiza al instante de reactivación. La operación es reversible y no elimina físicamente la UE.
+
+### Unidades Orgánicas
+
+Desde una UE se navega a una ruta separada para sus UO. La UE se muestra como contexto heredado no editable y la URL conserva su identificador. El alta solicita nombre, `SIGLA` no vacía y un estado inicial booleano explícito. El código `UO-<consecutivo>` lo genera el backend por UE y no se puede cambiar.
+
+La sigla de UO es el campo `acronym` de la entidad y la columna `UNIDAD_ORGANICA.SIGLA`; la ingresa el administrador autorizado. Una UO activa debe conservar una sigla no vacía y solo las UO activas con sigla aparecen como opciones nuevas en iniciativas y proyectos. Desactivar y reactivar son acciones separadas, versionadas y reversibles. La administración de UO no muestra, envía ni interpreta `ID_UNIDAD_PADRE`, `parent` o `parentId` como jerarquía interna.
+
+Los listados administrativos distinguen activas e inactivas. La auditoría conserva actor, entidad, ámbito, acción, fecha y cambios funcionales seguros. Una consulta sin UE explícita se limita a las UE autorizadas del actor y nunca devuelve un conjunto global.
+
 El contexto activo de la UE determina qué acciones se ofrecen. Un usuario puede tener `Consulta externa` en una UE y `Administrador PIIP` en otra; el rol privilegiado no se traslada ni se combina con la cobertura de la otra UE. Sobre la misma UE, `Administrador PIIP` prevalece como rol efectivo frente a `Consulta externa`.
 
 ```mermaid

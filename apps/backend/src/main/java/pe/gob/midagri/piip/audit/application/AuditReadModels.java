@@ -12,5 +12,14 @@ public final class AuditReadModels {
     public record EventView(String event, String entityCode, String detail, String actor,
             String actorName, String actorEmail, Instant occurredAt,
             PortfolioStatusReferenceResponse status, PortfolioStatusReferenceResponse previousStatus,
-            PortfolioStatusReferenceResponse newStatus) {}
+            PortfolioStatusReferenceResponse newStatus, String entityType, Long entityId,
+            Long institutionId, Long executingUnitId, Long organizationalUnitId) {
+        public EventView(String event, String entityCode, String detail, String actor,
+                String actorName, String actorEmail, Instant occurredAt,
+                PortfolioStatusReferenceResponse status, PortfolioStatusReferenceResponse previousStatus,
+                PortfolioStatusReferenceResponse newStatus) {
+            this(event, entityCode, detail, actor, actorName, actorEmail, occurredAt, status, previousStatus,
+                newStatus, null, null, null, null, null);
+        }
+    }
 }

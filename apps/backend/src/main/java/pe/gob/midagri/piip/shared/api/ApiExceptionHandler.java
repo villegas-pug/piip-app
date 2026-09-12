@@ -21,8 +21,18 @@ public class ApiExceptionHandler {
     ProblemDetail notFound(NotFoundException exception, HttpServletRequest request) { return problem(request, HttpStatus.NOT_FOUND, "Recurso no encontrado", exception.getMessage(), ProblemCode.RESOURCE_NOT_FOUND); }
 
     @ExceptionHandler(BusinessRuleException.class)
-    ProblemDetail business(BusinessRuleException exception, HttpServletRequest request) { return problem(request, HttpStatus.UNPROCESSABLE_ENTITY, "Regla de negocio", exception.getMessage(), exception.getProblemCode()); }
-    ProblemDetail business(BusinessRuleException exception) { return problem(null, HttpStatus.UNPROCESSABLE_ENTITY, "Regla de negocio", exception.getMessage(), exception.getProblemCode()); }
+    ProblemDetail business(BusinessRuleException exception, HttpServletRequest request) {
+        HttpStatus status = exception.getProblemCode() == ProblemCode.INVALID_REQUEST
+            ? HttpStatus.BAD_REQUEST : HttpStatus.UNPROCESSABLE_ENTITY;
+        return problem(request, status, status == HttpStatus.BAD_REQUEST ? "Solicitud inválida" : "Regla de negocio",
+            exception.getMessage(), exception.getProblemCode());
+    }
+    ProblemDetail business(BusinessRuleException exception) {
+        HttpStatus status = exception.getProblemCode() == ProblemCode.INVALID_REQUEST
+            ? HttpStatus.BAD_REQUEST : HttpStatus.UNPROCESSABLE_ENTITY;
+        return problem(null, status, status == HttpStatus.BAD_REQUEST ? "Solicitud inválida" : "Regla de negocio",
+            exception.getMessage(), exception.getProblemCode());
+    }
 
     @ExceptionHandler(InvalidReferenceException.class)
     ProblemDetail invalidReference(InvalidReferenceException exception, HttpServletRequest request) {

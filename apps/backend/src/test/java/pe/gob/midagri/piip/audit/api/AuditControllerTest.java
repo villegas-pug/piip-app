@@ -50,4 +50,18 @@ class AuditControllerTest {
         assertThat(response.previousStatus().code()).isEqualTo("PRESENTED");
         assertThat(response.newStatus().code()).isEqualTo("INITIATIVE_ARCHIVED");
     }
+
+    @Test
+    void exposesStructuredOrganizationScopeAlongsideLegacyAuditFields() {
+        EventView event = new EventView("UE_CREADA", "UE-001", "{\"result\":\"SUCCESS\"}", "actor-subject",
+            "Ana Analista", "ana@midagri.gob.pe", Instant.now(), null, null, null, "UNIDAD_EJECUTORA", 10L,
+            1L, 10L, null);
+
+        AuditController.EventResponse response = AuditController.toEventResponse(event);
+
+        assertThat(response.entityType()).isEqualTo("UNIDAD_EJECUTORA");
+        assertThat(response.entityId()).isEqualTo(10L);
+        assertThat(response.institutionId()).isEqualTo(1L);
+        assertThat(response.executingUnitId()).isEqualTo(10L);
+    }
 }

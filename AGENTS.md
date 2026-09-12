@@ -64,5 +64,5 @@
 <!-- SPECKIT START -->
 ## Plan activo Spec Kit
 
-- Plan activo: `specs/018-centralizar-estados-portafolio/plan.md` (feature 018, rama `018-centralizar-estados-portafolio`).
+- Plan activo: `specs/019-administrar-unidades-organizacionales/plan.md` (feature 019, rama `019-administrar-unidades-organizacionales`).
 <!-- SPECKIT END -->

@@ -1,5 +1,8 @@
 import { Injectable, computed, signal } from '@angular/core';
 import {
+  AdministrativeExecutingUnit,
+  AdministrativeInstitution,
+  AdministrativeOrganizationalUnit,
   AdministrableScope,
   AuditEvent,
   AuditAccess,
@@ -28,6 +31,8 @@ import {
   PortfolioStatusReference, PortfolioStatusOption, CatalogBundle, OrganizationalUnit, ResourceState,
   AssignmentMutationInput, AssignmentMutationResult, UserAdministrationSnapshot,
   UserAdministrationUser, UserAssignmentCandidate, UserAssignmentScope,
+  CreateAdministrativeExecutingUnitInput, UpdateAdministrativeExecutingUnitInput,
+  CreateAdministrativeOrganizationalUnitInput, UpdateAdministrativeOrganizationalUnitInput,
 } from './piip.models';
 import { INITIATIVE_STATUS_TRANSITIONS, PROJECT_STATUS_TRANSITIONS, type InitiativeStatus, type ProjectStatus } from './piip.catalogs';
 import { PiipRepository } from './piip.repository';
@@ -54,6 +59,33 @@ export class PiipMockRepository extends PiipRepository {
     institutionWideAllowed: true,
     executingUnits: [{ id: 1, code: 'UE-DEMO', name: 'Unidad Ejecutora de demostración' }],
   }]);
+  readonly administrativeInstitutions = signal<AdministrativeInstitution[]>([
+    { id: 1, code: 'INST-DEMO', name: 'Institución de demostración' },
+  ]);
+  readonly administrativeExecutingUnits = signal<AdministrativeExecutingUnit[]>([
+    {
+      id: 1,
+      code: 'UE-DEMO',
+      name: 'Unidad Ejecutora de demostración',
+      active: true,
+      displayOrder: 0,
+      registeredAt: '2026-01-01T00:00:00Z',
+      activatedAt: '2026-01-01T00:00:00Z',
+      version: 0,
+      institution: { id: 1, code: 'INST-DEMO', name: 'Institución de demostración' },
+    },
+  ]);
+  readonly administrativeOrganizationalUnits = signal<AdministrativeOrganizationalUnit[]>([
+    {
+      id: 101,
+      code: 'UO-DEMO',
+      name: 'Unidad Orgánica de demostración',
+      acronym: 'UO',
+      active: true,
+      version: 0,
+      executingUnit: { id: 1, code: 'UE-DEMO', name: 'Unidad Ejecutora de demostración' },
+    },
+  ]);
   readonly catalogs = signal<ResourceState<CatalogBundle>>({ phase: 'ready', value: mockCatalogBundle(), error: null, requestId: 1 });
   readonly organizationalUnits = signal<OrganizationalUnit[]>([
     { id: 101, code: 'UO-DEMO', name: 'Unidad Orgánica de demostración', acronym: 'UO', parentId: null, executingUnitId: 1, active: true },
@@ -308,6 +340,105 @@ export class PiipMockRepository extends PiipRepository {
   reloadCatalogs(): void {}
   reloadOrganizationalUnits(): void {}
   loadAdministrableScopes(): void {}
+  loadAdministrativeInstitutions(): AdministrativeInstitution[] { return this.administrativeInstitutions(); }
+  loadAdministrativeExecutingUnits(institutionId: number): AdministrativeExecutingUnit[] {
+    return this.administrativeExecutingUnits().filter((unit) => unit.institution.id === institutionId)
+      .sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name) || a.id - b.id);
+  }
+  loadAdministrativeExecutingUnit(executingUnitId: number): AdministrativeExecutingUnit | undefined {
+    return this.administrativeExecutingUnits().find((unit) => unit.id === executingUnitId);
+  }
+  createAdministrativeExecutingUnit(input: CreateAdministrativeExecutingUnitInput): AdministrativeExecutingUnit {
+    const institution = this.administrativeInstitutions().find((item) => item.id === input.institutionId);
+    if (!institution) throw mockRepositoryError(403, 'La institución no pertenece a tu ámbito administrativo.');
+    const inInstitution = this.loadAdministrativeExecutingUnits(input.institutionId);
+    const displayOrder = input.displayOrder ?? (inInstitution.length ? Math.max(...inInstitution.map((item) => item.displayOrder)) + 1 : 0);
+    const unit: AdministrativeExecutingUnit = {
+      id: Math.max(0, ...this.administrativeExecutingUnits().map((item) => item.id)) + 1,
+      code: `UE-${String(inInstitution.length + 1).padStart(3, '0')}`,
+      name: input.name,
+      active: true,
+      displayOrder,
+      registeredAt: new Date().toISOString(),
+      activatedAt: new Date().toISOString(),
+      version: 0,
+      institution,
+    };
+    this.administrativeExecutingUnits.update((items) => [...items, unit]);
+    return unit;
+  }
+  updateAdministrativeExecutingUnit(id: number, version: number, input: UpdateAdministrativeExecutingUnitInput): AdministrativeExecutingUnit {
+    const current = this.requireMockAdministrativeExecutingUnit(id, version);
+    const updated = { ...current, name: input.name, displayOrder: input.displayOrder, version: current.version + 1 };
+    this.administrativeExecutingUnits.update((items) => items.map((item) => item.id === id ? updated : item));
+    return updated;
+  }
+  deactivateAdministrativeExecutingUnit(id: number, version: number): AdministrativeExecutingUnit {
+    const current = this.requireMockAdministrativeExecutingUnit(id, version);
+    if (!current.active) throw mockRepositoryError(422, 'La Unidad Ejecutora ya está inactiva.');
+    const updated = { ...current, active: false, version: current.version + 1 };
+    this.administrativeExecutingUnits.update((items) => items.map((item) => item.id === id ? updated : item));
+    return updated;
+  }
+  reactivateAdministrativeExecutingUnit(id: number, version: number): AdministrativeExecutingUnit {
+    const current = this.requireMockAdministrativeExecutingUnit(id, version);
+    if (current.active) throw mockRepositoryError(422, 'La Unidad Ejecutora ya está activa.');
+    const updated = { ...current, active: true, activatedAt: new Date().toISOString(), version: current.version + 1 };
+    this.administrativeExecutingUnits.update((items) => items.map((item) => item.id === id ? updated : item));
+    return updated;
+  }
+  loadAdministrativeOrganizationalUnits(executingUnitId: number): AdministrativeOrganizationalUnit[] {
+    return this.administrativeOrganizationalUnits().filter((unit) => unit.executingUnit.id === executingUnitId);
+  }
+  createAdministrativeOrganizationalUnit(input: CreateAdministrativeOrganizationalUnitInput): AdministrativeOrganizationalUnit {
+    const executingUnit = this.administrativeExecutingUnits().find((item) => item.id === input.executingUnitId);
+    if (!executingUnit) throw mockRepositoryError(404, 'La Unidad Ejecutora indicada no existe.');
+    const siblings = this.loadAdministrativeOrganizationalUnits(input.executingUnitId);
+    const unit: AdministrativeOrganizationalUnit = {
+      id: Math.max(0, ...this.administrativeOrganizationalUnits().map((item) => item.id)) + 1,
+      code: `UO-${String(siblings.length + 1).padStart(3, '0')}`,
+      name: input.name,
+      acronym: input.acronym,
+      active: input.active,
+      version: 0,
+      executingUnit: { id: executingUnit.id, code: executingUnit.code, name: executingUnit.name },
+    };
+    this.administrativeOrganizationalUnits.update((items) => [...items, unit]);
+    return unit;
+  }
+  updateAdministrativeOrganizationalUnit(id: number, version: number, input: UpdateAdministrativeOrganizationalUnitInput): AdministrativeOrganizationalUnit {
+    const current = this.requireMockAdministrativeOrganizationalUnit(id, version);
+    const updated = { ...current, name: input.name, acronym: input.acronym, version: current.version + 1 };
+    this.administrativeOrganizationalUnits.update((items) => items.map((item) => item.id === id ? updated : item));
+    return updated;
+  }
+  deactivateAdministrativeOrganizationalUnit(id: number, version: number): AdministrativeOrganizationalUnit {
+    const current = this.requireMockAdministrativeOrganizationalUnit(id, version);
+    if (!current.active) throw mockRepositoryError(422, 'La Unidad Orgánica ya está inactiva.');
+    const updated = { ...current, active: false, version: current.version + 1 };
+    this.administrativeOrganizationalUnits.update((items) => items.map((item) => item.id === id ? updated : item));
+    return updated;
+  }
+  reactivateAdministrativeOrganizationalUnit(id: number, version: number): AdministrativeOrganizationalUnit {
+    const current = this.requireMockAdministrativeOrganizationalUnit(id, version);
+    if (current.active) throw mockRepositoryError(422, 'La Unidad Orgánica ya está activa.');
+    if (!current.acronym.trim()) throw mockRepositoryError(422, 'La Unidad Orgánica requiere una sigla para reactivarse.');
+    const updated = { ...current, active: true, version: current.version + 1 };
+    this.administrativeOrganizationalUnits.update((items) => items.map((item) => item.id === id ? updated : item));
+    return updated;
+  }
+  private requireMockAdministrativeExecutingUnit(id: number, version: number): AdministrativeExecutingUnit {
+    const unit = this.administrativeExecutingUnits().find((item) => item.id === id);
+    if (!unit) throw mockRepositoryError(404, 'La Unidad Ejecutora indicada no existe.');
+    if (unit.version !== version) throw mockRepositoryError(409, 'La Unidad Ejecutora cambió.');
+    return unit;
+  }
+  private requireMockAdministrativeOrganizationalUnit(id: number, version: number): AdministrativeOrganizationalUnit {
+    const unit = this.administrativeOrganizationalUnits().find((item) => item.id === id);
+    if (!unit) throw mockRepositoryError(404, 'La Unidad Orgánica indicada no existe.');
+    if (unit.version !== version) throw mockRepositoryError(409, 'La Unidad Orgánica cambió.');
+    return unit;
+  }
   async loadUserAdministration(): Promise<UserAdministrationSnapshot> {
     return { users: this.userAdministrationUsers(), assignmentCandidates: this.assignmentCandidates() };
   }

@@ -29,7 +29,10 @@ class ExecutingUnitFilterMappingTest {
         Method method = Arrays.stream(controller.getDeclaredMethods())
             .filter(candidate -> candidate.getName().equals(methodName))
             .findFirst().orElseThrow();
-        RequestParam parameter = method.getParameters()[0].getAnnotation(RequestParam.class);
+        RequestParam parameter = Arrays.stream(method.getParameters())
+            .map(candidate -> candidate.getAnnotation(RequestParam.class))
+            .filter(candidate -> candidate != null && candidate.value().equals("executingUnitId"))
+            .findFirst().orElseThrow();
         assertThat(parameter.value()).isEqualTo("executingUnitId");
         assertThat(parameter.required()).isFalse();
         assertThat(method.getAnnotation(GetMapping.class).produces())

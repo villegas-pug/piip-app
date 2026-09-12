@@ -56,6 +56,28 @@ public class LocalAuthorizationService {
         return context;
     }
 
+    /**
+     * Re-resuelve desde Oracle la capacidad administrativa antes de usarla.
+     * El contexto adjunto a la autenticación solo sirve para identificar al
+     * actor; nunca es la fuente final de autorización funcional.
+     */
+    @Transactional(readOnly = true)
+    public LocalAccessContext requireFresh(RoleCode role) {
+        LocalAccessContext snapshot = require(role);
+        LocalAccessContext authoritative = resolve(snapshot.subject());
+        if (!authoritative.hasRole(role)) throw new AccessDeniedException("Se requiere el rol " + role);
+        return authoritative;
+    }
+
+    @Transactional(readOnly = true)
+    public LocalAccessContext requireOrganizationAdministration(Long institutionId) {
+        LocalAccessContext context = requireFresh(RoleCode.ADMINISTRADOR_PIIP);
+        if (!context.institutionIds(RoleCode.ADMINISTRADOR_PIIP).contains(institutionId)) {
+            throw new AccessDeniedException("La institución está fuera del ámbito administrativo autorizado");
+        }
+        return context;
+    }
+
     public LocalAccessContext requireReadableUnit(Long unitId) {
         LocalAccessContext context = requireAuthenticatedRole();
         if (!coversUnit(context, unitId)) throw new AccessDeniedException("La Unidad Ejecutora está fuera del ámbito autorizado");

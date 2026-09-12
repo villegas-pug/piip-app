@@ -21,7 +21,7 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelectorAll('.notification-row')).toHaveLength(4);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('puede originar un proyecto');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Se ha registrado una iniciativa para revisión.');
   });
 
   it('solo marca una notificación mediante la acción explícita de la fila', async () => {

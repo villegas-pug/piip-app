@@ -49,10 +49,14 @@ class OpenApiGenerationTest {
             .contains("\"400\"", "\"401\"", "\"403\"");
         assertThat(response.body())
             .contains("InitiativeStatusTransitionRequest", "ProjectStatusTransitionRequest")
-            .contains("\"/initiatives/{code}/status-transitions\"", "\"/projects/{code}/status-transitions\"");
+            .contains("\"/initiatives/{code}/status-transitions\"", "\"/projects/{code}/status-transitions\"")
+            .contains("\"/institutions\"", "\"/executing-units\"", "\"/organizational-units\"")
+            .contains("/admin/organization/executing-units", "/admin/organization/organizational-units",
+                "CreateExecutingUnitRequest", "CreateOrganizationalUnitRequest", "entityType", "organizationalUnitId");
         JsonNode document = new ObjectMapper().readTree(response.body());
         assertProblemDetailContract(document);
         assertAssignmentMutationContract(document);
+        assertOrganizationAdministrationContract(document);
         assertPatchContract(document, "/initiatives/{code}", "InitiativeUpdateRequest");
         assertPatchContract(document, "/projects/{code}", "ProjectUpdateRequest");
         Path output = Path.of("target", "piip-openapi.json");
@@ -66,7 +70,8 @@ class OpenApiGenerationTest {
         assertThat(schema.path("properties").path("problemCode").path("enum").toString())
             .contains("INVALID_REQUEST", "FORBIDDEN_SCOPE", "RESOURCE_NOT_FOUND", "STALE_VERSION",
                 "ACTIVE_ASSIGNMENT_DUPLICATE", "SELF_ADMIN_SUSPENSION", "LAST_ACTIVE_ADMIN",
-                "INCOMPATIBLE_ASSIGNMENT_STATE", "INVALID_ACTIVE_REFERENCE", "BUSINESS_RULE_VIOLATION");
+                "INCOMPATIBLE_ASSIGNMENT_STATE", "INVALID_ACTIVE_REFERENCE", "BUSINESS_RULE_VIOLATION",
+                "ORGANIZATION_CODE_DUPLICATE");
     }
 
     private static void assertAssignmentMutationContract(JsonNode document) {
@@ -78,6 +83,23 @@ class OpenApiGenerationTest {
         assertThat(paths.path("/admin/role-assignments/{scopeId}/reactivation").path("put").path("responses").has("200")).isTrue();
         assertThat(document.path("components").path("schemas").path("AccessResponse")
             .path("properties").path("safeReason").isObject()).isTrue();
+    }
+
+    private static void assertOrganizationAdministrationContract(JsonNode document) {
+        JsonNode paths = document.path("paths");
+        assertThat(paths.path("/admin/organization/institutions").path("get").isObject()).isTrue();
+        assertThat(paths.path("/admin/organization/executing-units").path("get").isObject()).isTrue();
+        assertThat(paths.path("/admin/organization/executing-units").path("post").isObject()).isTrue();
+        assertThat(paths.path("/admin/organization/executing-units/{id}").path("put").isObject()).isTrue();
+        assertThat(paths.path("/admin/organization/organizational-units").path("get").isObject()).isTrue();
+        assertThat(paths.path("/admin/organization/organizational-units").path("post").isObject()).isTrue();
+        assertThat(paths.path("/admin/organization/organizational-units/{id}").path("put").isObject()).isTrue();
+        assertThat(document.path("components").path("schemas").path("ExecutingUnitResponse").path("properties")
+            .has("registeredAt")).isTrue();
+        assertThat(document.path("components").path("schemas").path("OrganizationalUnitResponse").path("properties")
+            .has("parentId")).isFalse();
+        assertThat(document.path("components").path("schemas").path("CreateOrganizationalUnitRequest").path("required").toString())
+            .contains("name", "acronym", "active");
     }
 
     private static void assertPatchContract(JsonNode document, String path, String requestSchema) {

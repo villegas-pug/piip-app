@@ -10,13 +10,21 @@ import { RequestBuilder } from '../../request-builder';
 import { EventResponse } from '../../models/event-response';
 
 export interface Events$Params {
+  entityType?: string;
+  entityId?: number;
+  institutionId?: number;
   executingUnitId?: number;
+  organizationalUnitId?: number;
 }
 
 export function events(http: HttpClient, rootUrl: string, params?: Events$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<EventResponse>>> {
   const rb = new RequestBuilder(rootUrl, events.PATH, 'get');
   if (params) {
+    rb.query('entityType', params.entityType, {});
+    rb.query('entityId', params.entityId, {});
+    rb.query('institutionId', params.institutionId, {});
     rb.query('executingUnitId', params.executingUnitId, {});
+    rb.query('organizationalUnitId', params.organizationalUnitId, {});
   }
 
   return http.request(

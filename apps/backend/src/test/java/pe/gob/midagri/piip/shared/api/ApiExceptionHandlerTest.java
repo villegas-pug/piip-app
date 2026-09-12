@@ -34,4 +34,15 @@ class ApiExceptionHandlerTest {
             .containsEntry("referenceId", 7L).containsEntry("reason", "INACTIVE")
             .containsEntry("problemCode", "INVALID_ACTIVE_REFERENCE");
     }
+
+    @Test
+    void mapsAdministrativeInvalidRequestToBadRequestAndCodeCollisionToUnprocessableEntity() {
+        var invalid = handler.business(new BusinessRuleException(ProblemCode.INVALID_REQUEST, "cuerpo inválido"));
+        assertThat(invalid.getStatus()).isEqualTo(400);
+        assertThat(invalid.getProperties()).containsEntry("problemCode", "INVALID_REQUEST");
+
+        var duplicate = handler.business(new BusinessRuleException(ProblemCode.ORGANIZATION_CODE_DUPLICATE, "duplicado"));
+        assertThat(duplicate.getStatus()).isEqualTo(422);
+        assertThat(duplicate.getProperties()).containsEntry("problemCode", "ORGANIZATION_CODE_DUPLICATE");
+    }
 }

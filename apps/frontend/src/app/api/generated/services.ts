@@ -5,6 +5,7 @@ export { WorkControllerService } from './services/work-controller.service';
 export { DocumentControllerService } from './services/document-controller.service';
 export { NotificationControllerService } from './services/notification-controller.service';
 export { UserAdministrationControllerService } from './services/user-administration-controller.service';
+export { OrganizationAdministrationControllerService } from './services/organization-administration-controller.service';
 export { PortfolioControllerService } from './services/portfolio-controller.service';
 export { OrganizationControllerService } from './services/organization-controller.service';
 export { IdentityControllerService } from './services/identity-controller.service';

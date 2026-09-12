@@ -467,6 +467,67 @@ export interface AdministrableScope {
   executingUnits: AdministrableExecutingUnit[];
 }
 
+/** Contexto institucional devuelto por las operaciones administrativas. */
+export interface AdministrativeInstitution {
+  id: number;
+  code: string;
+  name: string;
+}
+
+/** Referencia heredada de una Unidad Ejecutora en la administración de UO. */
+export interface AdministrativeExecutingUnitReference {
+  id: number;
+  code: string;
+  name: string;
+}
+
+/** Modelo administrativo de UE, separado del catálogo legado. */
+export interface AdministrativeExecutingUnit {
+  id: number;
+  code: string;
+  name: string;
+  active: boolean;
+  displayOrder: number;
+  registeredAt: string;
+  activatedAt: string;
+  version: number;
+  institution: AdministrativeInstitution;
+}
+
+/** Modelo administrativo de UO; deliberadamente no contiene parentId. */
+export interface AdministrativeOrganizationalUnit {
+  id: number;
+  code: string;
+  name: string;
+  acronym: string;
+  active: boolean;
+  version: number;
+  executingUnit: AdministrativeExecutingUnitReference;
+}
+
+export interface CreateAdministrativeExecutingUnitInput {
+  institutionId: number;
+  name: string;
+  displayOrder?: number;
+}
+
+export interface UpdateAdministrativeExecutingUnitInput {
+  name: string;
+  displayOrder: number;
+}
+
+export interface CreateAdministrativeOrganizationalUnitInput {
+  executingUnitId: number;
+  name: string;
+  acronym: string;
+  active: boolean;
+}
+
+export interface UpdateAdministrativeOrganizationalUnitInput {
+  name: string;
+  acronym: string;
+}
+
 export interface OrganizationalUnit {
   id: number;
   code: string;

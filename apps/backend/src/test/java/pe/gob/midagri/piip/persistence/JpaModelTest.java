@@ -12,6 +12,7 @@ import pe.gob.midagri.piip.catalogs.persistence.*;
 import pe.gob.midagri.piip.portfolio.domain.*;
 import pe.gob.midagri.piip.portfolio.persistence.*;
 import java.time.LocalDate;
+import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
@@ -66,6 +67,23 @@ class JpaModelTest {
         assertThat(project.getOriginCode()).isEqualTo("I-002-2026");
         assertThat(project.getStatusCatalog()).isNotNull();
         assertThat(project.getStatusCatalog().getCode()).isEqualTo(PortfolioStatus.PROJECT_IN_PROGRESS);
+    }
+
+    @Test
+    void persistsExecutingUnitAdministrativeOrderAndDates() {
+        InstitutionEntity institution = institutions.save(new InstitutionEntity("MIDAGRI-ADMIN", "Institución administrativa"));
+        Instant createdAt = Instant.parse("2026-09-11T12:00:00Z");
+        ExecutingUnitEntity unit = executingUnits.save(new ExecutingUnitEntity(institution, "UE-ADMIN", "Unidad administrativa", 7, createdAt));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(executingUnits.findById(unit.getId())).get().satisfies(persisted -> {
+            assertThat(persisted.getDisplayOrder()).isEqualTo(7);
+            assertThat(persisted.getRegisteredAt()).isEqualTo(createdAt);
+            assertThat(persisted.getActivatedAt()).isEqualTo(createdAt);
+            assertThat(persisted.getVersion()).isZero();
+        });
     }
 
     private CatalogItemEntity item(CatalogCode code, String itemCode) {

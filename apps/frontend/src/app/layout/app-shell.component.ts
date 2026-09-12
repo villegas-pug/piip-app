@@ -57,10 +57,12 @@ export class AppShellComponent {
     { label: 'Proyectos', icon: 'business_center', route: '/proyectos' },
     { label: 'Documentos', icon: 'description', route: '/documentos' },
     { label: 'Auditoría', icon: 'shield', route: '/auditoria', adminOnly: true },
+    { label: 'Unidades organizacionales', icon: 'account_tree', route: '/administracion/unidades-ejecutoras', adminOnly: true },
   ];
 
   readonly pageTitle = computed(() => {
     const url = this.currentUrl();
+    const path = url.split(/[?#]/, 1)[0];
     if (url.includes('/iniciativas/nueva')) return 'Nueva iniciativa';
     if (url.includes('/proyectos/nuevo/derivado/')) return 'Registrar proyecto derivado';
     if (url.includes('/proyectos/nuevo/preexistente')) return 'Registrar proyecto preexistente';
@@ -68,6 +70,12 @@ export class AppShellComponent {
     if (url.startsWith('/iniciativas')) return 'Iniciativas';
     if (url.startsWith('/proyectos')) return 'Proyectos';
     if (url.startsWith('/auditoria')) return 'Auditoría de expedientes';
+    if (path.includes('/unidades-organicas/nueva')) return 'Nueva Unidad Orgánica';
+    if (path.includes('/unidades-organicas/') && path.endsWith('/editar')) return 'Editar Unidad Orgánica';
+    if (path.endsWith('/unidades-organicas')) return 'Unidades Orgánicas';
+    if (path.includes('/unidades-ejecutoras/nueva')) return 'Nueva Unidad Ejecutora';
+    if (path.includes('/unidades-ejecutoras/') && path.endsWith('/editar')) return 'Editar Unidad Ejecutora';
+    if (path.startsWith('/administracion/unidades-ejecutoras')) return 'Unidades Ejecutoras';
     if (url.startsWith('/administracion')) return 'Administración de usuarios';
     return 'Gestión de Iniciativas y Proyectos';
   });

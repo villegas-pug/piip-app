@@ -11,14 +11,14 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { ExecutingUnitResponse } from '../models/executing-unit-response';
-import { executingUnits } from '../fn/organization-controller/executing-units';
-import { ExecutingUnits$Params } from '../fn/organization-controller/executing-units';
+import { executingUnits1 } from '../fn/organization-controller/executing-units-1';
+import { ExecutingUnits1$Params } from '../fn/organization-controller/executing-units-1';
 import { InstitutionResponse } from '../models/institution-response';
 import { institutions } from '../fn/organization-controller/institutions';
 import { Institutions$Params } from '../fn/organization-controller/institutions';
 import { OrganizationalUnitResponse } from '../models/organizational-unit-response';
-import { organizationalUnits } from '../fn/organization-controller/organizational-units';
-import { OrganizationalUnits$Params } from '../fn/organization-controller/organizational-units';
+import { organizationalUnits1 } from '../fn/organization-controller/organizational-units-1';
+import { OrganizationalUnits1$Params } from '../fn/organization-controller/organizational-units-1';
 
 @Injectable({ providedIn: 'root' })
 export class OrganizationControllerService extends BaseService {
@@ -26,28 +26,28 @@ export class OrganizationControllerService extends BaseService {
     super(config, http);
   }
 
-  /** Path part for operation `organizationalUnits()` */
-  static readonly OrganizationalUnitsPath = '/organizational-units';
+  /** Path part for operation `organizationalUnits1()` */
+  static readonly OrganizationalUnits1Path = '/organizational-units';
 
   /**
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
-   * To access only the response body, use `organizationalUnits()` instead.
+   * To access only the response body, use `organizationalUnits1()` instead.
    *
    * This method doesn't expect any request body.
    */
-  organizationalUnits$Response(params: OrganizationalUnits$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<OrganizationalUnitResponse>>> {
-    const obs = organizationalUnits(this.http, this.rootUrl, params, context);
+  organizationalUnits1$Response(params: OrganizationalUnits1$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<OrganizationalUnitResponse>>> {
+    const obs = organizationalUnits1(this.http, this.rootUrl, params, context);
     return obs;
   }
 
   /**
    * This method provides access only to the response body.
-   * To access the full response (for headers, for example), `organizationalUnits$Response()` instead.
+   * To access the full response (for headers, for example), `organizationalUnits1$Response()` instead.
    *
    * This method doesn't expect any request body.
    */
-  organizationalUnits(params: OrganizationalUnits$Params, context?: HttpContext): Observable<Array<OrganizationalUnitResponse>> {
-    const resp = this.organizationalUnits$Response(params, context);
+  organizationalUnits1(params: OrganizationalUnits1$Params, context?: HttpContext): Observable<Array<OrganizationalUnitResponse>> {
+    const resp = this.organizationalUnits1$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<Array<OrganizationalUnitResponse>>): Array<OrganizationalUnitResponse> => r.body)
     );
@@ -80,28 +80,28 @@ export class OrganizationControllerService extends BaseService {
     );
   }
 
-  /** Path part for operation `executingUnits()` */
-  static readonly ExecutingUnitsPath = '/executing-units';
+  /** Path part for operation `executingUnits1()` */
+  static readonly ExecutingUnits1Path = '/executing-units';
 
   /**
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
-   * To access only the response body, use `executingUnits()` instead.
+   * To access only the response body, use `executingUnits1()` instead.
    *
    * This method doesn't expect any request body.
    */
-  executingUnits$Response(params?: ExecutingUnits$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<ExecutingUnitResponse>>> {
-    const obs = executingUnits(this.http, this.rootUrl, params, context);
+  executingUnits1$Response(params?: ExecutingUnits1$Params, context?: HttpContext): Observable<StrictHttpResponse<Array<ExecutingUnitResponse>>> {
+    const obs = executingUnits1(this.http, this.rootUrl, params, context);
     return obs;
   }
 
   /**
    * This method provides access only to the response body.
-   * To access the full response (for headers, for example), `executingUnits$Response()` instead.
+   * To access the full response (for headers, for example), `executingUnits1$Response()` instead.
    *
    * This method doesn't expect any request body.
    */
-  executingUnits(params?: ExecutingUnits$Params, context?: HttpContext): Observable<Array<ExecutingUnitResponse>> {
-    const resp = this.executingUnits$Response(params, context);
+  executingUnits1(params?: ExecutingUnits1$Params, context?: HttpContext): Observable<Array<ExecutingUnitResponse>> {
+    const resp = this.executingUnits1$Response(params, context);
     return resp.pipe(
       map((r: StrictHttpResponse<Array<ExecutingUnitResponse>>): Array<ExecutingUnitResponse> => r.body)
     );

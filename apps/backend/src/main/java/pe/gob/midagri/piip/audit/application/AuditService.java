@@ -32,8 +32,17 @@ public class AuditService {
 
     @Transactional
     public void event(String type, String entityType, String entityCode, Map<String, ?> detail, String actorSubject) {
+        event(type, entityType, null, entityCode, null, null, null, detail, actorSubject);
+    }
+
+    /** Evento funcional transaccional con referencias estructuradas de ámbito. */
+    @Transactional
+    public void event(String type, String entityType, Long entityId, String entityCode,
+            Long institutionId, Long executingUnitId, Long organizationalUnitId,
+            Map<String, ?> detail, String actorSubject) {
         UserEntity user = users.findByKeycloakSubject(actorSubject).orElse(null);
-        events.save(new AuditEventEntity(type, entityType, entityCode, toJson(detail), user, actorSubject));
+        events.save(new AuditEventEntity(type, entityType, entityId, entityCode, institutionId, executingUnitId,
+            organizationalUnitId, toJson(detail), user, actorSubject));
     }
 
     private String toJson(Map<String, ?> detail) {

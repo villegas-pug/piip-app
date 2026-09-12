@@ -95,6 +95,30 @@ class LocalAuthorizationServiceTest {
         verify(scopes).findActiveBySubject(org.mockito.ArgumentMatchers.eq("subject"), org.mockito.ArgumentMatchers.any(Instant.class));
     }
 
+    @Test
+    void organizationAdministrationUsesTheFreshOracleAssignmentInsteadOfTheAttachedSnapshot() {
+        LocalAccessContext snapshot = new LocalAccessContext(1L, "subject",
+            Set.of(new RoleScopeGrant(RoleCode.ADMINISTRADOR_PIIP, 10L, null)));
+        LocalAccessContext current = new LocalAccessContext(1L, "subject",
+            Set.of(new RoleScopeGrant(RoleCode.ADMINISTRADOR_PIIP, 20L, null)));
+        when(authentication.getDetails()).thenReturn(snapshot);
+        UserEntity user = new UserEntity("subject", "Persona", "persona@example.test");
+        ReflectionTestUtils.setField(user, "id", 1L);
+        when(users.findByKeycloakSubject("subject")).thenReturn(Optional.of(user));
+        when(scopes.findActiveBySubject(org.mockito.ArgumentMatchers.eq("subject"), org.mockito.ArgumentMatchers.any(Instant.class)))
+            .thenReturn(List.of(scope(user, 20L)));
+
+        assertThat(service.requireOrganizationAdministration(20L)).isNotNull();
+        assertThatThrownBy(() -> service.requireOrganizationAdministration(10L))
+            .isInstanceOf(AccessDeniedException.class);
+    }
+
+    private UserRoleScopeEntity scope(UserEntity user, Long institutionId) {
+        InstitutionEntity institution = institution(institutionId);
+        RoleEntity role = new RoleEntity(RoleCode.ADMINISTRADOR_PIIP, "Administrador PIIP");
+        return new UserRoleScopeEntity(user, role, institution, null, "TEST");
+    }
+
     private ExecutingUnitEntity unit(Long unitId, Long institutionId) {
         return unit(unitId, institution(institutionId));
     }

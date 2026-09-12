@@ -2,6 +2,7 @@ package pe.gob.midagri.piip.organization.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import java.util.List;
 import java.util.Set;
@@ -61,6 +62,7 @@ class OrganizationQueryServiceTest {
         // filtro del repositorio y la null se cubre además como defensa en profundidad del servicio.
         assertThat(result).extracting(OrganizationReadModels.OrganizationalUnitView::id).containsExactly(201L);
         assertThat(result).extracting(OrganizationReadModels.OrganizationalUnitView::acronym).containsExactly("U1");
+        verify(organizationalUnits).findByExecutingUnitIdAndActiveTrueAndAcronymIsNotNullOrderByName(100L);
     }
 
     private OrganizationalUnitEntity organizationalUnit(Long id, ExecutingUnitEntity unit, String code, String name,

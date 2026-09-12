@@ -42,28 +42,29 @@ class TestResetPostValidationTest {
         ExecutingUnitEntity ejecutora = ue("UE-001");
         assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
             () -> postvalidar(semillaDe(ejecutora,
-                unidad(ejecutora, "UE-001-UO-01", "UO1", true), unidad(ejecutora, "UE-001-UO-02", "   ", true)))))
+                unidad(ejecutora, "UO-001", "UO1", true), unidad(ejecutora, "UO-002", "   ", true)))))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Falló la etapa test-reset POST_VALIDATION")
-            .hasRootCauseMessage("La Unidad Orgánica sintética UE-001-UO-02 no tiene sigla registrada");
+            .hasRootCauseMessage("La Unidad Orgánica sintética UO-002 no tiene sigla registrada");
 
         assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
             () -> postvalidar(semillaDe(ejecutora,
-                unidad(ejecutora, "UE-001-UO-01", "UO1", true), unidad(ejecutora, "UE-001-UO-02", null, true)))))
+                unidad(ejecutora, "UO-001", "UO1", true), unidad(ejecutora, "UO-002", null, true)))))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Falló la etapa test-reset POST_VALIDATION")
-            .hasRootCauseMessage("La Unidad Orgánica sintética UE-001-UO-02 no tiene sigla registrada");
+            .hasRootCauseMessage("La Unidad Orgánica sintética UO-002 no tiene sigla registrada");
     }
 
     @Test
     void asociacionUnidadEjecutoraIncorrectaFallaDeFormaSegura() {
         ExecutingUnitEntity ejecutora = ue("UE-002");
+        ExecutingUnitEntity otraEjecutora = ue("UE-001");
         assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
             () -> postvalidar(semillaDe(ejecutora,
-                unidad(ejecutora, "UE-001-UO-01", "UO1", true), unidad(ejecutora, "UE-002-UO-02", "UO2", true)))))
+                unidad(otraEjecutora, "UO-001", "UO1", true), unidad(ejecutora, "UO-002", "UO2", true)))))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Falló la etapa test-reset POST_VALIDATION")
-            .hasRootCauseMessage("La Unidad Orgánica sintética UE-001-UO-01 no pertenece a la Unidad Ejecutora esperada UE-002");
+            .hasRootCauseMessage("La Unidad Orgánica sintética UO-001 no pertenece a la Unidad Ejecutora esperada UE-002");
     }
 
     @Test
@@ -71,17 +72,17 @@ class TestResetPostValidationTest {
         ExecutingUnitEntity ejecutora = ue("UE-001");
         assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
             () -> postvalidar(semillaDe(ejecutora,
-                unidad(ejecutora, "   ", "UO1", true), unidad(ejecutora, "UE-001-UO-02", "UO2", true)))))
+                unidad(ejecutora, "   ", "UO1", true), unidad(ejecutora, "UO-002", "UO2", true)))))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Falló la etapa test-reset POST_VALIDATION")
             .hasRootCauseMessage("La Unidad Orgánica sintética de la Unidad Ejecutora UE-001 tiene el código vacío");
 
         assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
             () -> postvalidar(semillaDe(ejecutora,
-                unidad(ejecutora, "UE-001-UO-01", "UO1", true), unidadConNombre(ejecutora, "UE-001-UO-02", "  ", "UO2", true)))))
+                unidad(ejecutora, "UO-001", "UO1", true), unidadConNombre(ejecutora, "UO-002", "  ", "UO2", true)))))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Falló la etapa test-reset POST_VALIDATION")
-            .hasRootCauseMessage("La Unidad Orgánica sintética UE-001-UO-02 tiene el nombre vacío");
+            .hasRootCauseMessage("La Unidad Orgánica sintética UO-002 tiene el nombre vacío");
 
         assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
             () -> postvalidar(semillaDe(ejecutora))))
@@ -95,10 +96,10 @@ class TestResetPostValidationTest {
         ExecutingUnitEntity ejecutora = ue("UE-001");
         assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
             () -> postvalidar(semillaDe(ejecutora,
-                unidad(ejecutora, "UE-001-UO-01", "UO1", true), unidad(ejecutora, "UE-001-UO-01", "UO2", true)))))
+                unidad(ejecutora, "UO-001", "UO1", true), unidad(ejecutora, "UO-001", "UO2", true)))))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Falló la etapa test-reset POST_VALIDATION")
-            .hasRootCauseMessage("La Unidad Orgánica sintética UE-001-UO-01 está duplicada en la Unidad Ejecutora UE-001");
+            .hasRootCauseMessage("La Unidad Orgánica sintética UO-001 está duplicada en la Unidad Ejecutora UE-001");
     }
 
     @Test
@@ -106,7 +107,7 @@ class TestResetPostValidationTest {
         ExecutingUnitEntity ejecutora = ue("UE-001");
         assertThatThrownBy(() -> TestResetCoordinator.stage(TestResetStage.POST_VALIDATION.name(),
             () -> postvalidar(semillaDe(ejecutora,
-                unidad(ejecutora, "UE-001-UO-01", "UO1", true), unidad(ejecutora, "UE-001-UO-02", "UO2", false)))))
+                unidad(ejecutora, "UO-001", "UO1", true), unidad(ejecutora, "UO-002", "UO2", false)))))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("Falló la etapa test-reset POST_VALIDATION")
             .hasRootCauseMessage("La Unidad Ejecutora sintética UE-001 no dispone de dos Unidades Orgánicas activas");
@@ -198,13 +199,13 @@ class TestResetPostValidationTest {
         TestResetCoordinator.validateSyntheticOrganization(semilla.unidadesEjecutoras(), semilla.unidadesOrganicas()::get);
     }
 
-    /** Conjunto sintético vigente del seed: dos UEs con dos UOs activas cada una, código, nombre y sigla completos. */
+    /** Conjunto sintético vigente del seed: dos UEs con dos UOs UO-xxx activas cada una. */
     private static Semilla semillaValida() {
         ExecutingUnitEntity primera = ue("UE-001");
         ExecutingUnitEntity segunda = ue("UE-002");
         return new Semilla(List.of(primera, segunda), Map.of(
-            primera.getId(), List.of(unidad(primera, "UE-001-UO-01", "UO1", true), unidad(primera, "UE-001-UO-02", "UO2", true)),
-            segunda.getId(), List.of(unidad(segunda, "UE-002-UO-01", "UO1", true), unidad(segunda, "UE-002-UO-02", "UO2", true))));
+            primera.getId(), List.of(unidad(primera, "UO-001", "UO1", true), unidad(primera, "UO-002", "UO2", true)),
+            segunda.getId(), List.of(unidad(segunda, "UO-001", "UO1", true), unidad(segunda, "UO-002", "UO2", true))));
     }
 
     private static Semilla semillaDe(ExecutingUnitEntity ejecutora, OrganizationalUnitEntity... unidades) {
@@ -215,7 +216,8 @@ class TestResetPostValidationTest {
 
     private static ExecutingUnitEntity ue(String codigo) {
         InstitutionEntity institution = new InstitutionEntity("MIDAGRI", "MIDAGRI");
-        ExecutingUnitEntity value = new ExecutingUnitEntity(institution, codigo, codigo);
+        ExecutingUnitEntity value = new ExecutingUnitEntity(institution, codigo, codigo, 1,
+            java.time.Instant.parse("2026-09-11T12:00:00Z"));
         ReflectionTestUtils.setField(value, "id", (long) codigo.hashCode());
         return value;
     }

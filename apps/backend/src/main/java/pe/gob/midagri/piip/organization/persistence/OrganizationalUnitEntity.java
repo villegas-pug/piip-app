@@ -14,12 +14,15 @@ public class OrganizationalUnitEntity {
     @Column(name = "CODIGO", length = 30, nullable = false) private String code;
     @Column(name = "NOMBRE", length = 200, nullable = false) private String name;
     @Column(name = "SIGLA", length = 30) private String acronym;
-    @Column(name = "ACTIVO", nullable = false) private boolean active = true;
+    @Column(name = "ACTIVO", nullable = false) private boolean active;
     @Version @Column(name = "VERSION", nullable = false) private long version;
 
     protected OrganizationalUnitEntity() {}
     public OrganizationalUnitEntity(ExecutingUnitEntity executingUnit, String code, String name, String acronym) {
-        this.executingUnit = executingUnit; this.code = code; this.name = name; this.acronym = acronym;
+        this(executingUnit, code, name, acronym, true);
+    }
+    public OrganizationalUnitEntity(ExecutingUnitEntity executingUnit, String code, String name, String acronym, boolean active) {
+        this.executingUnit = executingUnit; this.code = code; this.name = name; this.acronym = acronym; this.active = active;
     }
     public Long getId() { return id; }
     public ExecutingUnitEntity getExecutingUnit() { return executingUnit; }
@@ -28,4 +31,14 @@ public class OrganizationalUnitEntity {
     public String getName() { return name; }
     public String getAcronym() { return acronym; }
     public boolean isActive() { return active; }
+    public long getVersion() { return version; }
+
+    public void updateDetails(String name, String acronym) {
+        this.name = name;
+        this.acronym = acronym;
+    }
+
+    public void deactivate() { active = false; }
+
+    public void reactivate() { active = true; }
 }

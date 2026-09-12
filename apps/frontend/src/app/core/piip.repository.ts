@@ -1,11 +1,12 @@
 import { Signal, WritableSignal } from '@angular/core';
 import {
-  AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
+  AdministrativeExecutingUnit, AdministrativeInstitution, AdministrativeOrganizationalUnit, AdministrableScope, AuditAccess, AuditEvent, CurrentUser, DashboardSummary, DerivedProjectInput, DocumentDossier,
   DocumentDossierSummary, ExecutingUnit, InitiativeDecisionInput, InitiativeDetail, InitiativeInput, InitiativeUpdateInput,
   InitiativeRecord, InitiativeStatusTransitionInput, NotificationItem, OrganizationalUnit, PiipPortfolioRecord,
   PreexistingProjectInput, ProjectDetail, ProjectRecord, ProjectStatusTransitionInput, ProjectUpdateInput, PiipRecordType, UserRole, WorkItem,
   HomePortfolioQuery, HomePortfolioResult, CatalogBundle, ResourceState, AssignmentMutationInput, AssignmentMutationResult,
-  UserAdministrationSnapshot,
+  UserAdministrationSnapshot, CreateAdministrativeExecutingUnitInput, UpdateAdministrativeExecutingUnitInput,
+  CreateAdministrativeOrganizationalUnitInput, UpdateAdministrativeOrganizationalUnitInput,
 } from './piip.models';
 
 export type RepositoryOperation<T> = T | Promise<T>;
@@ -43,6 +44,18 @@ export abstract class PiipRepository {
   abstract reloadCatalogs(): RepositoryOperation<void>;
   abstract reloadOrganizationalUnits(): RepositoryOperation<void>;
   abstract loadAdministrableScopes(): RepositoryOperation<void>;
+  abstract loadAdministrativeInstitutions(): RepositoryOperation<AdministrativeInstitution[]>;
+  abstract loadAdministrativeExecutingUnits(institutionId: number): RepositoryOperation<AdministrativeExecutingUnit[]>;
+  abstract loadAdministrativeExecutingUnit(executingUnitId: number): RepositoryOperation<AdministrativeExecutingUnit | undefined>;
+  abstract createAdministrativeExecutingUnit(input: CreateAdministrativeExecutingUnitInput): RepositoryOperation<AdministrativeExecutingUnit>;
+  abstract updateAdministrativeExecutingUnit(id: number, version: number, input: UpdateAdministrativeExecutingUnitInput): RepositoryOperation<AdministrativeExecutingUnit>;
+  abstract deactivateAdministrativeExecutingUnit(id: number, version: number): RepositoryOperation<AdministrativeExecutingUnit>;
+  abstract reactivateAdministrativeExecutingUnit(id: number, version: number): RepositoryOperation<AdministrativeExecutingUnit>;
+  abstract loadAdministrativeOrganizationalUnits(executingUnitId: number): RepositoryOperation<AdministrativeOrganizationalUnit[]>;
+  abstract createAdministrativeOrganizationalUnit(input: CreateAdministrativeOrganizationalUnitInput): RepositoryOperation<AdministrativeOrganizationalUnit>;
+  abstract updateAdministrativeOrganizationalUnit(id: number, version: number, input: UpdateAdministrativeOrganizationalUnitInput): RepositoryOperation<AdministrativeOrganizationalUnit>;
+  abstract deactivateAdministrativeOrganizationalUnit(id: number, version: number): RepositoryOperation<AdministrativeOrganizationalUnit>;
+  abstract reactivateAdministrativeOrganizationalUnit(id: number, version: number): RepositoryOperation<AdministrativeOrganizationalUnit>;
   abstract loadUserAdministration(): RepositoryOperation<UserAdministrationSnapshot>;
   abstract assignUserRole(input: AssignmentMutationInput): RepositoryOperation<AssignmentMutationResult>;
   abstract updateUserAssignment(scopeId: number, version: number, input: AssignmentMutationInput): RepositoryOperation<AssignmentMutationResult>;
